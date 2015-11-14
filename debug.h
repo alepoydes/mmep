@@ -1,0 +1,8 @@
+#define COLOR_RESET "\033[m"
+#define COLOR_BOLD "\033[1m"
+#define COLOR_FAINT "\033[2m"
+#define COLOR_ITALIC "\033[3m"
+#define COLOR_RED "\033[31m"
+#define COLOR_GREEN "\033[32m"
+#define COLOR_YELLOW "\033[33m"
+#define COLOR_BLUE "\033[34m"

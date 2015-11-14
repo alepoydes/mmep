@@ -1,0 +1,2 @@
+#!/bin/sh
+./min2 $@ -p | gnuplot -p 2>/dev/null
