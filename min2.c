@@ -102,7 +102,8 @@ int main(int argc, char** argv) {
   int size=sizeu*sizex*sizey*sizez*3;
   float* spins=(float*)malloc(sizeof(float)*size); assert(spins);
   random_vector(size, spins); normalize(spins);
-  skyrmion_lagrange_conjugate(spins, mode, mode_param, epsilon, max_iter);
+  int status=skyrmion_lagrange_conjugate(spins, mode, mode_param, epsilon, max_iter);
+  fprintf(stderr, "Status: %d\n", status);
   free(spins);
   return 0;
 };

@@ -45,3 +45,7 @@ void add_mult(int n, const float* restrict a, float b, float* restrict c) {
 void sub_inplace(int n, const float* restrict a, float* restrict c) {
 	for(int k=0; k<n; k++) c[k]-=a[k];
 }; 
+
+void negate_inplace(int n, float* restrict c) {
+	for(int k=0; k<n; k++) c[k]=-c[k];
+}; 

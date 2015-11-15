@@ -151,6 +151,8 @@ int lagrange_conjugate(
   void (*P)(const float* x, const float* y, float* r)
   )
 {
+  float min_mu=0.1; // Minimum required bpttpm of spectrum of Q+mu
+  float dot_precision=1.2e-07*(N+M)*10; // Precision of inner product
   // allocate mempry
   float* u=(float*)malloc(sizeof(float)*M); assert(u);
   float* gradx=(float*)malloc(sizeof(float)*N); assert(gradx);
@@ -177,70 +179,133 @@ int lagrange_conjugate(
     D(x0,u,gradx);
     mult_add(N,mu,x0,gradx);
     C(x0,gradu); 
-    // Calculate residual
+    // Calculate norm of residual
     float resx=normsq(N,gradx), resu=normsq(M,gradu);
     float res=sqrtf(resx+resu);
     float last_res=res;
-    fprintf(stderr,COLOR_RED"%d: res=%g %+g mu=%g\n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu),mu);
-    fprintf(stderr, COLOR_YELLOW);
-    for(int j=0;j<N;j++) fprintf(stderr,"%g ",x0[j]); fprintf(stderr,":");
-    for(int j=0;j<M;j++) fprintf(stderr," %g",u[j]); 
-    fprintf(stderr,COLOR_RESET"\n");
-
+    // Diplay progress
+    #ifdef DEBUG
+      fprintf(stderr,COLOR_RED"%d: res=%g %+g mu=%g\n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu),mu);
+      fprintf(stderr, COLOR_YELLOW);
+      for(int j=0;j<N;j++) fprintf(stderr,"%g ",x0[j]); fprintf(stderr,":");
+      for(int j=0;j<M;j++) fprintf(stderr," %g",u[j]); 
+      fprintf(stderr,COLOR_RESET"\n");
+    #endif
+    // Residula is negative gradient
+    negate_inplace(N,gradx); negate_inplace(M,gradu);
     // Reporting result
     if(display) display(iter,x0,gradx,f,res,mu);
-    if(res<epsilon) { status=0; break; }; // If solution is found
+    if(res<epsilon) { 
+      #ifdef DEBUG
+        fprintf(stderr,COLOR_RED"%d: Converged %.3g < %.3g\n"COLOR_RESET,iter,res,epsilon);
+      #endif    
+      status=0; break; 
+    }; // If solution is found
     // Solving auxilliary problem with respect to xn,un
+    // [...]*[xn;un]=[gradx;gradu]
     // initial guess
     zero_vector(N, xn); zero_vector(M,un);
     // computing quadratic part
     //h=[A+2*lambda+shift,2*x;2*x',0];
-    Q(gradx,hgradx); iter++;
+    iter++;
+    Q(gradx,hgradx); 
     D(gradx,u,hgradx);
     mult_add(N,mu,gradx,hgradx);
     float positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
     // If the quadratic form is not positive, update shift 'mu'
-    if(positive<=0) { mu=mu-positive+1; goto restart; };
+    if(positive<min_mu) { 
+      #ifdef DEBUG      
+        fprintf(stderr,COLOR_GREEN"  %d: Hessian is small: %.3e < %.3e\n"COLOR_RESET,iter,positive,min_mu);
+      #endif      
+      mu+=2*min_mu-positive;  
+      goto restart; 
+    };
     float low_boundary=positive; // Estimate of bottom of Hessian spectrum
-    D(x0,un,hgradx);
-    P(x0,gradx,hgradu);
+    D(x0,gradu,hgradx); P(x0,gradx,hgradu);
+    //zero_vector(M,hgradu);
     // choosing initial conjugate direction
     copy_vector(N, gradx, conjx); copy_vector(M, gradu, conju);
     copy_vector(N, hgradx, hconjx); copy_vector(M, hgradu, hconju);
     // Initialization of conjugate residual
     float q=dot(N,gradx,hgradx)+dot(M,gradu,hgradu); 
     while(iter<max_iter) {
-      if(fabs(q)<epsilon) goto stop;
-      float alpha=q/(dot(N,hgradx,hgradx)+dot(M,hgradu,hgradu));
+      if(fabs(q)<dot_precision) { 
+        #ifdef DEBUG        
+          fprintf(stderr,COLOR_GREEN"  %d: Small q: %.3e < %.3e\n"COLOR_RESET,iter,q,dot_precision);
+        #endif        
+        mu+=min_mu; 
+        goto restart; 
+      };
+      float hconj_normsq=normsq(N,hconjx)+normsq(M,hconju);
+      #ifdef DEBUG 
+        // Debug
+        fprintf(stderr, COLOR_YELLOW"  X:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",xn[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",un[j]); fprintf(stderr,"\n");
+        fprintf(stderr, COLOR_YELLOW"  G:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",gradx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",gradu[j]); fprintf(stderr,"\n");
+        fprintf(stderr, COLOR_YELLOW"  C:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",conjx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",conju[j]); fprintf(stderr,"\n");
+        // <grad|A grad>=<grad|A conj>
+        float hgradhconj=dot(N,hgradx,hconjx)+dot(M,hgradu,hconju);
+        fprintf(stderr, "Biorthogonality %g\n",hgradhconj-hconj_normsq);
+        // Self-adjointness test
+        float gradhconj=dot(N,gradx,hconjx)+dot(M,gradu,hconju);
+        float conjhgrad=dot(N,hgradx,conjx)+dot(M,hgradu,conju);
+        fprintf(stderr, "Self-adjointness %g\n",gradhconj-conjhgrad);
+      #endif
+
+      float alpha=q/hconj_normsq;
       mult_add(N, alpha, conjx, xn); mult_add(M, alpha, conju, un);
       mult_sub(N, alpha, hconjx, gradx); mult_add(M, alpha, hconju, gradu);
       resx=normsq(N,gradx); resu=normsq(M,gradu); res=sqrtf(resx+resu);
       assert(!isnan(res));
-      if(res<epsilon) break; // Auxilliary problem is solved
-      if(res>last_res) break; // Unstability detected ???
+      if(res<epsilon) { // Auxilliary problem is solved
+        fprintf(stderr,COLOR_GREEN"  %d: Residual is small: R %.3e %+.3e \n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu));
+        break; 
+      };
+      if(res>100*last_res) { // Unstability detected ???
+        fprintf(stderr,COLOR_GREEN"  %d: Residual increases: R %.3e %+.3e \n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu));
+        break; 
+      };
       last_res=res;
-      // Aplying quadratic form
-      Q(gradx,hgradx); iter++;
+      // Aplying quadratic form to residual
+      iter++;
+      Q(gradx,hgradx); 
       D(gradx,u,hgradx);
       mult_add(N,mu,gradx,hgradx);
       float positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
       // If the quadratic form is not positive, update shift 'mu'
-      if(positive<=0) { mu=mu-positive+1; goto restart; };
+      if(positive<min_mu) { 
+        fprintf(stderr,COLOR_GREEN"  %d: Hessian is small: %.3e < %.3e\n"COLOR_RESET,iter,positive,min_mu);
+        mu+=2*min_mu-positive; 
+        goto restart; 
+      };
       if(positive<low_boundary) low_boundary=positive;
-      D(x0,un,hgradx);
-      P(x0,gradx,hgradu);
+      D(x0,gradu,hgradx); P(x0,gradx,hgradu);
+      //zero_vector(M,hgradu);
+      #ifdef DEBUG 
+        // Self-adjointness test 2
+        gradhconj=dot(N,gradx,hconjx)+dot(M,gradu,hconju);
+        conjhgrad=dot(N,hgradx,conjx)+dot(M,hgradu,conju);
+        fprintf(stderr, "Self-adjointness (2) %g\n",gradhconj-conjhgrad);
+      #endif
       // Calculating projections
       float qn=dot(N,gradx,hgradx)+dot(M,gradu,hgradu);
       float beta=qn/q; q=qn;
+      #ifdef DEBUG 
+        // Checking orthogoaity <A conj_k|A conj_{k+1}>=0
+        float hgradnexthconj=dot(N,hgradx,hconjx)+dot(M,hgradu,hconju);
+        fprintf(stderr, "Orthogonality %g\n",hgradnexthconj+beta*hconj_normsq);
+      #endif      
       // Update conjugate direction
       add_mult(N, gradx, beta, conjx); add_mult(M, gradu, beta, conju); 
       add_mult(N, hgradx, beta, hconjx); add_mult(M, hgradu, beta, hconju); 
-      fprintf(stderr,COLOR_GREEN"  %d: R %.3e %+.3e A %.3e B %.3e P %.3e q %.3e\n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu),alpha,beta,positive/resx,q);
+      fprintf(stderr,COLOR_GREEN"  %d: R %.3e %+.3e A %.3e B %.3e P %.3e q %.3e\n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu),alpha,beta,positive,q);
     };
-    mu=2*low_boundary;
+    #ifdef DEBUG 
+      fprintf(stderr,COLOR_BLUE"  %d: Hessian bottom %.3e\n"COLOR_RESET,iter,mu-low_boundary);
+    #endif    
+    mu=(mu-low_boundary)/2+min_mu;
     sub_inplace(N,xn,x0); sub_inplace(M,un,u); 
   };
-  stop:{};
+  //stop:{};
   free(u); free(xn); free(un); 
   free(gradx); free(gradu); free(conjx); free(conju);
   free(hgradx); free(hgradu); free(hconjx); free(hconju);

@@ -25,4 +25,5 @@ void sub_const(int n, float a, float* c);
 void random_vector(int n, float* a);
 void zero_vector(int n, float* a);
 void copy_vector(int n, const float* a, float* b);
-void sub_inplace(int n, const float* restrict a, float* restrict c) ;
+void sub_inplace(int n, const float* restrict a, float* restrict c);
+void negate_inplace(int n, float* restrict c);

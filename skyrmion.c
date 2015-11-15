@@ -98,11 +98,11 @@ void skyrmion_constrain(const float* restrict a, float* restrict r) {
 };
 
 // D:x,u,r->r+sum_l u_l P_j x
-void skyrmion_constrain_gradient(const float* restrict a, const float* restrict u, float* restrict r) {
+void skyrmion_constrain_gradient(const float* restrict a, const float* restrict lambda, float* restrict r) {
   forall(u,x,y,z) {
   	int i=INDEX(u,x,y,z);
-  	mult_plus3(u+i,a+3*i,r+3*i)
-  };	
+  	mult_plus3(lambda[i],a+3*i,r+3*i);
+  };
 };
 
 // P:x,y->(<x|P_j y>)_l
@@ -110,7 +110,7 @@ void skyrmion_constrain_adjucent(const float* restrict a, const float* restrict 
   forall(u,x,y,z) {
   	int i=INDEX(u,x,y,z);
   	r[i]=dot3(a+3*i,b+3*i);
-  };	
+  };
 };
 
 
