@@ -49,3 +49,7 @@ void sub_inplace(int n, const float* restrict a, float* restrict c) {
 void negate_inplace(int n, float* restrict c) {
 	for(int k=0; k<n; k++) c[k]=-c[k];
 }; 
+
+void vector_copy(int n, const float* a, float* b) {
+	for(int k=0; k<n; k++) b[k]=a[k];
+}

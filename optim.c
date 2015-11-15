@@ -151,7 +151,7 @@ int lagrange_conjugate(
   void (*P)(const float* x, const float* y, float* r)
   )
 {
-  float min_mu=0.1; // Minimum required bpttpm of spectrum of Q+mu
+  float min_mu=mode_param; // Minimum required bpttpm of spectrum of Q+mu
   float dot_precision=1.2e-07*(N+M)*10; // Precision of inner product
   // allocate mempry
   float* u=(float*)malloc(sizeof(float)*M); assert(u);
@@ -186,13 +186,15 @@ int lagrange_conjugate(
     // Diplay progress
     #ifdef DEBUG
       fprintf(stderr,COLOR_RED"%d: res=%g %+g mu=%g\n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu),mu);
-      fprintf(stderr, COLOR_YELLOW);
-      for(int j=0;j<N;j++) fprintf(stderr,"%g ",x0[j]); fprintf(stderr,":");
-      for(int j=0;j<M;j++) fprintf(stderr," %g",u[j]); 
-      fprintf(stderr,COLOR_RESET"\n");
+      if(N+M<8) {
+        fprintf(stderr, COLOR_YELLOW);
+        for(int j=0;j<N;j++) fprintf(stderr,"%g ",x0[j]); fprintf(stderr,":");
+        for(int j=0;j<M;j++) fprintf(stderr," %g",u[j]); 
+        fprintf(stderr,COLOR_RESET"\n");
+      };
     #endif
     // Residula is negative gradient
-    negate_inplace(N,gradx); negate_inplace(M,gradu);
+    //negate_inplace(N,gradx); negate_inplace(M,gradu);
     // Reporting result
     if(display) display(iter,x0,gradx,f,res,mu);
     if(res<epsilon) { 
@@ -211,6 +213,7 @@ int lagrange_conjugate(
     Q(gradx,hgradx); 
     D(gradx,u,hgradx);
     mult_add(N,mu,gradx,hgradx);
+    //vector_copy(N,gradx,hgradx);
     float positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
     // If the quadratic form is not positive, update shift 'mu'
     if(positive<min_mu) { 
@@ -222,7 +225,7 @@ int lagrange_conjugate(
     };
     float low_boundary=positive; // Estimate of bottom of Hessian spectrum
     D(x0,gradu,hgradx); P(x0,gradx,hgradu);
-    //zero_vector(M,hgradu);
+    //vector_copy(M,gradu,hgradu);
     // choosing initial conjugate direction
     copy_vector(N, gradx, conjx); copy_vector(M, gradu, conju);
     copy_vector(N, hgradx, hconjx); copy_vector(M, hgradu, hconju);
@@ -233,27 +236,34 @@ int lagrange_conjugate(
         #ifdef DEBUG        
           fprintf(stderr,COLOR_GREEN"  %d: Small q: %.3e < %.3e\n"COLOR_RESET,iter,q,dot_precision);
         #endif        
-        mu+=min_mu; 
-        goto restart; 
+        //mu+=min_mu; goto restart; 
+        break;
       };
       float hconj_normsq=normsq(N,hconjx)+normsq(M,hconju);
       #ifdef DEBUG 
-        // Debug
-        fprintf(stderr, COLOR_YELLOW"  X:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",xn[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",un[j]); fprintf(stderr,"\n");
-        fprintf(stderr, COLOR_YELLOW"  G:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",gradx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",gradu[j]); fprintf(stderr,"\n");
-        fprintf(stderr, COLOR_YELLOW"  C:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",conjx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",conju[j]); fprintf(stderr,"\n");
         // <grad|A grad>=<grad|A conj>
         float hgradhconj=dot(N,hgradx,hconjx)+dot(M,hgradu,hconju);
-        fprintf(stderr, "Biorthogonality %g\n",hgradhconj-hconj_normsq);
+        assert(fabs(hgradhconj-hconj_normsq)<1e-4);
+        //fprintf(stderr, "Biorthogonality %g\n",hgradhconj-hconj_normsq);
         // Self-adjointness test
         float gradhconj=dot(N,gradx,hconjx)+dot(M,gradu,hconju);
         float conjhgrad=dot(N,hgradx,conjx)+dot(M,hgradu,conju);
-        fprintf(stderr, "Self-adjointness %g\n",gradhconj-conjhgrad);
+        assert(fabs(gradhconj-conjhgrad)<1e-4);
+        //fprintf(stderr, "Self-adjointness %g\n",gradhconj-conjhgrad);
       #endif
 
       float alpha=q/hconj_normsq;
       mult_add(N, alpha, conjx, xn); mult_add(M, alpha, conju, un);
-      mult_sub(N, alpha, hconjx, gradx); mult_add(M, alpha, hconju, gradu);
+      mult_sub(N, alpha, hconjx, gradx); mult_sub(M, alpha, hconju, gradu);
+
+      #ifdef DEBUG 
+        // Debug
+        if(N+M<8) {
+          fprintf(stderr, COLOR_YELLOW"  X:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",xn[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",un[j]); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW"  G:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",gradx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",gradu[j]); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW"  C:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",conjx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",conju[j]); fprintf(stderr,"\n");
+        };
+      #endif      
       resx=normsq(N,gradx); resu=normsq(M,gradu); res=sqrtf(resx+resu);
       assert(!isnan(res));
       if(res<epsilon) { // Auxilliary problem is solved
@@ -270,6 +280,7 @@ int lagrange_conjugate(
       Q(gradx,hgradx); 
       D(gradx,u,hgradx);
       mult_add(N,mu,gradx,hgradx);
+      //vector_copy(N,gradx,hgradx);
       float positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
       // If the quadratic form is not positive, update shift 'mu'
       if(positive<min_mu) { 
@@ -279,12 +290,13 @@ int lagrange_conjugate(
       };
       if(positive<low_boundary) low_boundary=positive;
       D(x0,gradu,hgradx); P(x0,gradx,hgradu);
-      //zero_vector(M,hgradu);
+      //vector_copy(M,gradu,hgradu);
       #ifdef DEBUG 
         // Self-adjointness test 2
         gradhconj=dot(N,gradx,hconjx)+dot(M,gradu,hconju);
         conjhgrad=dot(N,hgradx,conjx)+dot(M,hgradu,conju);
-        fprintf(stderr, "Self-adjointness (2) %g\n",gradhconj-conjhgrad);
+        assert(fabs(gradhconj-conjhgrad)<1e-4);
+        //fprintf(stderr, "Self-adjointness (2) %g\n",gradhconj-conjhgrad);
       #endif
       // Calculating projections
       float qn=dot(N,gradx,hgradx)+dot(M,gradu,hgradu);
@@ -292,7 +304,8 @@ int lagrange_conjugate(
       #ifdef DEBUG 
         // Checking orthogoaity <A conj_k|A conj_{k+1}>=0
         float hgradnexthconj=dot(N,hgradx,hconjx)+dot(M,hgradu,hconju);
-        fprintf(stderr, "Orthogonality %g\n",hgradnexthconj+beta*hconj_normsq);
+        assert(fabs(hgradnexthconj+beta*hconj_normsq)<1e-2);
+        //fprintf(stderr, "Orthogonality %g\n",hgradnexthconj+beta*hconj_normsq);
       #endif      
       // Update conjugate direction
       add_mult(N, gradx, beta, conjx); add_mult(M, gradu, beta, conju); 
@@ -300,7 +313,7 @@ int lagrange_conjugate(
       fprintf(stderr,COLOR_GREEN"  %d: R %.3e %+.3e A %.3e B %.3e P %.3e q %.3e\n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu),alpha,beta,positive,q);
     };
     #ifdef DEBUG 
-      fprintf(stderr,COLOR_BLUE"  %d: Hessian bottom %.3e\n"COLOR_RESET,iter,mu-low_boundary);
+      fprintf(stderr,COLOR_BLUE"  %d: Hessian bottom %.3e\n"COLOR_RESET,iter,low_boundary-mu);
     #endif    
     mu=(mu-low_boundary)/2+min_mu;
     sub_inplace(N,xn,x0); sub_inplace(M,un,u); 

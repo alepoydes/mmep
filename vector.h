@@ -27,3 +27,4 @@ void zero_vector(int n, float* a);
 void copy_vector(int n, const float* a, float* b);
 void sub_inplace(int n, const float* restrict a, float* restrict c);
 void negate_inplace(int n, float* restrict c);
+void vector_copy(int n, const float* a, float* b);
