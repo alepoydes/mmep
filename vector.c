@@ -46,6 +46,10 @@ void sub_inplace(int n, const real* restrict a, real* restrict c) {
 	for(int k=0; k<n; k++) c[k]-=a[k];
 }; 
 
+void add_inplace(int n, const real* restrict a, real* restrict c) {
+	for(int k=0; k<n; k++) c[k]+=a[k];
+}; 
+
 void negate_inplace(int n, real* restrict c) {
 	for(int k=0; k<n; k++) c[k]=-c[k];
 }; 

@@ -6,7 +6,7 @@ void plot_field3(FILE* file, const real* restrict a) {
 	//printf("set term pngcairo\n");
 	//printf("set output '%s.png'\n","output");
 	fprintf(file,"unset key\nunset tics\nunset colorbox\nset border 0\n");
-	fprintf(file,"set xrange [-1:%d]\nset yrange [-1:%d]\nset zrange [-1:%d]\n",sizex,sizey,sizez);
+	//fprintf(file,"set xrange [-1:%d]\nset yrange [-1:%d]\nset zrange [-1:%d]\n",sizex,sizey,sizez);
 	fprintf(file,"load 'moreland.pal'\nset cbrange [-1:1]\n");
 	if(sizez==1) {
 		fprintf(file,"plot '-' using ($1-($4)/2):($2-($5)/2):(($4)):(($5)):($5)");
@@ -35,3 +35,39 @@ void plot_field3(FILE* file, const real* restrict a) {
 	};
 	fprintf(file,"EOF\n\n");
 }
+
+void plot_path(FILE* file, int sizep, const real* restrict mep) {
+	fprintf(file,"unset key\nunset tics\nunset colorbox\nset border 0\n");
+	//fprintf(file,"set xrange [-1:%d]\nset yrange [-1:%d]\nset zrange [-1:%d]\n",sizex,sizey,sizez);
+	fprintf(file,"load 'spectral.pal'\nset cbrange [-1:%d]\n", sizep);
+	if(sizez==1) {
+		fprintf(file,"plot '-' using ($1-($4)/2):($2-($5)/2):(($4)):(($5)):($7) ");
+		fprintf(file,"with vectors head size 0.1,20,60 filled lc palette\n");
+	} else {
+		return;
+	};
+	int size=3*sizeu*sizex*sizey*sizez;
+	for(int p=0; p<sizep; p++) forall(u,x,y,z) {
+		int i=3*INDEX(u,x,y,z)+p*size;
+		fprintf(file,"%"RF"g %"RF"g %"RF"g %.3"RF"f %.3"RF"f %.3"RF"f %d\n"
+			,atom_positions[3*u+0]+x*translation_vectors[0][0]+y*translation_vectors[1][0]+z*translation_vectors[2][0]
+			,atom_positions[3*u+1]+x*translation_vectors[0][1]+y*translation_vectors[1][1]+z*translation_vectors[2][1]
+			,atom_positions[3*u+2]+x*translation_vectors[0][2]+y*translation_vectors[1][2]+z*translation_vectors[2][2]
+			,mep[i+0]
+			,mep[i+1]
+			,mep[i+2]
+			,p
+			);
+	}
+	fprintf(file,"EOF\n\n");
+}
+
+
+void animate_path(FILE* file, int sizep, const real* restrict mep, const char* location) {
+	int size=3*sizeu*sizex*sizey*sizez;
+	fprintf(file,"set terminal gif animate delay 30\n");
+	fprintf(file,"set output '%s'\n",location);
+	for(int n=0; n<sizep; n++) 
+		plot_field3(file,mep+n*size);
+};
+

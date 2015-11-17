@@ -2,6 +2,7 @@
 #define VECTOR_H
 
 #include <math.h>
+#include <float.h>
 
 #ifdef DOUBLE
 	#define real double
@@ -9,6 +10,7 @@
 	#define rabs(x) fabs(x)
 	#define rsincos(x,y,z) sincos(x,y,z)
 	#define RF "l"
+	#define EPSILON DBL_EPSILON
 #else
 #ifdef QUAD
 	#define real long double
@@ -16,12 +18,14 @@
 	#define rabs(x) fabsl(x)
 	#define rsincos(x,y,z) sincosl(x,y,z)
 	#define RF "L"
+	#define EPSILON LDBL_EPSILON
 #else 
 	#define real float
 	#define rsqrt(x) sqrtf(x)
 	#define rabs(x) fabsf(x)
 	#define rsincos(x,y,z) sincosf(x,y,z)
 	#define RF ""
+	#define EPSILON FLT_EPSILON
 #endif
 #endif
 
@@ -51,6 +55,7 @@ void random_vector(int n, real* a);
 void zero_vector(int n, real* a);
 void copy_vector(int n, const real* a, real* b);
 void sub_inplace(int n, const real* restrict a, real* restrict c);
+void add_inplace(int n, const real* restrict a, real* restrict c);
 void negate_inplace(int n, real* restrict c);
 void vector_copy(int n, const real* a, real* b);
 

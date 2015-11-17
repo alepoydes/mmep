@@ -1,7 +1,7 @@
 [size]
 # Grid dimesions <x> x <y> x <z>
 # <x> <y> <z>
-1 1 1
+100 100 1
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>

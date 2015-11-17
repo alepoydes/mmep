@@ -1,0 +1,2 @@
+#!/bin/sh
+./mepd $@ -p | gnuplot -p 2>/dev/null

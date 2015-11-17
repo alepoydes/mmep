@@ -151,8 +151,9 @@ int lagrange_conjugate(
   void (*P)(const real* x, const real* y, real* r)
   )
 {
-  real min_mu=mode_param; // Minimum required bpttpm of spectrum of Q+mu
-  real dot_precision=1.2e-07*10/**(N+M)*/; // Precision of inner product
+  #define MU_INC mu-positive+mode_param
+  real min_mu=1e-4; // Minimum required bpttpm of spectrum of Q+mu
+  real dot_precision=EPSILON*10/**(N+M)*/; // Precision of inner product
   // allocate mempry
   real* u=(real*)malloc(sizeof(real)*M); assert(u);
   real* gradx=(real*)malloc(sizeof(real)*N); assert(gradx);
@@ -177,6 +178,7 @@ int lagrange_conjugate(
     L(gradx);
     f+=dot(N,x0,gradx);
     D(x0,u,gradx);
+    //real rest=normsq(N,gradx);
     mult_add(N,mu,x0,gradx);
     C(x0,gradu); 
     // Calculate norm of residual
@@ -194,7 +196,7 @@ int lagrange_conjugate(
       };
     #endif
     // Residula is negative gradient
-    //negate_inplace(N,gradx); negate_inplace(M,gradu);
+    negate_inplace(N,gradx); negate_inplace(M,gradu);
     // Reporting result
     if(display) display(iter,x0,gradx,f,res,mu);
     if(res<epsilon) { 
@@ -217,10 +219,10 @@ int lagrange_conjugate(
     real positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
     // If the quadratic form is not positive, update shift 'mu'
     if(positive<min_mu) { 
-      //#ifdef DEBUG      
+      #ifdef DEBUG      
         fprintf(stderr,COLOR_GREEN"  %d: Hessian is small: %.3"RF"e < %.3"RF"e\n"COLOR_RESET,iter,positive,min_mu);
-      //#endif      
-      mu+=2*(min_mu-positive)+min_mu;  
+      #endif      
+      mu=MU_INC;  
       goto restart; 
     };
     real low_boundary=positive; // Estimate of bottom of Hessian spectrum
@@ -233,9 +235,9 @@ int lagrange_conjugate(
     real q=dot(N,gradx,hgradx)+dot(M,gradu,hgradu); 
     while(iter<max_iter) {
       if(rabs(q)<dot_precision) { 
-        //#ifdef DEBUG        
+        #ifdef DEBUG        
           fprintf(stderr,COLOR_GREEN"  %d: Small q: %.3"RF"e < %.3"RF"e\n"COLOR_RESET,iter,q,dot_precision);
-        //#endif        
+        #endif        
         //mu+=min_mu; goto restart; 
         break;
       };
@@ -267,15 +269,15 @@ int lagrange_conjugate(
       resx=normsq(N,gradx); resu=normsq(M,gradu); res=rsqrt(resx+resu);
       assert(!isnan(res));
       if(res<epsilon) { // Auxilliary problem is solved
-        //#ifdef DEBUG 
+        #ifdef DEBUG 
           fprintf(stderr,COLOR_GREEN"  %d: Residual is small: R %.3"RF"e %+.3"RF"e \n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu));
-        //#endif  
+        #endif  
         break; 
       };
       if(res>100*last_res) { // Unstability detected ???
-        //#ifdef DEBUG 
+        #ifdef DEBUG 
           fprintf(stderr,COLOR_GREEN"  %d: Residual increases: R %.3"RF"e %+.3"RF"e \n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu));
-        //#endif  
+        #endif  
         break; 
       };
       last_res=res;
@@ -288,10 +290,10 @@ int lagrange_conjugate(
       real positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
       // If the quadratic form is not positive, update shift 'mu'
       if(positive<min_mu) { 
-        //#ifdef DEBUG 
+        #ifdef DEBUG 
           fprintf(stderr,COLOR_GREEN"  %d: Hessian is small: %.3"RF"e < %.3"RF"e\n"COLOR_RESET,iter,positive,min_mu);
-        //#endif  
-        mu+=2*(min_mu-positive)+min_mu; 
+        #endif  
+        mu=MU_INC; 
         goto restart; 
       };
       if(positive<low_boundary) low_boundary=positive;
@@ -310,9 +312,9 @@ int lagrange_conjugate(
       #ifdef DEBUG 
         // Checking orthogoaity <A conj_k|A conj_{k+1}>=0
         real hgradnexthconj=dot(N,hgradx,hconjx)+dot(M,hgradu,hconju);
-        assert(rabs(hgradnexthconj+beta*hconj_normsq)<1e-2);
+        assert(rabs(hgradnexthconj+beta*hconj_normsq)<1e0);
         //fprintf(stderr, "Orthogonality %g\n",hgradnexthconj+beta*hconj_normsq);
-      #endif      
+      #endif
       // Update conjugate direction
       add_mult(N, gradx, beta, conjx); add_mult(M, gradu, beta, conju); 
       add_mult(N, hgradx, beta, hconjx); add_mult(M, hgradu, beta, hconju); 
@@ -320,11 +322,11 @@ int lagrange_conjugate(
         fprintf(stderr,COLOR_GREEN"  %d: R %.3"RF"e %+.3"RF"e A %.3"RF"e B %.3"RF"e P %.3"RF"e q %.3"RF"e\n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu),alpha,beta,positive,q);
       #endif   
     };
-    //#ifdef DEBUG 
+    #ifdef DEBUG 
       fprintf(stderr,COLOR_BLUE"  %d: Hessian bottom %.3"RF"e\n"COLOR_RESET,iter,low_boundary-mu);
-    //#endif    
+    #endif    
     mu=mu*0.9+(mu-low_boundary+min_mu)*0.1;
-    sub_inplace(N,xn,x0); sub_inplace(M,un,u); 
+    add_inplace(N,xn,x0); add_inplace(M,un,u); 
   };
   //stop:{};
   free(u); free(xn); free(un); 

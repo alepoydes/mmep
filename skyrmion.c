@@ -113,7 +113,26 @@ void skyrmion_constrain_adjucent(const real* restrict a, const real* restrict b,
   };
 };
 
-
+void skyrmion_middle(const real* restrict a, const real* restrict b, real* restrict r) {
+  forall(u,x,y,z) {
+  	int i=INDEX(u,x,y,z);
+  	middle3(a+3*i,b+3*i,r+3*i);
+  };
+};
+	
+void skyrmion_geodesic_rec(real* p, int n, int m) {
+	int size=sizeu*sizex*sizey*sizez*3;
+	if(n+1==m) return;
+	int k=(n+m)/2; // Точка разбиения
+	// Находим середину на прямой между n и m и проецируем на сферы
+	skyrmion_middle(p+n*size,p+m*size,p+k*size);
+	// Заполняем пробелы
+	skyrmion_geodesic_rec(p,n,k);
+	skyrmion_geodesic_rec(p,k,m);
+}
+void skyrmion_geodesic(int sizep, real* p) { 
+	skyrmion_geodesic_rec(p, 0, sizep-1); 
+}
 
 
 

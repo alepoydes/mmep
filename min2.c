@@ -19,12 +19,21 @@ int debug_every=1;
 
 void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real alpha) {
   static real prev_f=NAN;
-  static real prev_iter=-1;
+  static int prev_iter=-1;
   if(iter>=prev_iter+debug_every) {
-  	fprintf(stderr, "%d: E %"RF"g%+"RF"g R %"RF"g A %"RF"g\n", iter, f, f-prev_f, res, alpha);
+    // Compute projection on tangent space
+    int size=sizeu*sizex*sizey*sizez*3;
+    real* tmp=(real*)malloc(sizeof(real)*size); assert(tmp);
+    hamiltonian_hessian(a,tmp); subtract_field(tmp); 
+    project_to_tangent(a, tmp); 
+    real tanres=rsqrt(normsq(size, tmp));
+    free(tmp);
+  	fprintf(stderr, "%d: E %"RF"g%+.2"RF"g R %.2"RF"g / %.2"RF"g A %.2"RF"g\n", iter, f, f-prev_f, res, tanres, alpha);
   	if(debug_plot) plot_field3(stdout,a);
+    prev_iter=iter;
   };
-  prev_f=f; prev_iter=iter;
+  //fprintf(stderr, "%d: prev iter %d\n", iter, prev_iter);  
+  prev_f=f; 
 };
 
 int skyrmion_lagrange_conjugate(real* restrict x, int mode, real mode_param, 
