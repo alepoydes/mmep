@@ -1,5 +1,5 @@
 #include <stdio.h>
 
-#include "skyrmion.h"
+#include "vector.h"
 
-void plot_field3(FILE* file, const float* restrict a);
+void plot_field3(FILE* file, const real* restrict a);

@@ -28,15 +28,15 @@ int iswhitespace(const char* string) {
 };
 
 void realloc_u(int sz) {
-	atom_positions=realloc(atom_positions,sizeof(float)*sz*3);
+	atom_positions=realloc(atom_positions,sizeof(real)*sz*3);
 	assert(atom_positions);
 };
 
 void realloc_n(int sz) {
 	neighbours=realloc(neighbours,sizeof(int)*sz*5); assert(neighbours);
-	exchange_constant=realloc(exchange_constant,sizeof(float)*sz); 
+	exchange_constant=realloc(exchange_constant,sizeof(real)*sz); 
 	assert(exchange_constant);
-	dzyaloshinskii_moriya_vector=realloc(dzyaloshinskii_moriya_vector,sizeof(float)*sz*3);
+	dzyaloshinskii_moriya_vector=realloc(dzyaloshinskii_moriya_vector,sizeof(real)*sz*3);
 	assert(dzyaloshinskii_moriya_vector);
 };
 
@@ -91,7 +91,7 @@ void parse_lattice(FILE* file) {
 				fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
 				exit(1); 
 			};
-			if(sscanf(buf, "%g %g %g",&magnetic_field[0],&magnetic_field[1],&magnetic_field[2])!=3) {
+			if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",&magnetic_field[0],&magnetic_field[1],&magnetic_field[2])!=3) {
 				fprintf(stderr,"Parse error:%d: real vector is expected\n",line); 
 				exit(1); 
 			};
@@ -100,11 +100,11 @@ void parse_lattice(FILE* file) {
 				fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
 				exit(1); 
 			};
-			if(sscanf(buf, "%g %g %g",&magnetic_anisotropy_unit[0],&magnetic_anisotropy_unit[1],&magnetic_anisotropy_unit[2])!=3) {
+			if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",&magnetic_anisotropy_unit[0],&magnetic_anisotropy_unit[1],&magnetic_anisotropy_unit[2])!=3) {
 				fprintf(stderr,"Parse error:%d: real vector is expected\n",line); 
 				exit(1); 
 			};
-			double t=normsq3(magnetic_anisotropy_unit);
+			real t=normsq3(magnetic_anisotropy_unit);
 			magnetic_anisotropy_norm=t;
 			if(magnetic_anisotropy_norm>0) {
 				magnetic_anisotropy_unit[0]/=t;
@@ -126,7 +126,7 @@ void parse_lattice(FILE* file) {
 					fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
 					exit(1); 
 				};
-				if(sscanf(buf, "%g %g %g",&translation_vectors[j][0],&translation_vectors[j][1],&translation_vectors[j][2])!=3) {
+				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",&translation_vectors[j][0],&translation_vectors[j][1],&translation_vectors[j][2])!=3) {
 					fprintf(stderr,"Parse error:%d: real vector is expected\n",line); 
 					exit(1); 
 				};
@@ -136,7 +136,7 @@ void parse_lattice(FILE* file) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
 				if(sizeu>=capacityu) { capacityu=capacityu*2+1; realloc_u(capacityu); };
-				if(sscanf(buf, "%g %g %g",atom_positions+3*sizeu+0,atom_positions+3*sizeu+1,atom_positions+3*sizeu+2)!=3) {
+				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",atom_positions+3*sizeu+0,atom_positions+3*sizeu+1,atom_positions+3*sizeu+2)!=3) {
 					fprintf(stderr,"Parse error:%d: real vector is expected\n",line); 
 					exit(1); 
 				};
@@ -158,7 +158,7 @@ void parse_lattice(FILE* file) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
 				if(ec_size>=capacityn) { capacityn=capacityn*2+1; realloc_n(capacityn); };
-				if(sscanf(buf, "%g",exchange_constant+ec_size+0)!=1) {
+				if(sscanf(buf, "%"RF"g",exchange_constant+ec_size+0)!=1) {
 					fprintf(stderr,"Parse error:%d: not a real constant\n",line); 
 					exit(1); 
 				};
@@ -169,7 +169,7 @@ void parse_lattice(FILE* file) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
 				if(dmv_size>=capacityn) { capacityn=capacityn*2+1; realloc_n(capacityn); };
-				if(sscanf(buf, "%g %g %g",dzyaloshinskii_moriya_vector+3*dmv_size+0,dzyaloshinskii_moriya_vector+3*dmv_size+1,dzyaloshinskii_moriya_vector+3*dmv_size+2)!=3) {
+				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",dzyaloshinskii_moriya_vector+3*dmv_size+0,dzyaloshinskii_moriya_vector+3*dmv_size+1,dzyaloshinskii_moriya_vector+3*dmv_size+2)!=3) {
 					fprintf(stderr,"Parse error:%d: not a real constant\n",line); 
 					exit(1); 
 				};
@@ -204,11 +204,11 @@ void parse_lattice(FILE* file) {
 		exit(1);	
 	};
 	if(isnan(magnetic_field[0]+magnetic_field[1]+magnetic_field[2])) {
-		fprintf(stderr,"Parse error: Magnetic field is not set: %g,%g,%g\n",magnetic_field[0],magnetic_field[1],magnetic_field[2]);
+		fprintf(stderr,"Parse error: Magnetic field is not set: %"RF"g,%"RF"g,%"RF"g\n",magnetic_field[0],magnetic_field[1],magnetic_field[2]);
 		exit(1);	
 	};
 	if(isnan(magnetic_anisotropy_norm)) {
-		fprintf(stderr,"Parse error: Anisotropy is not set: %g,%g,%g\n",magnetic_anisotropy_unit[0],magnetic_anisotropy_unit[1],magnetic_anisotropy_unit[2]);
+		fprintf(stderr,"Parse error: Anisotropy is not set: %"RF"g,%"RF"g,%"RF"g\n",magnetic_anisotropy_unit[0],magnetic_anisotropy_unit[1],magnetic_anisotropy_unit[2]);
 		exit(1);	
 	};
 	for(int j=0; j<3; j++) if(boundary_conditions[j]<0 || boundary_conditions[j]>1) {

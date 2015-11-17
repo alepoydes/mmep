@@ -3,53 +3,53 @@
 
 #include "vector.h"
 
-float normsq(int n, const float* a) {
-	float nrm=0;
+real normsq(int n, const real* a) {
+	real nrm=0;
 	for(int k=0; k<n; k++) nrm+=a[k]*a[k];
 	return nrm;
 };
 
-float dot(int n, const float* a, const float* b) {
-	float nrm=0;
+real dot(int n, const real* a, const real* b) {
+	real nrm=0;
 	for(int k=0; k<n; k++) nrm+=a[k]*b[k];
 	return nrm;	
 };
 
-void mult_sub(int n, float a, const float* restrict b, float* restrict c) {
+void mult_sub(int n, real a, const real* restrict b, real* restrict c) {
 	for(int k=0; k<n; k++) c[k]-=a*b[k];
 };
-void mult_add(int n, float a, const float* restrict b, float* restrict c) {
+void mult_add(int n, real a, const real* restrict b, real* restrict c) {
 	for(int k=0; k<n; k++) c[k]+=a*b[k];
 };
 
-void random_vector(int n, float* a) {
-	for(int k=0; k<n; k++) a[k]=(float)rand()/(double)(RAND_MAX)-0.5;
+void random_vector(int n, real* a) {
+	for(int k=0; k<n; k++) a[k]=(real)rand()/(real)(RAND_MAX)-0.5;
 };
 
-void zero_vector(int n, float* a) {
+void zero_vector(int n, real* a) {
 	for(int k=0; k<n; k++) a[k]=0;
 };
 
-void sub_const(int n, float a, float* c) {
+void sub_const(int n, real a, real* c) {
 	for(int k=0; k<n; k++) c[k]-=a;
 };
 
-void copy_vector(int n, const float* restrict a, float* restrict b) {
+void copy_vector(int n, const real* restrict a, real* restrict b) {
 	for(int k=0; k<n; k++) b[k]=a[k];
 };
 
-void add_mult(int n, const float* restrict a, float b, float* restrict c) {
+void add_mult(int n, const real* restrict a, real b, real* restrict c) {
 	for(int k=0; k<n; k++) c[k]=b*c[k]+a[k];
 }; 
 
-void sub_inplace(int n, const float* restrict a, float* restrict c) {
+void sub_inplace(int n, const real* restrict a, real* restrict c) {
 	for(int k=0; k<n; k++) c[k]-=a[k];
 }; 
 
-void negate_inplace(int n, float* restrict c) {
+void negate_inplace(int n, real* restrict c) {
 	for(int k=0; k<n; k++) c[k]=-c[k];
 }; 
 
-void vector_copy(int n, const float* a, float* b) {
+void vector_copy(int n, const real* a, real* b) {
 	for(int k=0; k<n; k++) b[k]=a[k];
 }

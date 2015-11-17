@@ -11,9 +11,9 @@
 // Minimizing function f(x) is of special form:
 //   f(x)=<x|Hx>/2+<x|B>.
 // Hessian part H is given by operator Q:x->H(x) with signature
-//   void Q(const float* x, float* y)
+//   void Q(const real* x, real* y)
 // Linear part is given as an operator L:y->y+B
-//   void L(float* y)
+//   void L(real* y)
 // The minimum is obtained as the limit of the sequence
 // x(k+1)=x(k)-alpha(k)*grad_f(x(k))
 // where grad_f(x) is the gradient of the minimizing function f(x):
@@ -26,7 +26,7 @@
 // Result is stored in the bufer 'a'.
 // Length of the vector 'a' is 'n'.
 // Progress can be displayed by function display:
-//   void display(int d, int n, float* a, float* grad_f, float f, float res)
+//   void display(int d, int n, real* a, real* grad_f, real f, real res)
 // where 
 //   iter : iteration counter,
 //   n : vector length,
@@ -39,23 +39,23 @@
 // routine 'P' must project approximation 'a' to manifold of solutions
 // satisfying constrains, and 'T' must project vector field 't'
 // to tangent space at the point 'a':
-//   void P(int n, float* a)
-//   void T(int n, const float* a, float* t)
+//   void P(int n, real* a)
+//   void T(int n, const real* a, real* t)
 // Return 0 on success (residual is less then epsilon)
 //        1 if maximum number of iteration max_iter is reached
 //        2 if machine precision is reached for 'f' evaluation
 int steepest_descend(
-	int n, float* a, 
-	void (*Q)(const float* x, float* y),
-	void (*L)(float* y),
-	int mode, float mode_param, float epsilon, int max_iter,
-	void (*display)(int iter, float* a, float* grad_f, float f, float res, float alpha),
-  void (*P)(float* a),
-  void (*T)(const float* a, float* t)
+	int n, real* a, 
+	void (*Q)(const real* x, real* y),
+	void (*L)(real* y),
+	int mode, real mode_param, real epsilon, int max_iter,
+	void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
+  void (*P)(real* a),
+  void (*T)(const real* a, real* t)
 	)
 {
   int iter;
-  float alpha;
+  real alpha;
   assert(Q && L); assert((P && T) || (!P && !T));
   switch(mode) {
   	case SDM_CONSTANT: alpha=mode_param; break;
@@ -64,24 +64,24 @@ int steepest_descend(
     case SDM_CAUCHY: alpha=0; break;
 	  default: assert(1);
   };
-  float* grad=(float*)malloc(sizeof(float)*n); assert(grad);
-  float* hess=(float*)malloc(sizeof(float)*n); assert(hess);
+  real* grad=(real*)malloc(sizeof(real)*n); assert(grad);
+  real* hess=(real*)malloc(sizeof(real)*n); assert(hess);
   int status=1;
-  float last_res=0;
-  float last_f=-INFINITY;
+  real last_res=0;
+  real last_f=-INFINITY;
   if(P) P(a);
   for(iter=0; iter<max_iter; iter++) {
-    float next_alpha;
+    real next_alpha;
   	Q(a,grad);
-  	float f=-dot(n,a,grad);
+  	real f=-dot(n,a,grad);
   	L(grad);
   	f+=dot(n,a,grad);
   	// grad contains Hx+B
   	// f value of f(a)
     //ill conditioned quadratic optimiation
-    //fprintf(stderr,"res: %g\n",sqrtf(normsq(n,grad)));
+    //fprintf(stderr,"res: %g\n",rsqrt(normsq(n,grad)));
     if(T) T(a,grad);
-    float res2=normsq(n,grad); float res=sqrtf(res2);
+    real res2=normsq(n,grad); real res=rsqrt(res2);
     assert(!isnan(res));
     switch(mode) {
       case SDM_INERTIAL: 
@@ -92,7 +92,7 @@ int steepest_descend(
         break;
       case SDM_CAUCHY: 
         Q(grad, hess); 
-        next_alpha=fabs(res2/dot(n,grad,hess));
+        next_alpha=rabs(res2/dot(n,grad,hess));
         if(next_alpha>mode_param) next_alpha=mode_param;
         break; 
     };
@@ -131,9 +131,9 @@ int steepest_descend(
 // otherwise mu/=ratio.
 // dim(x)=N, dim(u)=M
 // Hessian part H is given by operator Q:x->H(x) with signature
-//   void Q(const float* x, float* y)
+//   void Q(const real* x, real* y)
 // Linear part is given as an operator L:y->y+B
-//   void L(float* y)
+//   void L(real* y)
 // Constrains gradient is given by 
 //   C:x->(<x|P_j x>/2-1/2)_j
 //   D:x,u,r->r+sum_l u_l P_j x
@@ -141,55 +141,55 @@ int steepest_descend(
 
 
 int lagrange_conjugate(
-  int N, int M, float* x0, 
-  void (*Q)(const float* x, float* y),
-  void (*L)(float* y),
-  int mode, float mode_param, float epsilon, int max_iter,
-  void (*display)(int iter, float* a, float* grad_f, float f, float res, float alpha),
-  void (*C)(const float* x, float* r),
-  void (*D)(const float* x, const float* u, float* r),
-  void (*P)(const float* x, const float* y, float* r)
+  int N, int M, real* x0, 
+  void (*Q)(const real* x, real* y),
+  void (*L)(real* y),
+  int mode, real mode_param, real epsilon, int max_iter,
+  void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
+  void (*C)(const real* x, real* r),
+  void (*D)(const real* x, const real* u, real* r),
+  void (*P)(const real* x, const real* y, real* r)
   )
 {
-  float min_mu=mode_param; // Minimum required bpttpm of spectrum of Q+mu
-  float dot_precision=1.2e-07*(N+M)*10; // Precision of inner product
+  real min_mu=mode_param; // Minimum required bpttpm of spectrum of Q+mu
+  real dot_precision=1.2e-07*10/**(N+M)*/; // Precision of inner product
   // allocate mempry
-  float* u=(float*)malloc(sizeof(float)*M); assert(u);
-  float* gradx=(float*)malloc(sizeof(float)*N); assert(gradx);
-  float* gradu=(float*)malloc(sizeof(float)*M); assert(gradu);
-  float* conjx=(float*)malloc(sizeof(float)*N); assert(conjx);
-  float* conju=(float*)malloc(sizeof(float)*M); assert(conju);
-  float* xn=(float*)malloc(sizeof(float)*N); assert(xn);
-  float* un=(float*)malloc(sizeof(float)*M); assert(un);
-  float* hgradx=(float*)malloc(sizeof(float)*N); assert(hgradx);
-  float* hgradu=(float*)malloc(sizeof(float)*M); assert(hgradu);
-  float* hconjx=(float*)malloc(sizeof(float)*N); assert(hconjx);
-  float* hconju=(float*)malloc(sizeof(float)*M); assert(hconju);
+  real* u=(real*)malloc(sizeof(real)*M); assert(u);
+  real* gradx=(real*)malloc(sizeof(real)*N); assert(gradx);
+  real* gradu=(real*)malloc(sizeof(real)*M); assert(gradu);
+  real* conjx=(real*)malloc(sizeof(real)*N); assert(conjx);
+  real* conju=(real*)malloc(sizeof(real)*M); assert(conju);
+  real* xn=(real*)malloc(sizeof(real)*N); assert(xn);
+  real* un=(real*)malloc(sizeof(real)*M); assert(un);
+  real* hgradx=(real*)malloc(sizeof(real)*N); assert(hgradx);
+  real* hgradu=(real*)malloc(sizeof(real)*M); assert(hgradu);
+  real* hconjx=(real*)malloc(sizeof(real)*N); assert(hconjx);
+  real* hconju=(real*)malloc(sizeof(real)*M); assert(hconju);
   // initialize state
   int status=1;  
-  float mu=0;
+  real mu=0;
   zero_vector(M, u);
 
   for(int iter=0; iter<max_iter;) {
     // Calculate gradient at the point
     restart: Q(x0,gradx); iter++;
-    float f=-dot(N,x0,gradx);
+    real f=-dot(N,x0,gradx);
     L(gradx);
     f+=dot(N,x0,gradx);
     D(x0,u,gradx);
     mult_add(N,mu,x0,gradx);
     C(x0,gradu); 
     // Calculate norm of residual
-    float resx=normsq(N,gradx), resu=normsq(M,gradu);
-    float res=sqrtf(resx+resu);
-    float last_res=res;
+    real resx=normsq(N,gradx), resu=normsq(M,gradu);
+    real res=rsqrt(resx+resu);
+    real last_res=res;
     // Diplay progress
     #ifdef DEBUG
-      fprintf(stderr,COLOR_RED"%d: res=%g %+g mu=%g\n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu),mu);
+      fprintf(stderr,COLOR_RED"%d: res=%"RF"g %+"RF"g mu=%"RF"g\n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu),mu);
       if(N+M<8) {
         fprintf(stderr, COLOR_YELLOW);
-        for(int j=0;j<N;j++) fprintf(stderr,"%g ",x0[j]); fprintf(stderr,":");
-        for(int j=0;j<M;j++) fprintf(stderr," %g",u[j]); 
+        for(int j=0;j<N;j++) fprintf(stderr,"%"RF"g ",x0[j]); fprintf(stderr,":");
+        for(int j=0;j<M;j++) fprintf(stderr," %"RF"g",u[j]); 
         fprintf(stderr,COLOR_RESET"\n");
       };
     #endif
@@ -199,7 +199,7 @@ int lagrange_conjugate(
     if(display) display(iter,x0,gradx,f,res,mu);
     if(res<epsilon) { 
       #ifdef DEBUG
-        fprintf(stderr,COLOR_RED"%d: Converged %.3g < %.3g\n"COLOR_RESET,iter,res,epsilon);
+        fprintf(stderr,COLOR_RED"%d: Converged %.3"RF"g < %.3"RF"g\n"COLOR_RESET,iter,res,epsilon);
       #endif    
       status=0; break; 
     }; // If solution is found
@@ -214,64 +214,68 @@ int lagrange_conjugate(
     D(gradx,u,hgradx);
     mult_add(N,mu,gradx,hgradx);
     //vector_copy(N,gradx,hgradx);
-    float positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
+    real positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
     // If the quadratic form is not positive, update shift 'mu'
     if(positive<min_mu) { 
-      #ifdef DEBUG      
-        fprintf(stderr,COLOR_GREEN"  %d: Hessian is small: %.3e < %.3e\n"COLOR_RESET,iter,positive,min_mu);
-      #endif      
-      mu+=2*min_mu-positive;  
+      //#ifdef DEBUG      
+        fprintf(stderr,COLOR_GREEN"  %d: Hessian is small: %.3"RF"e < %.3"RF"e\n"COLOR_RESET,iter,positive,min_mu);
+      //#endif      
+      mu+=2*(min_mu-positive)+min_mu;  
       goto restart; 
     };
-    float low_boundary=positive; // Estimate of bottom of Hessian spectrum
+    real low_boundary=positive; // Estimate of bottom of Hessian spectrum
     D(x0,gradu,hgradx); P(x0,gradx,hgradu);
     //vector_copy(M,gradu,hgradu);
     // choosing initial conjugate direction
     copy_vector(N, gradx, conjx); copy_vector(M, gradu, conju);
     copy_vector(N, hgradx, hconjx); copy_vector(M, hgradu, hconju);
     // Initialization of conjugate residual
-    float q=dot(N,gradx,hgradx)+dot(M,gradu,hgradu); 
+    real q=dot(N,gradx,hgradx)+dot(M,gradu,hgradu); 
     while(iter<max_iter) {
-      if(fabs(q)<dot_precision) { 
-        #ifdef DEBUG        
-          fprintf(stderr,COLOR_GREEN"  %d: Small q: %.3e < %.3e\n"COLOR_RESET,iter,q,dot_precision);
-        #endif        
+      if(rabs(q)<dot_precision) { 
+        //#ifdef DEBUG        
+          fprintf(stderr,COLOR_GREEN"  %d: Small q: %.3"RF"e < %.3"RF"e\n"COLOR_RESET,iter,q,dot_precision);
+        //#endif        
         //mu+=min_mu; goto restart; 
         break;
       };
-      float hconj_normsq=normsq(N,hconjx)+normsq(M,hconju);
+      real hconj_normsq=normsq(N,hconjx)+normsq(M,hconju);
       #ifdef DEBUG 
         // <grad|A grad>=<grad|A conj>
-        float hgradhconj=dot(N,hgradx,hconjx)+dot(M,hgradu,hconju);
-        assert(fabs(hgradhconj-hconj_normsq)<1e-4);
+        real hgradhconj=dot(N,hgradx,hconjx)+dot(M,hgradu,hconju);
+        assert(rabs(hgradhconj-hconj_normsq)<1e-4);
         //fprintf(stderr, "Biorthogonality %g\n",hgradhconj-hconj_normsq);
         // Self-adjointness test
-        float gradhconj=dot(N,gradx,hconjx)+dot(M,gradu,hconju);
-        float conjhgrad=dot(N,hgradx,conjx)+dot(M,hgradu,conju);
-        assert(fabs(gradhconj-conjhgrad)<1e-4);
+        real gradhconj=dot(N,gradx,hconjx)+dot(M,gradu,hconju);
+        real conjhgrad=dot(N,hgradx,conjx)+dot(M,hgradu,conju);
+        assert(rabs(gradhconj-conjhgrad)<1e-4);
         //fprintf(stderr, "Self-adjointness %g\n",gradhconj-conjhgrad);
       #endif
 
-      float alpha=q/hconj_normsq;
+      real alpha=q/hconj_normsq;
       mult_add(N, alpha, conjx, xn); mult_add(M, alpha, conju, un);
       mult_sub(N, alpha, hconjx, gradx); mult_sub(M, alpha, hconju, gradu);
 
       #ifdef DEBUG 
         // Debug
         if(N+M<8) {
-          fprintf(stderr, COLOR_YELLOW"  X:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",xn[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",un[j]); fprintf(stderr,"\n");
-          fprintf(stderr, COLOR_YELLOW"  G:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",gradx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",gradu[j]); fprintf(stderr,"\n");
-          fprintf(stderr, COLOR_YELLOW"  C:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %g",conjx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %g",conju[j]); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW"  X:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %"RF"g",xn[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %"RF"g",un[j]); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW"  G:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %"RF"g",gradx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %"RF"g",gradu[j]); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW"  C:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %"RF"g",conjx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %"RF"g",conju[j]); fprintf(stderr,"\n");
         };
       #endif      
-      resx=normsq(N,gradx); resu=normsq(M,gradu); res=sqrtf(resx+resu);
+      resx=normsq(N,gradx); resu=normsq(M,gradu); res=rsqrt(resx+resu);
       assert(!isnan(res));
       if(res<epsilon) { // Auxilliary problem is solved
-        fprintf(stderr,COLOR_GREEN"  %d: Residual is small: R %.3e %+.3e \n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu));
+        //#ifdef DEBUG 
+          fprintf(stderr,COLOR_GREEN"  %d: Residual is small: R %.3"RF"e %+.3"RF"e \n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu));
+        //#endif  
         break; 
       };
       if(res>100*last_res) { // Unstability detected ???
-        fprintf(stderr,COLOR_GREEN"  %d: Residual increases: R %.3e %+.3e \n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu));
+        //#ifdef DEBUG 
+          fprintf(stderr,COLOR_GREEN"  %d: Residual increases: R %.3"RF"e %+.3"RF"e \n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu));
+        //#endif  
         break; 
       };
       last_res=res;
@@ -281,11 +285,13 @@ int lagrange_conjugate(
       D(gradx,u,hgradx);
       mult_add(N,mu,gradx,hgradx);
       //vector_copy(N,gradx,hgradx);
-      float positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
+      real positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
       // If the quadratic form is not positive, update shift 'mu'
       if(positive<min_mu) { 
-        fprintf(stderr,COLOR_GREEN"  %d: Hessian is small: %.3e < %.3e\n"COLOR_RESET,iter,positive,min_mu);
-        mu+=2*min_mu-positive; 
+        //#ifdef DEBUG 
+          fprintf(stderr,COLOR_GREEN"  %d: Hessian is small: %.3"RF"e < %.3"RF"e\n"COLOR_RESET,iter,positive,min_mu);
+        //#endif  
+        mu+=2*(min_mu-positive)+min_mu; 
         goto restart; 
       };
       if(positive<low_boundary) low_boundary=positive;
@@ -295,27 +301,29 @@ int lagrange_conjugate(
         // Self-adjointness test 2
         gradhconj=dot(N,gradx,hconjx)+dot(M,gradu,hconju);
         conjhgrad=dot(N,hgradx,conjx)+dot(M,hgradu,conju);
-        assert(fabs(gradhconj-conjhgrad)<1e-4);
+        assert(rabs(gradhconj-conjhgrad)<1e-4);
         //fprintf(stderr, "Self-adjointness (2) %g\n",gradhconj-conjhgrad);
       #endif
       // Calculating projections
-      float qn=dot(N,gradx,hgradx)+dot(M,gradu,hgradu);
-      float beta=qn/q; q=qn;
+      real qn=dot(N,gradx,hgradx)+dot(M,gradu,hgradu);
+      real beta=qn/q; q=qn;
       #ifdef DEBUG 
         // Checking orthogoaity <A conj_k|A conj_{k+1}>=0
-        float hgradnexthconj=dot(N,hgradx,hconjx)+dot(M,hgradu,hconju);
-        assert(fabs(hgradnexthconj+beta*hconj_normsq)<1e-2);
+        real hgradnexthconj=dot(N,hgradx,hconjx)+dot(M,hgradu,hconju);
+        assert(rabs(hgradnexthconj+beta*hconj_normsq)<1e-2);
         //fprintf(stderr, "Orthogonality %g\n",hgradnexthconj+beta*hconj_normsq);
       #endif      
       // Update conjugate direction
       add_mult(N, gradx, beta, conjx); add_mult(M, gradu, beta, conju); 
       add_mult(N, hgradx, beta, hconjx); add_mult(M, hgradu, beta, hconju); 
-      fprintf(stderr,COLOR_GREEN"  %d: R %.3e %+.3e A %.3e B %.3e P %.3e q %.3e\n"COLOR_RESET,iter,sqrtf(resx),sqrtf(resu),alpha,beta,positive,q);
+      #ifdef DEBUG 
+        fprintf(stderr,COLOR_GREEN"  %d: R %.3"RF"e %+.3"RF"e A %.3"RF"e B %.3"RF"e P %.3"RF"e q %.3"RF"e\n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu),alpha,beta,positive,q);
+      #endif   
     };
-    #ifdef DEBUG 
-      fprintf(stderr,COLOR_BLUE"  %d: Hessian bottom %.3e\n"COLOR_RESET,iter,low_boundary-mu);
-    #endif    
-    mu=(mu-low_boundary)/2+min_mu;
+    //#ifdef DEBUG 
+      fprintf(stderr,COLOR_BLUE"  %d: Hessian bottom %.3"RF"e\n"COLOR_RESET,iter,low_boundary-mu);
+    //#endif    
+    mu=mu*0.9+(mu-low_boundary+min_mu)*0.1;
     sub_inplace(N,xn,x0); sub_inplace(M,un,u); 
   };
   //stop:{};

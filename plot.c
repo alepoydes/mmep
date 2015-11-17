@@ -1,6 +1,8 @@
 #include "plot.h"
+#include "vector.h"
+#include "skyrmion.h"
 
-void plot_field3(FILE* file, const float* restrict a) {
+void plot_field3(FILE* file, const real* restrict a) {
 	//printf("set term pngcairo\n");
 	//printf("set output '%s.png'\n","output");
 	fprintf(file,"unset key\nunset tics\nunset colorbox\nset border 0\n");
@@ -22,7 +24,7 @@ void plot_field3(FILE* file, const float* restrict a) {
 	forall(u,x,y,z) //if(x==0 || y==0 || z==0 || x==sizex-1 || y==sizey-1 || z==sizez-1)
 	{
 		int i=INDEX(u,x,y,z);
-		fprintf(file,"%g %g %g %.3f %.3f %.3f\n"
+		fprintf(file,"%"RF"g %"RF"g %"RF"g %.3"RF"f %.3"RF"f %.3"RF"f\n"
 			,atom_positions[3*u+0]+x*translation_vectors[0][0]+y*translation_vectors[1][0]+z*translation_vectors[2][0]
 			,atom_positions[3*u+1]+x*translation_vectors[0][1]+y*translation_vectors[1][1]+z*translation_vectors[2][1]
 			,atom_positions[3*u+2]+x*translation_vectors[0][2]+y*translation_vectors[1][2]+z*translation_vectors[2][2]

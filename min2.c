@@ -10,40 +10,40 @@
 #include "plot.h"
 #include "parse.h"
 
-float epsilon=1e-6;
+real epsilon=1e-6;
 int max_iter=1000;
-float mode_param=2;
+real mode_param=0.1;
 int mode=SDM_CONSTANT;
 int debug_plot=0;
 int debug_every=1;
 
-void skyrmion_display(int iter, float* restrict a, float* restrict grad_f, float f, float res, float alpha) {
-  static float prev_f=NAN;
-  static float prev_iter=-1;
+void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real alpha) {
+  static real prev_f=NAN;
+  static real prev_iter=-1;
   if(iter>=prev_iter+debug_every) {
-  	fprintf(stderr, "%d: E %g%+g R %g A %g\n", iter, f, f-prev_f, res, alpha);
+  	fprintf(stderr, "%d: E %"RF"g%+"RF"g R %"RF"g A %"RF"g\n", iter, f, f-prev_f, res, alpha);
   	if(debug_plot) plot_field3(stdout,a);
   };
   prev_f=f; prev_iter=iter;
 };
 
-int skyrmion_lagrange_conjugate(float* restrict x, int mode, float mode_param, 
-	float epsilon, int max_iter) 
+int skyrmion_lagrange_conjugate(real* restrict x, int mode, real mode_param, 
+	real epsilon, int max_iter) 
 {
 	return lagrange_conjugate(
 		sizeu*sizex*sizey*sizez*3,  // int N 
 		sizeu*sizex*sizey*sizez, // int M 
-		x, // float* x0, 
-        hamiltonian_hessian, // void (*Q)(const float* x, float* y)
-        subtract_field, // void (*L)(float* y),
+		x, // real* x0, 
+        hamiltonian_hessian, // void (*Q)(const real* x, real* y)
+        subtract_field, // void (*L)(real* y),
         mode, // int mode
-        mode_param, // float mode_param
-        epsilon, // float epsilon
+        mode_param, // real mode_param
+        epsilon, // real epsilon
         max_iter, // int max_iter
-        skyrmion_display, // void (*display)(int iter, float* a, float* grad_f, float f, float res, float alpha),
-        skyrmion_constrain, // void (*C)(const float* x, float* r),
-        skyrmion_constrain_gradient, // void (*D)(const float* x, const float* u, float* r),
-        skyrmion_constrain_adjucent // void (*P)(const float* x, const float* y, float* r)
+        skyrmion_display, // void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
+        skyrmion_constrain, // void (*C)(const real* x, real* r),
+        skyrmion_constrain_gradient, // void (*D)(const real* x, const real* u, real* r),
+        skyrmion_constrain_adjucent // void (*P)(const real* x, const real* y, real* r)
     );
 };
 
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
   	fclose(file);
   } else parse_lattice(stdin);
   int size=sizeu*sizex*sizey*sizez*3;
-  float* spins=(float*)malloc(sizeof(float)*size); assert(spins);
+  real* spins=(real*)malloc(sizeof(real)*size); assert(spins);
   random_vector(size, spins); normalize(spins);
   int status=skyrmion_lagrange_conjugate(spins, mode, mode_param, epsilon, max_iter);
   fprintf(stderr, "Status: %d\n", status);

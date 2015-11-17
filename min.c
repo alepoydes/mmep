@@ -10,27 +10,27 @@
 #include "plot.h"
 #include "parse.h"
 
-float epsilon=1e-6;
+real epsilon=1e-6;
 int max_iter=1000;
-float mode_param=0.05;
+real mode_param=0.05;
 int mode=SDM_CONSTANT;
 int debug_plot=0;
 int debug_every=1;
 
-void skyrmion_display(int iter, float* restrict a, float* restrict grad_f, float f, float res, float alpha) {
-  static float prev_f=NAN;
+void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real alpha) {
+  static real prev_f=NAN;
   if(iter%debug_every==0) {
-  	fprintf(stderr, "%d: E %g%+g R %g A %g\n", iter, f, f-prev_f, res, alpha);
+  	fprintf(stderr, "%d: E %"RF"g%+"RF"g R %"RF"g A %"RF"g\n", iter, f, f-prev_f, res, alpha);
   	if(debug_plot) plot_field3(stdout,a);
   };
   prev_f=f;
 };
 
-int skyrmion_steepest_descent(float* restrict x, int mode, float mode_param, 
-	float epsilon, int max_iter) 
+int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param, 
+	real epsilon, int max_iter) 
 {
 	return steepest_descend(
-		sizeu*sizex*sizey*sizez*3, (float*)x, 
+		sizeu*sizex*sizey*sizez*3, (real*)x, 
 		hamiltonian_hessian,	subtract_field,
 		mode, mode_param, epsilon, max_iter,
 		skyrmion_display, 
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
   	fclose(file);
   } else parse_lattice(stdin);
   int size=sizeu*sizex*sizey*sizez*3;
-  float* spins=(float*)malloc(sizeof(float)*size); assert(spins);
+  real* spins=(real*)malloc(sizeof(real)*size); assert(spins);
   random_vector(size, spins);
   skyrmion_steepest_descent(spins, mode, mode_param, epsilon, max_iter);
   free(spins);

@@ -1,9 +1,22 @@
-all: min min2
-OPT=-std=c99 -flto -Ofast -march=native
-#OPT=-std=c99 -g -Wall -DDEBUG
+all: min mind minq min2 min2d min2q
+#OPT=-std=c99 -flto -Ofast -march=native 
+OPT=-std=c99 -g -Wall -DDEBUG 
 
 min: parse.c vector.c skyrmion.c plot.c optim.c min.c 
 	gcc $^ $(OPT) -lm -o $@	
 
+mind: parse.c vector.c skyrmion.c plot.c optim.c min.c 
+	gcc $^ $(OPT) -DDOUBLE -lm -o $@	
+
+minq: parse.c vector.c skyrmion.c plot.c optim.c min.c 
+	gcc $^ $(OPT) -DQUAD -lm -o $@	
+
 min2: parse.c vector.c skyrmion.c plot.c optim.c min2.c 
 	gcc $^ $(OPT) -lm -o $@	
+
+min2d: parse.c vector.c skyrmion.c plot.c optim.c min2.c 
+	gcc $^ $(OPT) -DDOUBLE -lm -o $@	
+
+min2q: parse.c vector.c skyrmion.c plot.c optim.c min2.c 
+	gcc $^ $(OPT) -DQUAD -lm -o $@	
+
