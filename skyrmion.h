@@ -46,6 +46,7 @@ extern real* dzyaloshinskii_moriya_vector;
 
 void hamiltonian_hessian(const real* restrict arg, real* restrict out);
 void subtract_field(real* restrict inout);
+void set_to_field(real* restrict out);
 
 void normalize(real* restrict a);
 // Project vector field 'b' to tangent space of unit length vector field 'a'
@@ -57,3 +58,6 @@ void skyrmion_constrain_adjucent(const real* restrict a, const real* restrict b,
 void skyrmion_middle(const real* restrict a, const real* restrict b, real* restrict r);
 void skyrmion_geodesic(int sizep, real* p);
 void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
+void three_point_project(const real* restrict a, const real* restrict b, real* restrict r);
+void three_point_equalize(const real* restrict a, const real* restrict b, real* restrict r);
+void three_point_equalizer(const real* restrict a, const real* restrict c, const real* restrict b, real* restrict r);

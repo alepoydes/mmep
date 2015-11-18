@@ -44,6 +44,7 @@
 #define cross_plus3(a,b,c) { (c)[0]+=(a)[1]*(b)[2]-(a)[2]*(b)[1]; (c)[1]+=(a)[2]*(b)[0]-(a)[0]*(b)[2]; (c)[2]+=(a)[0]*(b)[1]-(a)[1]*(b)[0]; }
 #define mult_minus3(a,b,c) { (c)[0]-=(a)*(b)[0]; (c)[1]-=(a)*(b)[1]; (c)[2]-=(a)*(b)[2]; }
 #define mult_plus3(a,b,c) { (c)[0]+=(a)*(b)[0]; (c)[1]+=(a)*(b)[1]; (c)[2]+=(a)*(b)[2]; }
+#define copy3(a,c) { (c)[0]=(a)[0]; (c)[1]=(a)[1]; (c)[2]=(a)[2]; }
 
 real distsq(int n, const real* a, const real* b);
 real normsq(int n, const real* a);

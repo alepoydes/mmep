@@ -75,6 +75,11 @@ void subtract_field(real* restrict inout) {
 	forall(u,x,y,z) for3(j) inout[INDEX(u,x,y,z)*3+j]-=magnetic_field[j];
 };
 
+void set_to_field(real* restrict out) {
+	forall(u,x,y,z) for3(j) out[INDEX(u,x,y,z)*3+j]=magnetic_field[j];
+};
+
+
 // Normalize vector field so every vector has unit length 
 void normalize(real* restrict a) {
 	forall(u,x,y,z) {
@@ -144,6 +149,43 @@ void three_point_tangent(const real* restrict a, const real* restrict b, const r
 	};
 };
 
+void three_point_project(const real* restrict a, const real* restrict b, real* restrict r) {
+	real tangent[3];
+	forall(u,x,y,z) {	
+		int i=INDEX(u,x,y,z)*3;
+		sub3(b+i,a+i,tangent); 
+		normalize3(tangent);
+		tangent3(tangent,r+i); 
+	};
+};
+
+// r moved along b-a to satisfy |r-a|=|r-b|
+void three_point_equalize(const real* restrict a, const real* restrict b, real* restrict r) {
+	real vec[3];
+	real ab,ar,br;
+	forall(u,x,y,z) {	
+		int i=INDEX(u,x,y,z)*3;
+		sub3(r+i,a+i,vec); ar=normsq3(vec);
+		sub3(r+i,b+i,vec); br=normsq3(vec);
+		sub3(b+i,a+i,vec); ab=normsq3(vec);
+		mult_plus3((br-ar)/ab*0.5,vec,r+i);
+		normalize3(r+i);
+	};
+};
+
+void three_point_equalizer(const real* restrict a, const real* restrict c, const real* restrict b, real* restrict r) {
+	real vec[3];
+	real ab,ar,br;
+	forall(u,x,y,z) {	
+		int i=INDEX(u,x,y,z)*3;
+		sub3(c+i,a+i,vec); ar=normsq3(vec);
+		sub3(c+i,b+i,vec); br=normsq3(vec);
+		sub3(b+i,a+i,vec); ab=normsq3(vec);
+		copy3(c+i,r+i);
+		mult_plus3((br-ar)/ab*0.5,vec,r+i);
+		normalize3(r+i);
+	};
+};
 
 
 

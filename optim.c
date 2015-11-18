@@ -60,7 +60,7 @@ int steepest_descend(
   switch(mode) {
   	case SDM_CONSTANT: alpha=mode_param; break;
 	  case SDM_INERTIAL: alpha=NAN; break;
-    case SDM_PROGR: alpha=1e-4; break;
+    case SDM_PROGR: alpha=mode_param; break;
     case SDM_CAUCHY: alpha=0; break;
 	  default: assert(1);
   };
@@ -73,7 +73,7 @@ int steepest_descend(
   for(iter=0; iter<max_iter; iter++) {
     real next_alpha;
   	Q(a,grad);
-  	real f=-dot(n,a,grad);
+  	real f=-dot(n,a,grad)/2;
   	L(grad);
   	f+=dot(n,a,grad);
   	// grad contains Hx+B
@@ -88,7 +88,8 @@ int steepest_descend(
         if(f<=last_f) alpha+=mode_param*last_res; else alpha=mode_param*res;
         break;
       case SDM_PROGR: 
-        if(f<=last_f) alpha*=mode_param; else alpha/=2*mode_param;
+        //if(f<=last_f) alpha*=1.1; else alpha=mode_param;
+        if(res<=last_res) alpha*=1.1; else alpha=mode_param;
         break;
       case SDM_CAUCHY: 
         Q(grad, hess); 
@@ -174,7 +175,7 @@ int lagrange_conjugate(
   for(int iter=0; iter<max_iter;) {
     // Calculate gradient at the point
     restart: Q(x0,gradx); iter++;
-    real f=-dot(N,x0,gradx);
+    real f=-dot(N,x0,gradx)/2;
     L(gradx);
     f+=dot(N,x0,gradx);
     D(x0,u,gradx);

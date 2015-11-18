@@ -1,7 +1,7 @@
 [size]
 # Grid dimesions <x> x <y> x <z>
 # <x> <y> <z>
-100 100 1
+20 20 1
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>
@@ -56,6 +56,6 @@
 [dzyaloshinskii moriya vector]
 # Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
 # <D_x> <D_y> <D_z>
-1 0 0
-0 1 0
-0 0 1
+0.9 0 0
+0 0.9 0
+0 0 0.9
