@@ -9,6 +9,12 @@ real normsq(int n, const real* a) {
 	return nrm;
 };
 
+real distsq(int n, const real* a, const real* b) {
+	real nrm=0;
+	for(int k=0; k<n; k++) nrm+=(a[k]-b[k])*(a[k]-b[k]);
+	return nrm;
+};
+
 real dot(int n, const real* a, const real* b) {
 	real nrm=0;
 	for(int k=0; k<n; k++) nrm+=a[k]*b[k];

@@ -45,6 +45,7 @@
 #define mult_minus3(a,b,c) { (c)[0]-=(a)*(b)[0]; (c)[1]-=(a)*(b)[1]; (c)[2]-=(a)*(b)[2]; }
 #define mult_plus3(a,b,c) { (c)[0]+=(a)*(b)[0]; (c)[1]+=(a)*(b)[1]; (c)[2]+=(a)*(b)[2]; }
 
+real distsq(int n, const real* a, const real* b);
 real normsq(int n, const real* a);
 real dot(int n, const real* a, const real* b);
 void mult_sub(int n, real a, const real* b, real* c);

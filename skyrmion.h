@@ -56,3 +56,4 @@ void skyrmion_constrain_gradient(const real* restrict a, const real* restrict u,
 void skyrmion_constrain_adjucent(const real* restrict a, const real* restrict b, real* restrict r);
 void skyrmion_middle(const real* restrict a, const real* restrict b, real* restrict r);
 void skyrmion_geodesic(int sizep, real* p);
+void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);

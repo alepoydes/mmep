@@ -63,10 +63,8 @@ void plot_path(FILE* file, int sizep, const real* restrict mep) {
 }
 
 
-void animate_path(FILE* file, int sizep, const real* restrict mep, const char* location) {
+void animate_path(FILE* file, int sizep, const real* restrict mep) {
 	int size=3*sizeu*sizex*sizey*sizez;
-	fprintf(file,"set terminal gif animate delay 30\n");
-	fprintf(file,"set output '%s'\n",location);
 	for(int n=0; n<sizep; n++) 
 		plot_field3(file,mep+n*size);
 };

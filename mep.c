@@ -53,11 +53,44 @@ void path_subtract_field(real* restrict inout) {
   };
 };
 
+void energy_display(FILE* file, real* path) {
+  real* q=(real*)malloc(sizeof(real)*size); assert(q);
+  real* u=(real*)malloc(sizeof(real)*size); assert(u);
+  real* distance=(real*)malloc(sizeof(real)*sizep); assert(distance);
+  real* f=(real*)malloc(sizeof(real)*sizep); assert(f);
+  real* diff=(real*)malloc(sizeof(real)*sizep); assert(diff);
+  real* tdiff=(real*)malloc(sizeof(real)*sizep); assert(tdiff);
+  fprintf(file,"set ytics nomirror\nset y2tics nomirror\nset log y2\n");
+  fprintf(file,"plot '-' using 1:2 with lines axes x1y1 title 'energy', '' using 1:3 with lines axes x1y2 title 'grad.', '' using 1:4 with lines axes x1y2 title 'orth. grad.'\n");
+  for(int p=0; p<sizep; p++) {
+    distance[p]=p<=0?0:distance[p-1]+rsqrt(distsq(size,path+size*(p-1),path+size*p));
+    hamiltonian_hessian(path+size*p, q);
+    f[p]=-dot(size,path+size*p, q);
+    subtract_field(q);
+    f[p]+=dot(size,path+size*p, q);
+    project_to_tangent(path+size*p,q);
+    diff[p]=rsqrt(normsq(size,q));
+    tdiff[p]=NAN;
+    if(p>0 && p<sizep-1) {
+      three_point_tangent(path+size*(p-1),path+size*(p+1),path+size*p,u);
+      project_to_tangent(u,q);
+      tdiff[p]=rsqrt(normsq(size,q));
+    };
+  };
+  for(int k=0; k<3; k++) {
+    for(int p=0; p<sizep; p++)
+      fprintf(file,"%.5"RF"e %.5"RF"e %.5"RF"e %.5"RF"e\n",distance[p],f[p],diff[p],tdiff[p]);
+    fprintf(file,"EOF\n\n");
+  };
+  free(tdiff); free(diff); free(f); free(distance); free(u); free(q);
+};
+
 void path_display(int iter, real* restrict mep, real* restrict grad_f, real f, real res, real alpha) {
   static real prev_f=NAN;
   if(iter%debug_every==0 || iter<0) {
     fprintf(stderr, "%d: E %"RF"g%+"RF"g R %"RF"g A %"RF"g\n", iter, f, f-prev_f, res, alpha);
-    if(debug_plot) plot_path(stdout, sizep, mep);
+    //if(debug_plot) plot_path(stdout, sizep, mep);
+    if(debug_plot) energy_display(stdout, mep);
   };
   prev_f=f;
 };
@@ -157,14 +190,28 @@ int main(int argc, char** argv) {
   // MEP calculation
   path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   // Ouput result
-  const char* filename="../fields/mep.gnuplot";
-  FILE* file=fopen(filename,"w");
+  // svae energy
+  const char* energyname="../fields/energy.gnuplot";
+  FILE* file=fopen(energyname,"w");
   if(file) {
-    animate_path(file, sizep, path, "");
+    fprintf(file,"set terminal png\nset output '../fields/energy.png'\n");
+    energy_display(file,path);
+    fclose(file);
+   } else {
+    fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,energyname);
+  }; 
+  // save field
+  const char* filename="../fields/mep.gnuplot";
+  file=fopen(filename,"w");
+  if(file) {
+    fprintf(file,"set terminal gif animate delay 30\n");
+    fprintf(file,"set output '../fields/mep.gif'\n");
+    animate_path(file, sizep, path);
     fclose(file);
   } else {
     fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,filename);
   };
+
   // Deinitialization
   free(path);
   return 0;

@@ -4,4 +4,4 @@
 
 void plot_field3(FILE* file, const real* restrict a);
 void plot_path(FILE* file, int sizep, const real* restrict mep);
-void animate_path(FILE* file, int sizep, const real* restrict mep, const char* location);
+void animate_path(FILE* file, int sizep, const real* restrict mep);

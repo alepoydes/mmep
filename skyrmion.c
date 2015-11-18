@@ -130,10 +130,19 @@ void skyrmion_geodesic_rec(real* p, int n, int m) {
 	skyrmion_geodesic_rec(p,n,k);
 	skyrmion_geodesic_rec(p,k,m);
 }
+
 void skyrmion_geodesic(int sizep, real* p) { 
 	skyrmion_geodesic_rec(p, 0, sizep-1); 
 }
 
+void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {
+	forall(u,x,y,z) {	
+		int i=INDEX(u,x,y,z)*3;
+		sub3(b+i,a+i,r+i); 
+		tangent3(c+i,r+i); 
+		normalize3(r+i);
+	};
+};
 
 
 
