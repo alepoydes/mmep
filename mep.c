@@ -20,6 +20,8 @@ int mode=SDM_CONSTANT;
 int debug_plot=0;
 int debug_every=1;
 
+real *distance=NULL, *energy=NULL, *diff=NULL, *tdiff=NULL;
+
 void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real alpha) {
   static real prev_f=NAN; 
   static real prev_res=NAN; 
@@ -60,36 +62,38 @@ void path_subtract_field(real* restrict inout) {
   };
 };
 
-void energy_display(FILE* file, real* path) {
+void energy_evaluate(real* path) {
   real* q=(real*)malloc(sizeof(real)*size); assert(q);
   real* u=(real*)malloc(sizeof(real)*size); assert(u);
-  real* distance=(real*)malloc(sizeof(real)*sizep); assert(distance);
-  real* f=(real*)malloc(sizeof(real)*sizep); assert(f);
-  real* diff=(real*)malloc(sizeof(real)*sizep); assert(diff);
-  real* tdiff=(real*)malloc(sizeof(real)*sizep); assert(tdiff);
-  fprintf(file,"set ytics nomirror\nset y2tics nomirror\nset log y2\n");
-  fprintf(file,"plot '-' using 1:2 with linespoints axes x1y1 title 'energy', '' using 1:3 with lines axes x1y2 title 'grad.', '' using 1:4 with lines axes x1y2 title 'orth. grad.'\n");
   for(int p=0; p<sizep; p++) {
-    distance[p]=p<=0?0:distance[p-1]+rsqrt(distsq(size,path+size*(p-1),path+size*p));
+    distance[p]=(p<=0)?0:distance[p-1]+rsqrt(distsq(size,path+size*(p-1),path+size*p));
     hamiltonian_hessian(path+size*p, q);
-    f[p]=-dot(size,path+size*p, q)/2;
+    energy[p]=-dot(size,path+size*p, q)/2;
     subtract_field(q);
-    f[p]+=dot(size,path+size*p, q);
+    energy[p]+=dot(size,path+size*p, q);
     project_to_tangent(path+size*p,q);
-    diff[p]=rsqrt(normsq(size,q));
+    diff[p]=rsqrt(normsq(size,q)/size);
     tdiff[p]=NAN;
     if(p>0 && p<sizep-1) {
       three_point_tangent(path+size*(p-1),path+size*(p+1),path+size*p,u);
       project_to_tangent(u,q);
-      tdiff[p]=rsqrt(normsq(size,q));
+      tdiff[p]=rsqrt(normsq(size,q)/size);
     };
   };
+  free(u); free(q);
+};
+
+void energy_display(FILE* file) {
+  fprintf(file,"set ytics nomirror\nset y2tics nomirror\nset log y2\n");
+  fprintf(file,"plot '-' using 1:2 with linespoints axes x1y1 title 'energy', '' using 1:3 with lines axes x1y2 title 'grad.', '' using 1:4 with lines axes x1y2 title 'orth. grad.'\n");
   for(int k=0; k<3; k++) {
     for(int p=0; p<sizep; p++)
-      fprintf(file,"%.5"RF"e %.5"RF"e %.5"RF"e %.5"RF"e\n",distance[p],f[p],diff[p],tdiff[p]);
+      fprintf(file,"%.5"RF"e %.5"RF"e %.5"RF"e %.5"RF"e\n",distance[p],energy[p],diff[p],tdiff[p]);
     fprintf(file,"EOF\n\n");
   };
-  free(tdiff); free(diff); free(f); free(distance); free(u); free(q);
+  real max_energy=energy[0];
+  for(int p=1; p<sizep; p++) if(max_energy<energy[p]) max_energy=energy[p];
+  fprintf(stderr, COLOR_BLUE"Energy:"COLOR_RESET" initial %.6"RF"f maximum %.6"RF"f final %.6"RF"f\n", energy[0],max_energy,energy[sizep-1]);
 };
 
 void path_display(int iter, real* restrict mep, real* restrict grad_f, real f, real res, real alpha) {
@@ -103,26 +107,29 @@ void path_display(int iter, real* restrict mep, real* restrict grad_f, real f, r
     else fprintf(stderr, "R "COLOR_RED"%"RF"g "COLOR_RESET, res);
     fprintf(stderr, "A %"RF"g\n", alpha);    
     //if(debug_plot) plot_path(stdout, sizep, mep);
-    if(debug_plot) energy_display(stdout, mep);
+    if(debug_plot) { 
+      energy_evaluate(mep);
+      energy_display(stdout);
+    };
     prev_f=f; prev_res=res;
   };
 };
 
 void path_normalize(real* mep) {
-  /*
+  //for(int p=0; p<sizep; p++) normalize(mep+size*p);
+  
   real* shifted=(real*)malloc(sizeof(real)*size*sizep); assert(shifted);
   for(int p=1; p<sizep-1; p++) {
     three_point_equalizer(mep+size*(p-1), mep+size*p, mep+size*(p+1), shifted+size*p);
   };
   copy_vector(size*(sizep-2), shifted+size, mep+size);
   free(shifted);
-  */
+  
+  /*
   for(int p=1; p<sizep-1; p++) {
     three_point_equalize(mep+size*(p-1), mep+size*(p+1), mep+size*p);
   };
-  /*for(int p=0; p<sizep; p++) {
-    normalize(mep+size*p);
-  };*/
+  */
 };
 
 void path_tangent(const real* restrict mep, real* restrict grad) {
@@ -200,32 +207,43 @@ int main(int argc, char** argv) {
   	parse_lattice(file);
   	fclose(file);
   } else parse_lattice(stdin);
+  if(sizep<2) {
+    fprintf(stderr, "Number of nodes is too small: %d < 2\n", sizep);
+    exit(1);
+  };
   // Initializaton
+  fprintf(stderr, "Size of real: %zd\n", sizeof(real));
   srand(time(NULL));
   size=sizeu*sizex*sizey*sizez*3;
   real* path=(real*)malloc(sizeof(real)*size*sizep); assert(path);
+  distance=(real*)malloc(sizeof(real)*sizep); assert(distance);
+  energy=(real*)malloc(sizeof(real)*sizep); assert(energy);
+  diff=(real*)malloc(sizeof(real)*sizep); assert(diff);
+  tdiff=(real*)malloc(sizeof(real)*sizep); assert(tdiff);
   // find two minima
-  fprintf(stderr, COLOR_GREEN"Calculating initial state\n"COLOR_RESET);
+  fprintf(stderr, COLOR_YELLOW"Calculating initial state\n"COLOR_RESET);
   //random_vector(size, path); 
   set_to_field(path); 
   path[INDEX(0,sizex/2,sizey/2,sizez/2)*3+2]=-1;
   skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter);
-  fprintf(stderr, COLOR_GREEN"Calculating final state\n"COLOR_RESET);
+  fprintf(stderr, COLOR_YELLOW"Calculating final state\n"COLOR_RESET);
   set_to_field(path+size*(sizep-1));
   //random_vector(size, path+size*(sizep-1)); 
   skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, epsilon, max_iter);
   // Set initial path as geodesic approximation
-  fprintf(stderr, COLOR_GREEN"Calculating MEP\n"COLOR_RESET);
+  fprintf(stderr, COLOR_YELLOW"Calculating MEP\n"COLOR_RESET);
   skyrmion_geodesic(sizep, path);
   // MEP calculation
   path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   // Ouput result
+  energy_evaluate(path);
   // save energy
+  fprintf(stderr, COLOR_YELLOW"Saving result\n"COLOR_RESET);
   const char* energyname="../fields/energy.gnuplot";
   FILE* file=fopen(energyname,"w");
   if(file) {
     fprintf(file,"set terminal png\nset output '../fields/energy.png'\n");
-    energy_display(file,path);
+    energy_display(file);
     fclose(file);
    } else {
     fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,energyname);
@@ -243,6 +261,6 @@ int main(int argc, char** argv) {
   };
 
   // Deinitialization
-  free(path);
+  free(path); free(tdiff); free(diff); free(energy); free(distance);
   return 0;
 };

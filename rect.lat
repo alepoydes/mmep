@@ -1,7 +1,7 @@
 [size]
 # Grid dimesions <x> x <y> x <z>
 # <x> <y> <z>
-20 20 1
+10 10 10
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>
@@ -16,7 +16,7 @@
 # Every BC can be one of
 #   0 : free
 #   1 : periodic
-0 0 0
+1 1 0
 [translation vectors]
 # Lattice generators
 # <X_x> <X_y> <X_z>

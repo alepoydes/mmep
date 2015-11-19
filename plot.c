@@ -9,13 +9,13 @@ void plot_field3(FILE* file, const real* restrict a) {
 	//fprintf(file,"set xrange [-1:%d]\nset yrange [-1:%d]\nset zrange [-1:%d]\n",sizex,sizey,sizez);
 	fprintf(file,"load 'moreland.pal'\nset cbrange [-1:1]\n");
 	if(sizez==1) {
-		fprintf(file,"plot '-' using ($1-($4)/2):($2-($5)/2):(($4)):(($5)):($5)");
+		fprintf(file,"plot '-' using ($1-($4)/2):($2-($5)/2):(($4)):(($5)):($5) ");
 		fprintf(file,"with vectors head size 0.1,20,60 filled lc palette\n");
 	} else {
 		//printf("splot '-' using ($1-($4)/2):($2-($5)/2):($3-($6)/2):($4):($5):($6):($6)");
 		//printf("with vectors head size 0.1,20,60 filled lc palette\n");
 		
-		fprintf(file,"splot '-' using ($1-($4)):($2-($5)):($3-($6)):($4):($5):(abs($6)<0.8?$6:1/0):($6)");
+		fprintf(file,"splot '-' using ($1-($4)):($2-($5)):($3-($6)):($4):($5):(abs($6)<0.9?$6:1/0):($6) ");
 		fprintf(file,"with vectors head size 0.1,20,60 filled lc palette\n");
 
 		//printf("splot '-' using ($1):($2):($3):(2*(1-abs($6))):($6)");

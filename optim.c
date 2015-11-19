@@ -56,6 +56,7 @@ int steepest_descend(
 {
   int iter;
   real alpha;
+  real factor=rsqrt(n);
   assert(Q && L); assert((P && T) || (!P && !T));
   switch(mode) {
   	case SDM_CONSTANT: alpha=mode_param; break;
@@ -80,12 +81,13 @@ int steepest_descend(
   	// f value of f(a)
     //ill conditioned quadratic optimiation
     //fprintf(stderr,"res: %g\n",rsqrt(normsq(n,grad)));
+    assert(!isnan(normsq(n,grad)));
     if(T) T(a,grad);
     real res2=normsq(n,grad); real res=rsqrt(res2);
     assert(!isnan(res));
     switch(mode) {
       case SDM_INERTIAL: 
-        if(f<=last_f) alpha+=mode_param*last_res; else alpha=mode_param*res;
+        if(f<=last_f) alpha+=mode_param*last_res/factor; else alpha=mode_param*res/factor;
         break;
       case SDM_PROGR: 
         //if(f<=last_f) alpha*=1.1; else alpha=mode_param;
@@ -97,8 +99,8 @@ int steepest_descend(
         if(next_alpha>mode_param) next_alpha=mode_param;
         break; 
     };
-    if(display) display(iter,a,grad,f,res,alpha);
-    if(res<epsilon) { status=0; break; }; // If solution is found
+    if(display) display(iter,a,grad,f,res/factor,alpha);
+    if(res<factor*epsilon) { status=0; break; }; // If solution is found
     //if(last_f==f) { status=2; break; }; // Iterations stop changing
     // Calculation next aproximation
     mult_sub(n,alpha,grad,a);

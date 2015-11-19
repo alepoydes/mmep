@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "vector.h"
 #include "skyrmion.h"
@@ -40,8 +41,9 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 	// Compute anisotropy part
 	real K2[3]; for3(j) K2[j]=-2*magnetic_anisotropy_norm*magnetic_anisotropy_unit[j];
 	forall(u,x,y,z) {
-		real m=dot3(magnetic_anisotropy_unit,arg+3*INDEX(u,x,y,z));
-		for3(j) out[3*INDEX(u,x,y,z)+j]=m*K2[j];
+		int i=3*INDEX(u,x,y,z);
+		real m=dot3(magnetic_anisotropy_unit,arg+i);
+		for3(j) out[i+j]=m*K2[j];
 	};
 	// Comput exchange part
 	for(int n=0;n<sizen;n++) {
@@ -61,12 +63,16 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 		} else { maxz=sizez-sz; minz=0; };
 		// Compute interaction fo the pair neighbours[n]
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
-			cross_minus3(dzyaloshinskii_moriya_vector+3*n,arg+INDEX(s,(x+sx)%sizex,(y+sy)%sizey,(z+sz)%sizez)*3,out+INDEX(d,x,y,z)*3);
-			mult_minus3(exchange_constant[n],arg+INDEX(s,(x+sx)%sizex,(y+sy)%sizey,(z+sz)%sizez)*3,out+INDEX(d,x,y,z)*3);
+			int i1=INDEX(s,(x+sx)%sizex,(y+sy)%sizey,(z+sz)%sizez)*3;
+			int i2=INDEX(d,x,y,z)*3;
+			cross_minus3(dzyaloshinskii_moriya_vector+3*n,arg+i1,out+i2);
+			mult_minus3(exchange_constant[n],arg+i1,out+i2);
 		};
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
-			cross_plus3(dzyaloshinskii_moriya_vector+3*n,arg+INDEX(s,x,y,z)*3,out+INDEX(d,(x+sx)%sizex,(y+sy)%sizey,(z+sz)%sizez)*3);
-			mult_minus3(exchange_constant[n],arg+INDEX(s,x,y,z)*3,out+INDEX(d,(x+sx)%sizex,(y+sy)%sizey,(z+sz)%sizez)*3);
+			int i1=INDEX(d,(x+sx)%sizex,(y+sy)%sizey,(z+sz)%sizez)*3;
+			int i2=INDEX(s,x,y,z)*3;
+			cross_plus3(dzyaloshinskii_moriya_vector+3*n,arg+i2,out+i1);
+			mult_minus3(exchange_constant[n],arg+i2,out+i1);
 		};
 	};
 };
@@ -176,15 +182,18 @@ void three_point_equalize(const real* restrict a, const real* restrict b, real* 
 void three_point_equalizer(const real* restrict a, const real* restrict c, const real* restrict b, real* restrict r) {
 	real vec[3];
 	real ab,ar,br;
+	//static real min=INFINITY;
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z)*3;
 		sub3(c+i,a+i,vec); ar=normsq3(vec);
 		sub3(c+i,b+i,vec); br=normsq3(vec);
 		sub3(b+i,a+i,vec); ab=normsq3(vec);
 		copy3(c+i,r+i);
-		mult_plus3((br-ar)/ab*0.5,vec,r+i);
+		if(ab>10*EPSILON) 
+			mult_plus3((br-ar)/ab*0.5,vec,r+i);
 		normalize3(r+i);
 	};
+	//fprintf(stderr, "min: %"RF"g\n", min);
 };
 
 

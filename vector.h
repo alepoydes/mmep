@@ -35,7 +35,7 @@
 #define dot3(x,y) (x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2]
 //#define normalize3(x) { real t=(3-normsq3(x))*0.5; (x)[0]*=t; (x)[1]*=t; (x)[2]*=t; }
 //#define normalize3(x) { real t=(1+normsq3(x))/2; (x)[0]/=t; (x)[1]/=t; (x)[2]/=t; }
-#define normalize3(x) { real t=rsqrt(normsq3(x)); (x)[0]/=t; (x)[1]/=t; (x)[2]/=t; }
+#define normalize3(x) { real t=rsqrt(normsq3(x)); if(t>0) { (x)[0]/=t; (x)[1]/=t; (x)[2]/=t; }; }
 #define middle3(x,y,z) { (z)[0]=((x)[0]+(y)[0])/2; (z)[1]=((x)[1]+(y)[1])/2; (z)[2]=((x)[2]+(y)[2])/2; normalize3(z); }
 #define sub3(x,y,z) { (z)[0]=(x)[0]-(y)[0]; (z)[1]=(x)[1]-(y)[1]; (z)[2]=(x)[2]-(y)[2]; }
 // проецирует y на касательное подпространство к x
