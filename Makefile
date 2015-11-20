@@ -1,6 +1,7 @@
 all: min mind minq min2 min2d min2q mep mepd mepq 
-#OPT=-std=c99 -flto -Ofast -march=native 
-OPT=-std=c99 -g -Wall -DDEBUG 
+OPT=-std=c99 -flto -Ofast -march=native -fopenmp
+#OPT=-std=c99 -flto -Ofast -march=native
+#OPT=-std=c99 -g -Wall -DDEBUG 
 
 min: parse.c vector.c skyrmion.c plot.c optim.c min.c 
 	gcc $^ $(OPT) -lm -o $@	

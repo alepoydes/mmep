@@ -40,6 +40,7 @@ real* dzyaloshinskii_moriya_vector=NULL;
 void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 	// Compute anisotropy part
 	real K2[3]; for3(j) K2[j]=-2*magnetic_anisotropy_norm*magnetic_anisotropy_unit[j];
+	#pragma omp parallel for collapse(4)
 	forall(u,x,y,z) {
 		int i=3*INDEX(u,x,y,z);
 		real m=dot3(magnetic_anisotropy_unit,arg+i);
@@ -62,12 +63,14 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 		} else if(sz<0) { minz=-sz; maxz=sizez; 
 		} else { maxz=sizez-sz; minz=0; };
 		// Compute interaction fo the pair neighbours[n]
+		#pragma omp parallel for collapse(3)
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(s,(x+sx)%sizex,(y+sy)%sizey,(z+sz)%sizez)*3;
 			int i2=INDEX(d,x,y,z)*3;
 			cross_minus3(dzyaloshinskii_moriya_vector+3*n,arg+i1,out+i2);
 			mult_minus3(exchange_constant[n],arg+i1,out+i2);
 		};
+		#pragma omp parallel for collapse(3)
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx)%sizex,(y+sy)%sizey,(z+sz)%sizez)*3;
 			int i2=INDEX(s,x,y,z)*3;
@@ -78,57 +81,61 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 };
 
 void subtract_field(real* restrict inout) {
+	#pragma omp parallel for collapse(4)
 	forall(u,x,y,z) for3(j) inout[INDEX(u,x,y,z)*3+j]-=magnetic_field[j];
 };
 
 void set_to_field(real* restrict out) {
+		#pragma omp parallel for collapse(4)
 	forall(u,x,y,z) for3(j) out[INDEX(u,x,y,z)*3+j]=magnetic_field[j];
 };
 
 
 // Normalize vector field so every vector has unit length 
 void normalize(real* restrict a) {
-	forall(u,x,y,z) {
-		normalize3(a+INDEX(u,x,y,z)*3);
-	};
+	#pragma omp parallel for collapse(4)
+	forall(u,x,y,z) normalize3(a+INDEX(u,x,y,z)*3);
 };
 
 // Project vector field 't' to tangent space of unit length vector field 'a'
 void project_to_tangent(const real* restrict a, real* restrict b) {
-	forall(u,x,y,z) {
-		tangent3(a+INDEX(u,x,y,z)*3,b+INDEX(u,x,y,z)*3);
-	};
+	#pragma omp parallel for collapse(4)
+	forall(u,x,y,z) tangent3(a+INDEX(u,x,y,z)*3,b+INDEX(u,x,y,z)*3);
 };
 
 // C:x->(<x|P_j x>/2-1/2)_j
 void skyrmion_constrain(const real* restrict a, real* restrict r) {
-  forall(u,x,y,z) {
-  	int i=INDEX(u,x,y,z);
-  	r[i]=(normsq3(a+3*i)-1.)/2.;
-  };
+	#pragma omp parallel for collapse(4)	
+  	forall(u,x,y,z) {
+  		int i=INDEX(u,x,y,z);
+  		r[i]=(normsq3(a+3*i)-1.)/2.;
+  	};
 };
 
 // D:x,u,r->r+sum_l u_l P_j x
 void skyrmion_constrain_gradient(const real* restrict a, const real* restrict lambda, real* restrict r) {
-  forall(u,x,y,z) {
-  	int i=INDEX(u,x,y,z);
-  	mult_plus3(lambda[i],a+3*i,r+3*i);
-  };
+	#pragma omp parallel for collapse(4)
+  	forall(u,x,y,z) {
+	  	int i=INDEX(u,x,y,z);
+	  	mult_plus3(lambda[i],a+3*i,r+3*i);
+  	};
 };
 
 // P:x,y->(<x|P_j y>)_l
 void skyrmion_constrain_adjucent(const real* restrict a, const real* restrict b, real* restrict r) {
-  forall(u,x,y,z) {
-  	int i=INDEX(u,x,y,z);
-  	r[i]=dot3(a+3*i,b+3*i);
-  };
+	#pragma omp parallel for collapse(4)	
+  	forall(u,x,y,z) {
+	  	int i=INDEX(u,x,y,z);
+	  	r[i]=dot3(a+3*i,b+3*i);
+  	};
 };
 
 void skyrmion_middle(const real* restrict a, const real* restrict b, real* restrict r) {
-  forall(u,x,y,z) {
-  	int i=INDEX(u,x,y,z);
-  	middle3(a+3*i,b+3*i,r+3*i);
-  };
+	#pragma omp parallel for collapse(4)	
+  	forall(u,x,y,z) {
+	  	int i=INDEX(u,x,y,z);
+	  	middle3(a+3*i,b+3*i,r+3*i);
+  	};
 };
 	
 void skyrmion_geodesic_rec(real* p, int n, int m) {
@@ -147,6 +154,7 @@ void skyrmion_geodesic(int sizep, real* p) {
 }
 
 void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {
+	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z)*3;
 		sub3(b+i,a+i,r+i); 
@@ -156,8 +164,9 @@ void three_point_tangent(const real* restrict a, const real* restrict b, const r
 };
 
 void three_point_project(const real* restrict a, const real* restrict b, real* restrict r) {
-	real tangent[3];
+	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
+		real tangent[3];
 		int i=INDEX(u,x,y,z)*3;
 		sub3(b+i,a+i,tangent); 
 		normalize3(tangent);
@@ -167,9 +176,10 @@ void three_point_project(const real* restrict a, const real* restrict b, real* r
 
 // r moved along b-a to satisfy |r-a|=|r-b|
 void three_point_equalize(const real* restrict a, const real* restrict b, real* restrict r) {
-	real vec[3];
-	real ab,ar,br;
+	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
+		real vec[3];
+		real ab,ar,br;
 		int i=INDEX(u,x,y,z)*3;
 		sub3(r+i,a+i,vec); ar=normsq3(vec);
 		sub3(r+i,b+i,vec); br=normsq3(vec);
@@ -180,25 +190,24 @@ void three_point_equalize(const real* restrict a, const real* restrict b, real* 
 };
 
 void three_point_equalizer(const real* restrict a, const real* restrict c, const real* restrict b, real* restrict r) {
-	real vec[3];
-	real ab,ar,br;
-	//static real min=INFINITY;
+	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
+		real vec[3];
+		real ab,ar,br;
 		int i=INDEX(u,x,y,z)*3;
 		sub3(c+i,a+i,vec); ar=normsq3(vec);
 		sub3(c+i,b+i,vec); br=normsq3(vec);
 		sub3(b+i,a+i,vec); ab=normsq3(vec);
 		copy3(c+i,r+i);
-		if(ab>10*EPSILON) 
-			mult_plus3((br-ar)/ab*0.5,vec,r+i);
+		if(ab>10*EPSILON) mult_plus3((br-ar)/ab*0.5,vec,r+i);
 		normalize3(r+i);
 	};
-	//fprintf(stderr, "min: %"RF"g\n", min);
 };
 
 
 
 void fourier_table(const real* restrict angles, real* restrict table) {
+	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
 		rsincos(angles[2*i+0],table+4*i+0,table+4*i+1);
@@ -209,6 +218,7 @@ void fourier_table(const real* restrict angles, real* restrict table) {
 // transform angles to vector on sphere
 // (x,y,z)=R(phi,theta)
 void angles_to_vector(const real* restrict table, const real* restrict angles, real* restrict vectors) {
+	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
 		real sphi=table[4*i+0];

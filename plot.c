@@ -1,12 +1,29 @@
+#include <assert.h>
+
 #include "plot.h"
 #include "vector.h"
 #include "skyrmion.h"
+
+void plot_bounds(real bounds[3][2]) {
+	assert(sizeu>0);
+	for3(j) bounds[j][0]=bounds[j][1]=atom_positions[j];
+	for(int u=0; u<sizeu; u++) for3(j) {
+		real c=atom_positions[3*u+j];
+		if(bounds[j][0]>c) bounds[j][0]=c;
+		if(bounds[j][1]<c) bounds[j][1]=c;
+		c+=(sizex-1)*translation_vectors[0][j]+(sizey-1)*translation_vectors[1][j]+(sizez-1)*translation_vectors[2][j];
+		if(bounds[j][0]>c) bounds[j][0]=c;
+		if(bounds[j][1]<c) bounds[j][1]=c;
+	};
+};
 
 void plot_field3(FILE* file, const real* restrict a) {
 	//printf("set term pngcairo\n");
 	//printf("set output '%s.png'\n","output");
 	fprintf(file,"unset key\nunset tics\nunset colorbox\nset border 0\n");
-	//fprintf(file,"set xrange [-1:%d]\nset yrange [-1:%d]\nset zrange [-1:%d]\n",sizex,sizey,sizez);
+	real bounds[3][2]; plot_bounds(bounds);
+	fprintf(file,"set xrange [%"RF"g:%"RF"g]\nset yrange [%"RF"g:%"RF"g]\nset zrange [%"RF"g:%"RF"g]\n"
+			,bounds[0][0]-0.5,bounds[0][1]+0.5,bounds[1][0]-0.5,bounds[1][1]+0.5,bounds[2][0]-0.5,bounds[2][1]+0.5);
 	fprintf(file,"load 'moreland.pal'\nset cbrange [-1:1]\n");
 	if(sizez==1) {
 		fprintf(file,"plot '-' using ($1-($4)/2):($2-($5)/2):(($4)):(($5)):($5) ");
@@ -38,9 +55,9 @@ void plot_field3(FILE* file, const real* restrict a) {
 
 void plot_path(FILE* file, int sizep, const real* restrict mep) {
 	fprintf(file,"unset key\nunset tics\nunset colorbox\nset border 0\n");
-	//fprintf(file,"set xrange [-1:%d]\nset yrange [-1:%d]\nset zrange [-1:%d]\n",sizex,sizey,sizez);
-	fprintf(file,"load 'spectral.pal'\nset cbrange [-1:%d]\n", sizep);
-	if(sizez==1) {
+	real bounds[3][2]; plot_bounds(bounds);
+	fprintf(file,"set xrange [%"RF"g:%"RF"g]\nset yrange [%"RF"g:%"RF"g]\nset zrange [%"RF"g:%"RF"g]\n"
+			,bounds[0][0]-0.5,bounds[0][1]+0.5,bounds[1][0]-0.5,bounds[1][1]+0.5,bounds[2][0]-0.5,bounds[2][1]+0.5);	if(sizez==1) {
 		fprintf(file,"plot '-' using ($1-($4)/2):($2-($5)/2):(($4)):(($5)):($7) ");
 		fprintf(file,"with vectors head size 0.1,20,60 filled lc palette\n");
 	} else {

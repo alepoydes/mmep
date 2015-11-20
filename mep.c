@@ -18,6 +18,7 @@ int max_iter=1000;
 real mode_param=0.2;
 int mode=SDM_CONSTANT;
 int debug_plot=0;
+int debug_plot_path=0;
 int debug_every=1;
 
 real *distance=NULL, *energy=NULL, *diff=NULL, *tdiff=NULL;
@@ -85,18 +86,17 @@ void energy_evaluate(real* path) {
 
 void energy_display(FILE* file) {
   fprintf(file,"set ytics nomirror\nset y2tics nomirror\nset log y2\n");
+  fprintf(file,"set autoscale xy\n");
   fprintf(file,"plot '-' using 1:2 with linespoints axes x1y1 title 'energy', '' using 1:3 with lines axes x1y2 title 'grad.', '' using 1:4 with lines axes x1y2 title 'orth. grad.'\n");
   for(int k=0; k<3; k++) {
     for(int p=0; p<sizep; p++)
-      fprintf(file,"%.5"RF"e %.5"RF"e %.5"RF"e %.5"RF"e\n",distance[p],energy[p],diff[p],tdiff[p]);
+      fprintf(file,"%.8"RF"e %.8"RF"e %.8"RF"e %.8"RF"e\n",distance[p],energy[p],diff[p],tdiff[p]);
     fprintf(file,"EOF\n\n");
   };
-  real max_energy=energy[0];
-  for(int p=1; p<sizep; p++) if(max_energy<energy[p]) max_energy=energy[p];
-  fprintf(stderr, COLOR_BLUE"Energy:"COLOR_RESET" initial %.6"RF"f maximum %.6"RF"f final %.6"RF"f\n", energy[0],max_energy,energy[sizep-1]);
 };
 
-void path_display(int iter, real* restrict mep, real* restrict grad_f, real f, real res, real alpha) {
+void path_display(int iter, real* restrict mep, real* restrict grad_f
+, real f, real res, real alpha) {
   static real prev_f=NAN;
   static real prev_res=NAN;
   if(iter%debug_every==0 || iter<0) {
@@ -106,10 +106,9 @@ void path_display(int iter, real* restrict mep, real* restrict grad_f, real f, r
     if(res<prev_res) fprintf(stderr, "R "COLOR_GREEN"%"RF"g "COLOR_RESET, res);
     else fprintf(stderr, "R "COLOR_RED"%"RF"g "COLOR_RESET, res);
     fprintf(stderr, "A %"RF"g\n", alpha);    
-    //if(debug_plot) plot_path(stdout, sizep, mep);
     if(debug_plot) { 
-      energy_evaluate(mep);
-      energy_display(stdout);
+      if(debug_plot_path) plot_path(stdout, sizep, mep);
+      else { energy_evaluate(mep); energy_display(stdout); };
     };
     prev_f=f; prev_res=res;
   };
@@ -139,8 +138,6 @@ void path_tangent(const real* restrict mep, real* restrict grad) {
   };
 }
 
-
-
 int path_steepest_descent(real* restrict path, int mode, 
   real mode_param, real epsilon, int max_iter) 
 {
@@ -159,7 +156,8 @@ void showUsage(const char* program) {
 \n    %s [options] [lattice description file]\
 \nOptions:\
 \n   -h|--help              Show this message and exit\
-\n   -p|--plot              Show graphics\
+\n   -p|--plot              Enable GNUPlot output of energy\
+\n   -P|--plot-path         Enable GNUPlot output of MEP\
 \n   -e|--epsilon REAL      Desired residual\
 \n   -n           INT       Nodes along path\
 \n   -i           INT       Set maximum number of iterations\
@@ -175,15 +173,17 @@ int parseCommandLine(int argc, char** argv) {
     static struct option long_options[] = {      
       {"help", no_argument, 0, 'h'},
       {"plot", no_argument, 0, 'p'},
+      {"plot-path", no_argument, 0, 'P'},
       {"epsilon", required_argument, 0, 'e'},
       {"mode", required_argument, 0, 'm'},
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "hpe:n:i:r:m:a:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hpPe:n:i:r:m:a:", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
+      case 'P': debug_plot=1; debug_plot_path=1; break;
       case 'h': showUsage(argv[0]); exit(0);
       case 'e': epsilon=atof(optarg); break;
       case 'n': sizep=atoi(optarg); break;
@@ -237,6 +237,10 @@ int main(int argc, char** argv) {
   path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   // Ouput result
   energy_evaluate(path);
+  real max_energy=energy[0];
+  for(int p=1; p<sizep; p++) if(max_energy<energy[p]) max_energy=energy[p];
+  fprintf(stderr, COLOR_BLUE"Energy:"COLOR_RESET" initial %.8"RF"f maximum %.8"RF"f final %.8"RF"f\n", energy[0],max_energy,energy[sizep-1]);
+
   // save energy
   fprintf(stderr, COLOR_YELLOW"Saving result\n"COLOR_RESET);
   const char* energyname="../fields/energy.gnuplot";

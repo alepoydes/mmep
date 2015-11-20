@@ -59,6 +59,5 @@ void copy_vector(int n, const real* a, real* b);
 void sub_inplace(int n, const real* restrict a, real* restrict c);
 void add_inplace(int n, const real* restrict a, real* restrict c);
 void negate_inplace(int n, real* restrict c);
-void vector_copy(int n, const real* a, real* b);
 
 #endif

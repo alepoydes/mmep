@@ -40,7 +40,7 @@ extern real* dzyaloshinskii_moriya_vector;
 // typedef real field[sizeu][sizex][sizey][sizez][3];
 // Fields are stored as if defined by 'field' type.
 
-#define forall(u,x,y,z) for(int u=0;u<sizeu;u++)for(int x=0;x<sizex;x++)for(int y=0;y<sizey;y++)for(int z=0;z<sizez;z++)
+#define forall(u,x,y,z) for(int u=0;u<sizeu;u++) for(int x=0;x<sizex;x++)for(int y=0;y<sizey;y++)for(int z=0;z<sizez;z++)
 #define for3(j) for(int j=0;j<3;j++)
 #define INDEX(u,x,y,z) ((((u)*sizex+(x))*sizey+(y))*sizez+(z))
 
