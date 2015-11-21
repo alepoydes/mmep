@@ -34,7 +34,7 @@ void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f,
     else fprintf(stderr, "R "COLOR_RED"%"RF"g "COLOR_RESET, res);
     fprintf(stderr, "A %"RF"g\n", alpha);
 
-  	if(debug_plot) plot_field3(stdout,a);
+  	if(debug_plot && size<=1000) plot_field3(stdout,a);
     prev_f=f; prev_res=res;
   };
 };
@@ -93,6 +93,7 @@ void energy_display(FILE* file) {
       fprintf(file,"%.8"RF"e %.8"RF"e %.8"RF"e %.8"RF"e\n",distance[p],energy[p],diff[p],tdiff[p]);
     fprintf(file,"EOF\n\n");
   };
+  fflush(file);
 };
 
 void path_display(int iter, real* restrict mep, real* restrict grad_f
@@ -222,12 +223,17 @@ int main(int argc, char** argv) {
   tdiff=(real*)malloc(sizeof(real)*sizep); assert(tdiff);
   // find two minima
   fprintf(stderr, COLOR_YELLOW"Calculating initial state\n"COLOR_RESET);
-  //random_vector(size, path); 
-  set_to_field(path); 
+  if(initial_state) {
+    copy_vector(size, initial_state, path);
+    free(initial_state);
+  } else random_vector(size, path); 
   path[INDEX(0,sizex/2,sizey/2,sizez/2)*3+2]=-1;
   skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   fprintf(stderr, COLOR_YELLOW"Calculating final state\n"COLOR_RESET);
-  set_to_field(path+size*(sizep-1));
+  if(final_state) {
+    copy_vector(size, final_state, path+size*(sizep-1));
+    free(final_state);
+  } else set_to_field(path+size*(sizep-1));
   //random_vector(size, path+size*(sizep-1)); 
   skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, epsilon, max_iter);
   // Set initial path as geodesic approximation

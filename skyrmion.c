@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include "vector.h"
 #include "skyrmion.h"
@@ -36,6 +37,8 @@ real magnetic_anisotropy_unit[3]={NAN,NAN,NAN};
 real* exchange_constant=NULL;
 // Dzyaloshinskii Moriya vector for every pair of atoms
 real* dzyaloshinskii_moriya_vector=NULL;
+real* initial_state=NULL;
+real* final_state=NULL;
 
 void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 	// Compute anisotropy part
@@ -204,7 +207,46 @@ void three_point_equalizer(const real* restrict a, const real* restrict c, const
 	};
 };
 
-
+void append_skyrmion(const real center[3], real distance, int winding, 
+	int rotation, real* restrict data) 
+{
+	real field[3]; copy3(magnetic_field, field); normalize3(field);
+	#pragma omp parallel for collapse(4)	
+	forall(u,x,y,z) {	
+		int i=INDEX(u,x,y,z)*3;
+		real vec[3]; COORDS(u,x,y,z,vec);
+		sub3(vec,center,vec);
+		//real elevation=dot3(vec,magnetic_field)/hnorm;
+		//if(rabs(elevation)<distance) continue;
+		//mult_minus3(elevation, magnetic_field, vec);
+		real dist=rsqrt(normsq3(vec));
+		if(dist>distance) continue;
+		if(dist==0) {
+			if((rotation+winding)%2!=0) mult3(-1,data+i,data+i);
+			continue;
+		};
+		multinv3(dist, vec, vec);
+		// First rotation is around vec
+		dist/=distance; dist=1-dist; dist*=M_PI_2;
+		real sinalpha, cosalpha; 
+		rsincos(dist*winding,&sinalpha,&cosalpha); 
+		real q1[4]; q1[0]=cosalpha; mult3(sinalpha,vec,q1+1);
+		// Second rotation is in the plane containing vec and field
+		rsincos(dist*rotation,&sinalpha,&cosalpha); 
+		real q2[4]; q2[0]=cosalpha; cross3(field,vec,q2+1);
+		mult3(sinalpha,q2+1,q2+1);
+		// combined rotation
+		real q[4]; quaternion_product(q1,q2,q);
+		// applying rotation
+		q1[0]=0; copy3(data+i, q1+1);
+		quaternion_product(q,q1,q2);
+		q[1]=-q[1]; q[2]=-q[2]; q[3]=-q[3];
+		quaternion_product(q2,q,q1);
+		//fprintf(stderr,"Error %"RF"g\n",rsqrt(normsq3(q1+1))-1);
+		//assert(rabs(rsqrt(normsq3(q1+1))-1)<1e-8);
+		copy3(q1+1,data+i);
+	};
+}
 
 void fourier_table(const real* restrict angles, real* restrict table) {
 	#pragma omp parallel for collapse(4)	

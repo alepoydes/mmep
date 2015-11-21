@@ -66,6 +66,8 @@ void parse_lattice(FILE* file) {
 	const char sec_n[]="[neigborood]";
 	const char sec_ec[]="[exchange constant]";
 	const char sec_dmv[]="[dzyaloshinskii moriya vector]";
+	const char sec_initial[]="[initial state]";
+	const char sec_final[]="[final state]";
 	// Allocated memory size
 	int capacityu=sizeu; int capacityn=sizen; 
 	// Number of lines in sections
@@ -170,11 +172,47 @@ void parse_lattice(FILE* file) {
 				if(buf[0]=='[') { ready=1; break; };
 				if(dmv_size>=capacityn) { capacityn=capacityn*2+1; realloc_n(capacityn); };
 				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",dzyaloshinskii_moriya_vector+3*dmv_size+0,dzyaloshinskii_moriya_vector+3*dmv_size+1,dzyaloshinskii_moriya_vector+3*dmv_size+2)!=3) {
-					fprintf(stderr,"Parse error:%d: not a real constant\n",line); 
+					fprintf(stderr,"Parse error:%d: not a real vector\n",line); 
 					exit(1); 
 				};
 				dmv_size++;
 			};
+		} else if(match(buf,sec_initial)) {	
+			if(initial_state) {
+				fprintf(stderr, "%s is not unique\n", sec_initial);
+				exit(1);
+			};
+			initial_state=(real*)malloc(sizeof(real)*sizeu*sizex*sizey*sizez*3);
+			assert(initial_state);
+			set_to_field(initial_state);
+			while(1) {
+				if(!READLINE) break;
+				if(buf[0]=='[') { ready=1; break; };
+				real center[3]; real radius; int winding, rotation;
+				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g %d %d",center+0,center+1,center+2,&radius,&winding,&rotation)!=6) {
+					fprintf(stderr,"Parse error:%d: wrong format\n",line); 
+					exit(1); 
+				};
+				append_skyrmion(center, radius, winding, rotation, initial_state);
+			};
+		} else if(match(buf,sec_final)) {	
+			if(final_state) {
+				fprintf(stderr, "%s is not unique\n", sec_final);
+				exit(1);
+			};
+			final_state=(real*)malloc(sizeof(real)*sizeu*sizex*sizey*sizez*3);
+			assert(final_state);
+			set_to_field(final_state);
+			while(1) {
+				if(!READLINE) break;
+				if(buf[0]=='[') { ready=1; break; };
+				real center[3]; real radius; int winding, rotation;
+				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g %d %d",center+0,center+1,center+2,&radius,&winding,&rotation)!=6) {
+					fprintf(stderr,"Parse error:%d: wrong format\n",line); 
+					exit(1); 
+				};
+				append_skyrmion(center, radius, winding, rotation, final_state);
+			};			
 		} else if(buf[0]=='[') {
 			fprintf(stderr,"Parse error:%d: Unknown section %s\n",line,buf);
 			exit(1);	

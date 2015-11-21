@@ -36,6 +36,9 @@ extern real* exchange_constant;
 // Dzyaloshinskii Moriya vector for every pair of atoms
 //extern real dzyaloshinskii_moriya_vector[sizen][3];
 extern real* dzyaloshinskii_moriya_vector;
+// Initial and final states. Given if not NULL
+extern real* initial_state;
+extern real* final_state;
 
 // typedef real field[sizeu][sizex][sizey][sizez][3];
 // Fields are stored as if defined by 'field' type.
@@ -61,3 +64,8 @@ void three_point_tangent(const real* restrict a, const real* restrict b, const r
 void three_point_project(const real* restrict a, const real* restrict b, real* restrict r);
 void three_point_equalize(const real* restrict a, const real* restrict b, real* restrict r);
 void three_point_equalizer(const real* restrict a, const real* restrict c, const real* restrict b, real* restrict r);
+
+void append_skyrmion(const real center[3], real distance, int winding, 
+	int rotation, real* restrict data);
+
+#define COORDS(u,x,y,z,vec) { (vec)[0]=atom_positions[3*u+0]+x*translation_vectors[0][0]+y*translation_vectors[1][0]+z*translation_vectors[2][0]; (vec)[1]=atom_positions[3*u+1]+x*translation_vectors[0][1]+y*translation_vectors[1][1]+z*translation_vectors[2][1]; (vec)[2]=atom_positions[3*u+2]+x*translation_vectors[0][2]+y*translation_vectors[1][2]+z*translation_vectors[2][2]; }

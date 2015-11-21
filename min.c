@@ -92,7 +92,10 @@ int main(int argc, char** argv) {
   } else parse_lattice(stdin);
   int size=sizeu*sizex*sizey*sizez*3;
   real* spins=(real*)malloc(sizeof(real)*size); assert(spins);
-  random_vector(size, spins);
+  if(initial_state) {
+    copy_vector(size, initial_state, spins);
+    free(initial_state);
+  } else random_vector(size, spins); 
   skyrmion_steepest_descent(spins, mode, mode_param, epsilon, max_iter);
   free(spins);
   return 0;
