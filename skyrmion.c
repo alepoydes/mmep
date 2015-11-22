@@ -143,7 +143,7 @@ void skyrmion_middle(const real* restrict a, const real* restrict b, real* restr
 	
 void skyrmion_geodesic_rec(real* p, int n, int m) {
 	int size=sizeu*sizex*sizey*sizez*3;
-	if(n+1==m) return;
+	if(n+1>=m) return;
 	int k=(n+m)/2; // Точка разбиения
 	// Находим середину на прямой между n и m и проецируем на сферы
 	skyrmion_middle(p+n*size,p+m*size,p+k*size);
@@ -174,6 +174,17 @@ void three_point_project(const real* restrict a, const real* restrict b, real* r
 		sub3(b+i,a+i,tangent); 
 		normalize3(tangent);
 		tangent3(tangent,r+i); 
+	};
+};
+
+void three_point_reverse(const real* restrict a, const real* restrict b, real* restrict r) {
+	#pragma omp parallel for collapse(4)	
+	forall(u,x,y,z) {	
+		real tangent[3];
+		int i=INDEX(u,x,y,z)*3;
+		sub3(b+i,a+i,tangent); 
+		normalize3(tangent);
+		reverse3(tangent,r+i); 
 	};
 };
 

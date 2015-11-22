@@ -60,10 +60,12 @@ void skyrmion_constrain_gradient(const real* restrict a, const real* restrict u,
 void skyrmion_constrain_adjucent(const real* restrict a, const real* restrict b, real* restrict r);
 void skyrmion_middle(const real* restrict a, const real* restrict b, real* restrict r);
 void skyrmion_geodesic(int sizep, real* p);
+void skyrmion_geodesic_rec(real* p, int n, int m);
 void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
 void three_point_project(const real* restrict a, const real* restrict b, real* restrict r);
 void three_point_equalize(const real* restrict a, const real* restrict b, real* restrict r);
 void three_point_equalizer(const real* restrict a, const real* restrict c, const real* restrict b, real* restrict r);
+void three_point_reverse(const real* restrict a, const real* restrict b, real* restrict r);
 
 void append_skyrmion(const real center[3], real distance, int winding, 
 	int rotation, real* restrict data);
