@@ -99,8 +99,11 @@ int steepest_descend(
         if(next_alpha>mode_param) next_alpha=mode_param;
         break; 
     };
-    if(display) display(iter,a,grad,f,res/factor,alpha);
-    if(res<factor*epsilon) { status=0; break; }; // If solution is found
+    if(res<factor*epsilon) { // If solution is found
+      if(display) display(-iter,a,grad,f,res/factor,alpha);
+      status=0; break; 
+    };
+    if(display) display(iter,a,grad,f,res/factor,alpha); 
     //if(last_f==f) { status=2; break; }; // Iterations stop changing
     // Calculation next aproximation
     mult_sub(n,alpha,grad,a);
@@ -155,6 +158,7 @@ int lagrange_conjugate(
   )
 {
   #define MU_INC mu-positive+mode_param
+  real improvement=0.1;
   real min_mu=1e-4; // Minimum required bpttpm of spectrum of Q+mu
   real dot_precision=EPSILON*10/**(N+M)*/; // Precision of inner product
   // allocate mempry
@@ -170,27 +174,30 @@ int lagrange_conjugate(
   real* hconjx=(real*)malloc(sizeof(real)*N); assert(hconjx);
   real* hconju=(real*)malloc(sizeof(real)*M); assert(hconju);
   // initialize state
+  int iter=0;
   int status=1;  
   real mu=0;
-  zero_vector(M, u);
-
-  for(int iter=0; iter<max_iter;) {
+  // Exact solution for orthonormal P_j x0 and exact minimizer x0.
+  Q(x0,gradx); iter++; L(gradx); P(gradx,x0,u); negate_inplace(M,u);
+  
+  //zero_vector(M, u);
+  real q=INFINITY;
+  while(iter<max_iter) {
     // Calculate gradient at the point
     restart: Q(x0,gradx); iter++;
     real f=-dot(N,x0,gradx)/2;
     L(gradx);
     f+=dot(N,x0,gradx);
     D(x0,u,gradx);
-    //real rest=normsq(N,gradx);
     mult_add(N,mu,x0,gradx);
     C(x0,gradu); 
     // Calculate norm of residual
     real resx=normsq(N,gradx), resu=normsq(M,gradu);
-    real res=rsqrt(resx+resu);
+    real res=rsqrt(resx/N+resu/M); real top_res=res*improvement;
     real last_res=res;
     // Diplay progress
     #ifdef DEBUG
-      fprintf(stderr,COLOR_RED"%d: res=%"RF"g %+"RF"g mu=%"RF"g\n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu),mu);
+      fprintf(stderr,COLOR_RED"%d: res=%"RF"g %+"RF"g mu=%"RF"g\n"COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M),mu);
       if(N+M<8) {
         fprintf(stderr, COLOR_YELLOW);
         for(int j=0;j<N;j++) fprintf(stderr,"%"RF"g ",x0[j]); fprintf(stderr,":");
@@ -201,13 +208,14 @@ int lagrange_conjugate(
     // Residula is negative gradient
     negate_inplace(N,gradx); negate_inplace(M,gradu);
     // Reporting result
-    if(display) display(iter,x0,gradx,f,res,mu);
     if(res<epsilon) { 
       #ifdef DEBUG
         fprintf(stderr,COLOR_RED"%d: Converged %.3"RF"g < %.3"RF"g\n"COLOR_RESET,iter,res,epsilon);
       #endif    
+      if(display) display(-iter,x0,gradx,f,res,mu);
       status=0; break; 
     }; // If solution is found
+    if(display) display(iter,x0,gradx,f,res,mu);
     // Solving auxilliary problem with respect to xn,un
     // [...]*[xn;un]=[gradx;gradu]
     // initial guess
@@ -222,9 +230,9 @@ int lagrange_conjugate(
     real positive=dot(N,gradx,hgradx)/resx; // Must be positive if form is positive
     // If the quadratic form is not positive, update shift 'mu'
     if(positive<min_mu) { 
-      #ifdef DEBUG      
+      #ifdef DEBUG
         fprintf(stderr,COLOR_GREEN"  %d: Hessian is small: %.3"RF"e < %.3"RF"e\n"COLOR_RESET,iter,positive,min_mu);
-      #endif      
+      #endif
       mu=MU_INC;  
       goto restart; 
     };
@@ -235,14 +243,16 @@ int lagrange_conjugate(
     copy_vector(N, gradx, conjx); copy_vector(M, gradu, conju);
     copy_vector(N, hgradx, hconjx); copy_vector(M, hgradu, hconju);
     // Initialization of conjugate residual
-    real q=dot(N,gradx,hgradx)+dot(M,gradu,hgradu); 
+    q=dot(N,gradx,hgradx)+dot(M,gradu,hgradu); 
     while(iter<max_iter) {
       if(rabs(q)<dot_precision) { 
         #ifdef DEBUG        
           fprintf(stderr,COLOR_GREEN"  %d: Small q: %.3"RF"e < %.3"RF"e\n"COLOR_RESET,iter,q,dot_precision);
         #endif        
         //mu+=min_mu; goto restart; 
-        break;
+        add_inplace(N,xn,x0); 
+        if(display) display(-iter,x0,gradx,f,res,mu);
+        goto stop;
       };
       real hconj_normsq=normsq(N,hconjx)+normsq(M,hconju);
       #ifdef DEBUG 
@@ -269,17 +279,18 @@ int lagrange_conjugate(
           fprintf(stderr, COLOR_YELLOW"  C:"COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %"RF"g",conjx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %"RF"g",conju[j]); fprintf(stderr,"\n");
         };
       #endif      
-      resx=normsq(N,gradx); resu=normsq(M,gradu); res=rsqrt(resx+resu);
+      resx=normsq(N,gradx); resu=normsq(M,gradu); res=rsqrt(resx/N+resu/N);
       assert(!isnan(res));
-      if(res<epsilon) { // Auxilliary problem is solved
+      //if(res<epsilon) { // Auxilliary problem is solved
+      if(/*res<epsilon ||*/ res<top_res) { // Auxilliary problem is solved
         #ifdef DEBUG 
-          fprintf(stderr,COLOR_GREEN"  %d: Residual is small: R %.3"RF"e %+.3"RF"e \n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu));
+          fprintf(stderr,COLOR_GREEN"  %d: Residual is small: R %.3"RF"e %+.3"RF"e \n"COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M));
         #endif  
         break; 
       };
       if(res>100*last_res) { // Unstability detected ???
         #ifdef DEBUG 
-          fprintf(stderr,COLOR_GREEN"  %d: Residual increases: R %.3"RF"e %+.3"RF"e \n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu));
+          fprintf(stderr,COLOR_GREEN"  %d: Residual increases: R %.3"RF"e %+.3"RF"e \n"COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M));
         #endif  
         break; 
       };
@@ -322,18 +333,22 @@ int lagrange_conjugate(
       add_mult(N, gradx, beta, conjx); add_mult(M, gradu, beta, conju); 
       add_mult(N, hgradx, beta, hconjx); add_mult(M, hgradu, beta, hconju); 
       #ifdef DEBUG 
-        fprintf(stderr,COLOR_GREEN"  %d: R %.3"RF"e %+.3"RF"e A %.3"RF"e B %.3"RF"e P %.3"RF"e q %.3"RF"e\n"COLOR_RESET,iter,rsqrt(resx),rsqrt(resu),alpha,beta,positive,q);
+        fprintf(stderr,COLOR_GREEN"  %d: R %.3"RF"e %+.3"RF"e A %.3"RF"e B %.3"RF"e P %.3"RF"e q %.3"RF"e\n"COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M),alpha,beta,positive,q);
       #endif   
     };
     #ifdef DEBUG 
       fprintf(stderr,COLOR_BLUE"  %d: Hessian bottom %.3"RF"e\n"COLOR_RESET,iter,low_boundary-mu);
     #endif    
-    mu=mu*0.9+(mu-low_boundary+min_mu)*0.1;
+    real delta_mu=(-low_boundary+min_mu)*0.1;
+    if(mu+delta_mu<0) delta_mu=-mu;
+    mu+=delta_mu;
+    add_constant_inplace(M,-delta_mu,u);
     add_inplace(N,xn,x0); add_inplace(M,un,u); 
   };
-  //stop:{};
+  stop: {}; 
   free(u); free(xn); free(un); 
   free(gradx); free(gradu); free(conjx); free(conju);
   free(hgradx); free(hgradu); free(hconjx); free(hconju);
   return status; 
+
 }

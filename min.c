@@ -9,21 +9,27 @@
 #include "optim.h"
 #include "plot.h"
 #include "parse.h"
+#include "debug.h"
 
 real epsilon=1e-6;
 int max_iter=1000;
-real mode_param=0.05;
-int mode=SDM_CONSTANT;
+real mode_param=0.2;
+int mode=2;
 int debug_plot=0;
 int debug_every=1;
 
 void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real alpha) {
-  static real prev_f=NAN;
-  if(iter%debug_every==0) {
-  	fprintf(stderr, "%d: E %"RF"g%+"RF"g R %"RF"g A %"RF"g\n", iter, f, f-prev_f, res, alpha);
+  static real prev_f=NAN; static real prev_res=NAN;
+  if(iter%debug_every==0 || iter<0) {
+  	fprintf(stderr, "%d: E %"RF"g", abs(iter), f);
+    if(f<prev_f) fprintf(stderr, COLOR_GREEN"%+"RF"g "COLOR_RESET, f-prev_f);
+    else fprintf(stderr, COLOR_RED"%+"RF"g "COLOR_RESET, f-prev_f);
+    if(res<prev_res) fprintf(stderr, "R "COLOR_GREEN"%"RF"g "COLOR_RESET, res);
+    else fprintf(stderr, "R "COLOR_RED"%"RF"g "COLOR_RESET, res);
+    fprintf(stderr, "A %"RF"g\n", alpha);
   	if(debug_plot) plot_field3(stdout,a);
+    prev_f=f; prev_res=res;
   };
-  prev_f=f;
 };
 
 int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param, 

@@ -72,3 +72,8 @@ void negate_inplace(int n, real* restrict c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]=-c[k];
 }; 
+
+void add_constant_inplace(int n, real a, real* restrict c) {
+	#pragma omp parallel for 
+	for(int k=0; k<n; k++) c[k]+=a;
+};

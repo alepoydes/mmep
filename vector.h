@@ -63,6 +63,7 @@ void zero_vector(int n, real* a);
 void copy_vector(int n, const real* a, real* b);
 void sub_inplace(int n, const real* restrict a, real* restrict c);
 void add_inplace(int n, const real* restrict a, real* restrict c);
+void add_constant_inplace(int n, real a, real* restrict c);
 void negate_inplace(int n, real* restrict c);
 
 #endif

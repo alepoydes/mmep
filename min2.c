@@ -9,6 +9,7 @@
 #include "optim.h"
 #include "plot.h"
 #include "parse.h"
+#include "debug.h"
 
 real epsilon=1e-6;
 int max_iter=1000;
@@ -18,19 +19,28 @@ int debug_plot=0;
 int debug_every=1;
 
 void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real alpha) {
-  static real prev_f=NAN;
+  static real prev_f=NAN; static real prev_res=NAN; 
+  static real prev_alpha=NAN; 
   static int prev_iter=-1;
-  if(iter>=prev_iter+debug_every) {
+  if(iter>=prev_iter+debug_every || iter<0) {
     // Compute projection on tangent space
     int size=sizeu*sizex*sizey*sizez*3;
     real* tmp=(real*)malloc(sizeof(real)*size); assert(tmp);
-    hamiltonian_hessian(a,tmp); subtract_field(tmp); 
+    hamiltonian_hessian(a,tmp); 
+    subtract_field(tmp); 
     project_to_tangent(a, tmp); 
-    real tanres=rsqrt(normsq(size, tmp));
+    real tanres=rsqrt(normsq(size, tmp)/size);
     free(tmp);
-  	fprintf(stderr, "%d: E %"RF"g%+.2"RF"g R %.2"RF"g / %.2"RF"g A %.2"RF"g\n", iter, f, f-prev_f, res, tanres, alpha);
+    fprintf(stderr, "%d: E %"RF"g", abs(iter), f);
+    if(f<prev_f) fprintf(stderr, COLOR_GREEN"%+"RF"g "COLOR_RESET, f-prev_f);
+    else fprintf(stderr, COLOR_RED"%+"RF"g "COLOR_RESET, f-prev_f);
+    if(res<prev_res) fprintf(stderr, "R "COLOR_GREEN"%"RF"g"COLOR_RESET, res);
+    else fprintf(stderr, "R "COLOR_RED"%"RF"g"COLOR_RESET, res);
+    fprintf(stderr, "/%"RF"g ", tanres);
+    if(alpha<=prev_alpha) fprintf(stderr, "A "COLOR_YELLOW"%"RF"g\n"COLOR_RESET, alpha);
+    else fprintf(stderr, "A %"RF"g\n"COLOR_RESET, alpha);
   	if(debug_plot) plot_field3(stdout,a);
-    prev_iter=iter;
+    prev_iter=iter; prev_res=res; prev_alpha=alpha;
   };
   //fprintf(stderr, "%d: prev iter %d\n", iter, prev_iter);  
   prev_f=f; 
@@ -110,7 +120,10 @@ int main(int argc, char** argv) {
   } else parse_lattice(stdin);
   int size=sizeu*sizex*sizey*sizez*3;
   real* spins=(real*)malloc(sizeof(real)*size); assert(spins);
-  random_vector(size, spins); normalize(spins);
+  if(initial_state) {
+    copy_vector(size, initial_state, spins);
+    free(initial_state);
+  } else random_vector(size, spins);   
   int status=skyrmion_lagrange_conjugate(spins, mode, mode_param, epsilon, max_iter);
   fprintf(stderr, "Status: %d\n", status);
   free(spins);

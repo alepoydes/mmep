@@ -16,8 +16,8 @@ int sizep=0; // Number of nodes on path
 int max_sizep=65; // Number of nodes on path
 real epsilon=1e-6;
 int max_iter=1000;
-real mode_param=0.2;
-int mode=SDM_CONSTANT;
+real mode_param=0.0001;
+int mode=2;
 int debug_plot=0;
 int debug_plot_path=0;
 int debug_every=1;
@@ -50,7 +50,7 @@ void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f,
   static real prev_f=NAN; 
   static real prev_res=NAN; 
   if(iter%(debug_every*sizep)==0 || iter<0) {
-  	fprintf(stderr, "%d: E %"RF"g", iter, f);
+  	fprintf(stderr, "%d: E %"RF"g", abs(iter), f);
     if(f<prev_f) fprintf(stderr, COLOR_GREEN"%+"RF"g "COLOR_RESET, f-prev_f);
     else fprintf(stderr, COLOR_RED"%+"RF"g "COLOR_RESET, f-prev_f);
     if(res<prev_res) fprintf(stderr, "R "COLOR_GREEN"%"RF"g "COLOR_RESET, res);
@@ -252,7 +252,7 @@ int main(int argc, char** argv) {
   diff=(real*)malloc(sizeof(real)*max_sizep); assert(diff);
   tdiff=(real*)malloc(sizeof(real)*max_sizep); assert(tdiff);
   // Set initla path size
-  sizep=17; if(max_sizep<sizep) sizep=max_sizep;
+  sizep=9; if(max_sizep<sizep) sizep=max_sizep;
   // find two minima
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating initial state\n"COLOR_RESET);
   if(initial_state) {
@@ -285,6 +285,10 @@ int main(int argc, char** argv) {
   real max_energy=energy[0];
   for(int p=1; p<sizep; p++) if(max_energy<energy[p]) max_energy=energy[p];
   fprintf(stderr, COLOR_BLUE"Energy:"COLOR_RESET" initial %.8"RF"f maximum %.8"RF"f final %.8"RF"f\n", energy[0],max_energy,energy[sizep-1]);
+  if(!debug_plot) {
+    for(int p=0;p<sizep;p++) printf("%.8"RF"e ", energy[p]);
+    printf("\n");
+  };
 
   // save energy
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Saving result\n"COLOR_RESET);

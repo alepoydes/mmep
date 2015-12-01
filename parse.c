@@ -102,12 +102,12 @@ void parse_lattice(FILE* file) {
 				fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
 				exit(1); 
 			};
-			if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",&magnetic_anisotropy_unit[0],&magnetic_anisotropy_unit[1],&magnetic_anisotropy_unit[2])!=3) {
-				fprintf(stderr,"Parse error:%d: real vector is expected\n",line); 
+			if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g",&magnetic_anisotropy_norm,&magnetic_anisotropy_unit[0],&magnetic_anisotropy_unit[1],&magnetic_anisotropy_unit[2])!=4) {
+				fprintf(stderr,"Parse error:%d: expected <abs. value <K_x> <K_y> <K_z>>\n",line); 
 				exit(1); 
 			};
 			real t=normsq3(magnetic_anisotropy_unit);
-			magnetic_anisotropy_norm=t;
+			magnetic_anisotropy_norm*=t;
 			if(magnetic_anisotropy_norm>0) {
 				magnetic_anisotropy_unit[0]/=t;
 				magnetic_anisotropy_unit[1]/=t;
