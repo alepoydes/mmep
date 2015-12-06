@@ -8,8 +8,8 @@
 0 0 1
 [magnetic anisotropy]
 # Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)
-# <K_x> <K_y> <K_z>
-0 0 0.000001
+# <Absolute value> <K_x> <K_y> <K_z>
+0.000001 0 0 1
 [boundary conditions]
 # Boundary conditions along every axis
 # <BC along x> <BC along y> <BC along z>

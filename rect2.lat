@@ -1,15 +1,15 @@
 [size]
 # Grid dimesions <x> x <y> x <z>
 # <x> <y> <z>
-20 20 1
+12 6 1
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>
 0 0 1
 [magnetic anisotropy]
 # Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)
-# <K_x> <K_y> <K_z>
-0 0 0
+# <absolute value> <K_x> <K_y> <K_z>
+0 0 1 1
 [boundary conditions]
 # Boundary conditions along every axis
 # <BC along x> <BC along y> <BC along z>
@@ -54,13 +54,16 @@
 [dzyaloshinskii moriya vector]
 # Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
 # <D_x> <D_y> <D_z>
-1.2 0 0
-0 1.2 0
+1 0 0
+0 1 0
 [initial state]
 # Initial state for MEP and stable state calculation.
 # Empty section means that all momentum are along the external field.
 # <x> <y> <z> <radius> <winding number> <rotation>
-10 10 0 0 1 0
+#0 0 0 0 1 0
+0 0 0 0 1 0
+6 0 0 0 1 0
 [final state]
 # Final state for MEP.
 # The same format as for [initial state]
+3 0 0 0 1 0

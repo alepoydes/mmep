@@ -15,12 +15,12 @@ int size=0; // Dimenion of vector containing skyrmionic solutions
 int sizep=0; // Number of nodes on path
 int max_sizep=65; // Number of nodes on path
 real epsilon=1e-6;
-int max_iter=1000;
-real mode_param=0.0001;
+int max_iter=10000;
+real mode_param=0.2;
 int mode=2;
 int debug_plot=0;
 int debug_plot_path=0;
-int debug_every=1;
+int debug_every=100;
 
 real *distance=NULL, *energy=NULL, *diff=NULL, *tdiff=NULL;
 int post_optimization=0;
@@ -46,7 +46,7 @@ void energy_evaluate(real* path) {
   free(u); free(q);
 };
 
-void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real alpha) {
+void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real constres, real alpha) {
   static real prev_f=NAN; 
   static real prev_res=NAN; 
   if(iter%(debug_every*sizep)==0 || iter<0) {
@@ -62,6 +62,11 @@ void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f,
   };
 };
 
+real quasynorm(real* restrict x) {
+  normalize(x); return 0;
+}
+
+
 int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param, 
 	real epsilon, int max_iter) 
 {
@@ -70,7 +75,7 @@ int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param,
 		hamiltonian_hessian,	subtract_field,
 		mode, mode_param, epsilon, max_iter,
 		skyrmion_display, 
-		normalize,project_to_tangent
+		quasynorm, project_to_tangent
 	);
 };
 
@@ -99,11 +104,11 @@ void energy_display(FILE* file) {
 };
 
 void path_display(int iter, real* restrict mep, real* restrict grad_f
-, real f, real res, real alpha) {
+, real f, real res, real restres, real alpha) {
   static real prev_f=NAN;
   static real prev_res=NAN;
   if(iter%debug_every==0 || iter<0) {
-    fprintf(stderr, "%d: E %"RF"g", iter, f);
+    fprintf(stderr, "%d: E %"RF"g", abs(iter), f);
     if(f<prev_f) fprintf(stderr, COLOR_GREEN"%+"RF"g "COLOR_RESET, f-prev_f);
     else fprintf(stderr, COLOR_RED"%+"RF"g "COLOR_RESET, f-prev_f);
     if(res<prev_res) fprintf(stderr, "R "COLOR_GREEN"%"RF"g "COLOR_RESET, res);
@@ -117,7 +122,7 @@ void path_display(int iter, real* restrict mep, real* restrict grad_f
   };
 };
 
-void path_normalize(real* mep) {
+real path_normalize(real* mep) {
   for(int p=0; p<sizep; p++) normalize(mep+size*p);
   
   /*real* shifted=(real*)malloc(sizeof(real)*size*sizep); assert(shifted);
@@ -150,6 +155,7 @@ void path_normalize(real* mep) {
     post_optimization=1;
     fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Post-optimization\n"COLOR_RESET);
   };*/
+  return 0;
 };
 
 void path_tangent(const real* restrict mep, real* restrict grad) {
@@ -169,10 +175,12 @@ void path_tangent(const real* restrict mep, real* restrict grad) {
 int path_steepest_descent(real* restrict path, int mode, 
   real mode_param, real epsilon, int max_iter) 
 {
+  real updated_param=mode_param;
+  if(mode==2) updated_param=mode_param/sizep;
   return steepest_descend(
     size*sizep, (real*)path, 
     path_hessian, path_subtract_field,
-    mode, mode_param, epsilon, max_iter,
+    mode, updated_param, epsilon, max_iter,
     path_display, 
     path_normalize, path_tangent
   );
@@ -292,21 +300,21 @@ int main(int argc, char** argv) {
 
   // save energy
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Saving result\n"COLOR_RESET);
-  const char* energyname="../fields/energy.gnuplot";
+  const char* energyname="fields/energy.gnuplot";
   FILE* file=fopen(energyname,"w");
   if(file) {
-    fprintf(file,"set terminal png\nset output '../fields/energy.png'\n");
+    fprintf(file,"set terminal png\nset output 'fields/energy.png'\n");
     energy_display(file);
     fclose(file);
    } else {
     fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,energyname);
   }; 
   // save field
-  const char* filename="../fields/mep.gnuplot";
+  const char* filename="fields/mep.gnuplot";
   file=fopen(filename,"w");
   if(file) {
     fprintf(file,"set terminal gif animate delay 10\n");
-    fprintf(file,"set output '../fields/mep.gif'\n");
+    fprintf(file,"set output 'fields/mep.gif'\n");
     animate_path(file, sizep, path);
     fclose(file);
   } else {

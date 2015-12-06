@@ -34,14 +34,26 @@
 // Return 0 on success (residual is less then epsilon)
 //        1 if maximum number of iteration max_iter is reached
 int steepest_descend(
-	int n, real* a, 
-	void (*Q)(const real* x, real* y),
-	void (*L)(real* y),
-	int mode, real mode_param, real epsilon, int max_iter,
-	void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
-    void (*P)(real* a),
-    void (*T)(const real* a, real* t)
+  int n, real* a, 
+  void (*Q)(const real* x, real* y),
+  void (*L)(real* y),
+  int mode, real mode_param, real epsilon, int max_iter,
+  void (*display)(int iter, real* a, real* grad_f, real f, real res, real constres, real alpha),
+  real (*P)(real* a),
+  void (*T)(const real* a, real* t)
 );
+
+int lagrange_conjugate_quad(
+  int N, int M, real* x0, 
+  void (*Q)(const real* x, real* y),
+  void (*L)(real* y),
+  int mode, real mode_param, real epsilon, int max_iter,
+  void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
+  void (*C)(const real* x, real* r),
+  void (*D)(const real* x, const real* u, real* r),
+  void (*P)(const real* x, const real* y, real* r),
+  real initial_mu
+ );
 
 int lagrange_conjugate(
   int N, int M, real* x0, 
@@ -51,5 +63,6 @@ int lagrange_conjugate(
   void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
   void (*C)(const real* x, real* r),
   void (*D)(const real* x, const real* u, real* r),
-  void (*P)(const real* x, const real* y, real* r)
+  void (*P)(const real* x, const real* y, real* r),
+  real initial_mu
  );

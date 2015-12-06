@@ -40,6 +40,16 @@ real* dzyaloshinskii_moriya_vector=NULL;
 real* initial_state=NULL;
 real* final_state=NULL;
 
+real skyrmion_minimum_energy() {
+	int size=sizeu*sizex*sizey*sizez;
+	real min=-2*rabs(magnetic_anisotropy_norm)*size;
+	for(int n=0; n<sizen;n++) {
+		min-=2*rsqrt(normsq3(dzyaloshinskii_moriya_vector+3*n))*size;
+		min-=2*rabs(exchange_constant[n])*size;
+	};
+	return min;
+};
+
 void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 	// Compute anisotropy part
 	real K2[3]; for3(j) K2[j]=-2*magnetic_anisotropy_norm*magnetic_anisotropy_unit[j];
@@ -98,6 +108,13 @@ void set_to_field(real* restrict out) {
 void normalize(real* restrict a) {
 	#pragma omp parallel for collapse(4)
 	forall(u,x,y,z) normalize3(a+INDEX(u,x,y,z)*3);
+};
+
+real seminormalize(real factor, real* restrict a) {
+	real sum=0;
+	#pragma omp parallel for collapse(4) reduction(+:sum)
+	forall(u,x,y,z) sum+=seminormalize3(factor,a+INDEX(u,x,y,z)*3);
+	return sum;
 };
 
 // Project vector field 't' to tangent space of unit length vector field 'a'

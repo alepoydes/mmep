@@ -61,3 +61,5 @@
 # Empty section means that all momentum are along the external field.
 # <x> <y> <z> <radius> <winding number> <rotation>
 0 0 0 0 1 0
+[final state]
+${X} 0 0 0 1 0

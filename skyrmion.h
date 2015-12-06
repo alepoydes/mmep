@@ -52,6 +52,7 @@ void subtract_field(real* restrict inout);
 void set_to_field(real* restrict out);
 
 void normalize(real* restrict a);
+real seminormalize(real factor, real* restrict a);
 // Project vector field 'b' to tangent space of unit length vector field 'a'
 void project_to_tangent(const real* restrict a, real* restrict b);
 
@@ -66,6 +67,8 @@ void three_point_project(const real* restrict a, const real* restrict b, real* r
 void three_point_equalize(const real* restrict a, const real* restrict b, real* restrict r);
 void three_point_equalizer(const real* restrict a, const real* restrict c, const real* restrict b, real* restrict r);
 void three_point_reverse(const real* restrict a, const real* restrict b, real* restrict r);
+
+real skyrmion_minimum_energy();
 
 void append_skyrmion(const real center[3], real distance, int winding, 
 	int rotation, real* restrict data);

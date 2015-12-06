@@ -49,7 +49,8 @@ void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f,
 int skyrmion_lagrange_conjugate(real* restrict x, int mode, real mode_param, 
 	real epsilon, int max_iter) 
 {
-	return lagrange_conjugate(
+  if(mode==0)
+	return lagrange_conjugate_quad(
 		sizeu*sizex*sizey*sizez*3,  // int N 
 		sizeu*sizex*sizey*sizez, // int M 
 		x, // real* x0, 
@@ -62,8 +63,30 @@ int skyrmion_lagrange_conjugate(real* restrict x, int mode, real mode_param,
         skyrmion_display, // void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
         skyrmion_constrain, // void (*C)(const real* x, real* r),
         skyrmion_constrain_gradient, // void (*D)(const real* x, const real* u, real* r),
-        skyrmion_constrain_adjucent // void (*P)(const real* x, const real* y, real* r)
+        skyrmion_constrain_adjucent, // void (*P)(const real* x, const real* y, real* r)
+        -skyrmion_minimum_energy()
     );
+  else if(mode==1)
+  return lagrange_conjugate(
+    sizeu*sizex*sizey*sizez*3,  // int N 
+    sizeu*sizex*sizey*sizez, // int M 
+    x, // real* x0, 
+        hamiltonian_hessian, // void (*Q)(const real* x, real* y)
+        subtract_field, // void (*L)(real* y),
+        mode, // int mode
+        mode_param, // real mode_param
+        epsilon, // real epsilon
+        max_iter, // int max_iter
+        skyrmion_display, // void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
+        skyrmion_constrain, // void (*C)(const real* x, real* r),
+        skyrmion_constrain_gradient, // void (*D)(const real* x, const real* u, real* r),
+        skyrmion_constrain_adjucent, // void (*P)(const real* x, const real* y, real* r)
+        -skyrmion_minimum_energy()        
+    );    
+  else {
+    fprintf(stderr, "Unknown solver mode: %d\n",mode);
+    exit(1);
+  };
 };
 
 void showUsage(const char* program) {
@@ -126,6 +149,17 @@ int main(int argc, char** argv) {
   } else random_vector(size, spins);   
   int status=skyrmion_lagrange_conjugate(spins, mode, mode_param, epsilon, max_iter);
   fprintf(stderr, "Status: %d\n", status);
+  // Saving result
+  const char* filename="fields/state.gnuplot";
+  FILE* file=fopen(filename,"w");
+  if(file) {
+    fprintf(file,"set terminal pngcairo\n");
+    fprintf(file,"set output 'fields/state.png'\n");
+    plot_field3(file, spins);
+    fclose(file);
+  } else {
+    fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,filename);
+  };
   free(spins);
   return 0;
 };

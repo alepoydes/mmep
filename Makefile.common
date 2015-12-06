@@ -1,6 +1,6 @@
-all: min mind minq min2 min2d min2q mep mepd mepq 
+all: minf mind minq min2f min2d min2q mepf mepd mepq README.html
 
-min: parse.c vector.c skyrmion.c plot.c optim.c min.c 
+minf: parse.c vector.c skyrmion.c plot.c optim.c min.c 
 	gcc $^ $(OPT) -lm -o $@	
 
 mind: parse.c vector.c skyrmion.c plot.c optim.c min.c 
@@ -9,7 +9,7 @@ mind: parse.c vector.c skyrmion.c plot.c optim.c min.c
 minq: parse.c vector.c skyrmion.c plot.c optim.c min.c 
 	gcc $^ $(OPT) -DQUAD -lm -o $@	
 
-min2: parse.c vector.c skyrmion.c plot.c optim.c min2.c 
+min2f: parse.c vector.c skyrmion.c plot.c optim.c min2.c 
 	gcc $^ $(OPT) -lm -o $@	
 
 min2d: parse.c vector.c skyrmion.c plot.c optim.c min2.c 
@@ -18,7 +18,7 @@ min2d: parse.c vector.c skyrmion.c plot.c optim.c min2.c
 min2q: parse.c vector.c skyrmion.c plot.c optim.c min2.c 
 	gcc $^ $(OPT) -DQUAD -lm -o $@	
 
-mep: parse.c vector.c skyrmion.c plot.c optim.c mep.c 
+mepf: parse.c vector.c skyrmion.c plot.c optim.c mep.c 
 	gcc $^ $(OPT) -lm -o $@	
 
 mepd: parse.c vector.c skyrmion.c plot.c optim.c mep.c 
@@ -26,3 +26,6 @@ mepd: parse.c vector.c skyrmion.c plot.c optim.c mep.c
 
 mepq: parse.c vector.c skyrmion.c plot.c optim.c mep.c 
 	gcc $^ $(OPT) -DQUAD -lm -o $@	
+
+README.html: README.md
+	pandoc $^ -t html -f markdown -s -o $@

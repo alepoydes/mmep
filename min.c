@@ -14,23 +14,29 @@
 real epsilon=1e-6;
 int max_iter=1000;
 real mode_param=0.2;
+real param2=1;
 int mode=2;
 int debug_plot=0;
 int debug_every=1;
 
-void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real alpha) {
+void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real constres, real alpha) {
   static real prev_f=NAN; static real prev_res=NAN;
   if(iter%debug_every==0 || iter<0) {
   	fprintf(stderr, "%d: E %"RF"g", abs(iter), f);
     if(f<prev_f) fprintf(stderr, COLOR_GREEN"%+"RF"g "COLOR_RESET, f-prev_f);
     else fprintf(stderr, COLOR_RED"%+"RF"g "COLOR_RESET, f-prev_f);
-    if(res<prev_res) fprintf(stderr, "R "COLOR_GREEN"%"RF"g "COLOR_RESET, res);
-    else fprintf(stderr, "R "COLOR_RED"%"RF"g "COLOR_RESET, res);
-    fprintf(stderr, "A %"RF"g\n", alpha);
+    if(res<prev_res) fprintf(stderr, "R "COLOR_GREEN"%"RF"g"COLOR_RESET, res);
+    else fprintf(stderr, "R "COLOR_RED"%"RF"g"COLOR_RESET, res);
+    fprintf(stderr, " %+"RF"g", constres);
+    fprintf(stderr, " A %"RF"g\n", alpha);
   	if(debug_plot) plot_field3(stdout,a);
     prev_f=f; prev_res=res;
   };
 };
+
+real quasynorm(real* restrict x) {
+  return rsqrt(seminormalize(param2, x)/sizeu/sizex/sizey/sizez);
+}
 
 int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param, 
 	real epsilon, int max_iter) 
@@ -40,7 +46,7 @@ int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param,
 		hamiltonian_hessian,	subtract_field,
 		mode, mode_param, epsilon, max_iter,
 		skyrmion_display, 
-		normalize,project_to_tangent
+		quasynorm,project_to_tangent
 	);
 };
 
@@ -55,7 +61,8 @@ void showUsage(const char* program) {
 \n   -i           INT       Set maximum number of iterations\
 \n   -r           INT       Progress will be shown every given iteration\
 \n   -m|--mode    INT       Optimization method\
-\n   -a           REAL      A parameter for optimization methods\
+\n   -a           REAL      First parameter for optimization methods\
+\n   -b           REAL      Second parameter for optimization methods\
 \n", program);
 };
 
@@ -70,7 +77,7 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "hpe:i:r:m:a:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hpe:i:r:m:a:b:", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
@@ -80,6 +87,7 @@ int parseCommandLine(int argc, char** argv) {
       case 'r': debug_every=atoi(optarg); break;
       case 'm': mode=atoi(optarg); break;
       case 'a': mode_param=atof(optarg); break;
+      case 'b': param2=atof(optarg); break;
       case '?': break;
       default: fprintf(stderr,"Unprocessed option '%c'\n", c); exit(1);
     };
@@ -103,6 +111,17 @@ int main(int argc, char** argv) {
     free(initial_state);
   } else random_vector(size, spins); 
   skyrmion_steepest_descent(spins, mode, mode_param, epsilon, max_iter);
+  // Saving result
+  const char* filename="fields/state.gnuplot";
+  FILE* file=fopen(filename,"w");
+  if(file) {
+    fprintf(file,"set terminal pngcairo\n");
+    fprintf(file,"set output 'fields/state.png'\n");
+    plot_field3(file, spins);
+    fclose(file);
+  } else {
+    fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,filename);
+  };
   free(spins);
   return 0;
 };
