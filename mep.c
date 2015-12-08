@@ -16,7 +16,7 @@ int sizep=0; // Number of nodes on path
 int max_sizep=65; // Number of nodes on path
 real epsilon=1e-6;
 int max_iter=10000;
-real mode_param=0.2;
+real mode_param=0.05;
 int mode=2;
 int debug_plot=0;
 int debug_plot_path=0;
@@ -294,7 +294,7 @@ int main(int argc, char** argv) {
   for(int p=1; p<sizep; p++) if(max_energy<energy[p]) max_energy=energy[p];
   fprintf(stderr, COLOR_BLUE"Energy:"COLOR_RESET" initial %.8"RF"f maximum %.8"RF"f final %.8"RF"f\n", energy[0],max_energy,energy[sizep-1]);
   if(!debug_plot) {
-    for(int p=0;p<sizep;p++) printf("%.8"RF"e ", energy[p]);
+    for(int p=0;p<sizep;p++) printf("%.8"RF"g ", energy[p]);
     printf("\n");
   };
 

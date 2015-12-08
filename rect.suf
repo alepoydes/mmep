@@ -1,3 +1,12 @@
-X=4; export X
-X=5; export X
-X=6; export X
+SIZEX=9; export SIZEX
+SIZEX=10; export SIZEX
+SIZEX=11; export SIZEX
+SIZEX=12; export SIZEX
+SIZEX=13; export SIZEX
+SIZEX=14; export SIZEX
+SIZEX=15; export SIZEX
+SIZEX=16; export SIZEX
+SIZEX=17; export SIZEX
+SIZEX=18; export SIZEX
+SIZEX=19; export SIZEX
+SIZEX=20; export SIZEX

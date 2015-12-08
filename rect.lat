@@ -1,7 +1,7 @@
 [size]
 # Grid dimesions <x> x <y> x <z>
 # <x> <y> <z>
-32 12 1
+${SIZEX} 12 1
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>
@@ -60,6 +60,6 @@
 # Initial state for MEP and stable state calculation.
 # Empty section means that all momentum are along the external field.
 # <x> <y> <z> <radius> <winding number> <rotation>
-0 0 0 0 1 0
+0 6 0 0 1 0
+4 6 0 0 1 0
 [final state]
-${X} 0 0 0 1 0
