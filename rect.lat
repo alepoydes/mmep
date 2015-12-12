@@ -54,8 +54,8 @@ ${SIZEX} 12 1
 [dzyaloshinskii moriya vector]
 # Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
 # <D_x> <D_y> <D_z>
-1.2 0 0
-0 1.2 0
+1 0 0
+0 1 0
 [initial state]
 # Initial state for MEP and stable state calculation.
 # Empty section means that all momentum are along the external field.

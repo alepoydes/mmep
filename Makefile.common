@@ -1,31 +1,37 @@
-all: minf mind minq min2f min2d min2q mepf mepd mepq README.html
+all: minf mind minq min2f min2d min2q mepf mepd mepq README.html simq
 
-minf: parse.c vector.c skyrmion.c plot.c optim.c min.c 
+COMMON=parse.c vector.c skyrmion.c plot.c optim.c
+GLIB=-lGLEW -lglut -lGLU -lGL -pthread
+
+minf: ${COMMON} min.c 
 	gcc $^ $(OPT) -lm -o $@	
 
-mind: parse.c vector.c skyrmion.c plot.c optim.c min.c 
+mind: ${COMMON} min.c 
 	gcc $^ $(OPT) -DDOUBLE -lm -o $@	
 
-minq: parse.c vector.c skyrmion.c plot.c optim.c min.c 
+minq: ${COMMON} min.c 
 	gcc $^ $(OPT) -DQUAD -lm -o $@	
 
-min2f: parse.c vector.c skyrmion.c plot.c optim.c min2.c 
+min2f: ${COMMON} min2.c 
 	gcc $^ $(OPT) -lm -o $@	
 
-min2d: parse.c vector.c skyrmion.c plot.c optim.c min2.c 
+min2d: ${COMMON} min2.c 
 	gcc $^ $(OPT) -DDOUBLE -lm -o $@	
 
-min2q: parse.c vector.c skyrmion.c plot.c optim.c min2.c 
+min2q: ${COMMON} min2.c 
 	gcc $^ $(OPT) -DQUAD -lm -o $@	
 
-mepf: parse.c vector.c skyrmion.c plot.c optim.c mep.c 
+mepf: ${COMMON} mep.c 
 	gcc $^ $(OPT) -lm -o $@	
 
-mepd: parse.c vector.c skyrmion.c plot.c optim.c mep.c 
+mepd: ${COMMON} mep.c 
 	gcc $^ $(OPT) -DDOUBLE -lm -o $@	
 
-mepq: parse.c vector.c skyrmion.c plot.c optim.c mep.c 
+mepq: ${COMMON} mep.c 
 	gcc $^ $(OPT) -DQUAD -lm -o $@	
 
 README.html: README.md
 	pandoc $^ -t html -f markdown -s -o $@
+
+simq: ${COMMON} display.c sim.c 
+	gcc $^ $(OPT) -DQUAD -lm ${GLIB} -o $@	

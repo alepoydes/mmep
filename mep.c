@@ -93,7 +93,7 @@ void path_subtract_field(real* restrict inout) {
 
 void energy_display(FILE* file) {
   fprintf(file,"set ytics nomirror\nset y2tics nomirror\nset log y2\n");
-  fprintf(file,"set autoscale xy\n");
+  fprintf(file,"set format y2 '10^{%%T}'\nset autoscale xy\n");
   fprintf(file,"plot '-' using 1:2 with linespoints axes x1y1 title 'energy', '' using 1:3 with lines axes x1y2 title 'grad.', '' using 1:4 with lines axes x1y2 title 'orth. grad.'\n");
   for(int k=0; k<3; k++) {
     for(int p=0; p<sizep; p++)

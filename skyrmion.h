@@ -47,6 +47,8 @@ extern real* final_state;
 #define for3(j) for(int j=0;j<3;j++)
 #define INDEX(u,x,y,z) ((((u)*sizex+(x))*sizey+(y))*sizez+(z))
 
+#define SIZE (sizex*sizey*sizez*sizeu)
+
 void hamiltonian_hessian(const real* restrict arg, real* restrict out);
 void subtract_field(real* restrict inout);
 void set_to_field(real* restrict out);

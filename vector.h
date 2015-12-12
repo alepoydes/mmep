@@ -1,6 +1,7 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
+#define _GNU_SOURCE
 #include <math.h>
 #include <float.h>
 
@@ -32,7 +33,7 @@
 // считает длину вектора
 #define normsq3(x) ((x)[0]*(x)[0]+(x)[1]*(x)[1]+(x)[2]*(x)[2])
 // считает скалярное произведение векторов
-#define dot3(x,y) (x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2]
+#define dot3(x,y) ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
 //#define normalize3(x) { real t=(3-normsq3(x))*0.5; (x)[0]*=t; (x)[1]*=t; (x)[2]*=t; }
 //#define normalize3(x) { real t=(1+normsq3(x))/2; (x)[0]/=t; (x)[1]/=t; (x)[2]/=t; }
 #define normalize3(x) { real t=normsq3(x); if(t>0) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
@@ -51,6 +52,7 @@
 #define mult_plus3(a,b,c) { (c)[0]+=(a)*(b)[0]; (c)[1]+=(a)*(b)[1]; (c)[2]+=(a)*(b)[2]; }
 #define copy3(a,c) { (c)[0]=(a)[0]; (c)[1]=(a)[1]; (c)[2]=(a)[2]; }
 #define quaternion_product(a,b,c) { (c)[0]=a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3]; (c)[1]=a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2]; (c)[2]=a[0]*b[2]-a[1]*b[3]+a[2]*b[0]+a[3]*b[1]; (c)[3]=a[0]*b[3]+a[1]*b[2]-a[2]*b[1]+a[3]*b[0]; }
+#define scale3(a,b,c) { (c)[0]=a*(c)[0]+(1-a)*(b)[0]; (c)[1]=a*(c)[1]+(1-a)*(b)[1]; (c)[2]=a*(c)[2]+(1-a)*(b)[2]; }
 
 real distsq(int n, const real* a, const real* b);
 real normsq(int n, const real* a);
