@@ -15,5 +15,7 @@ void displayRedraw();
 
 // external keyboard handler
 void keyboard_function(unsigned char key);
+void mouse_function(int button, int state, real p[3]);
+void motion_function(real p[3]);
 
 #endif

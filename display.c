@@ -27,13 +27,29 @@ int windowHeight = 600;     // Windowed mode's height
 float arrow = 0.45; // half of length of arrow representing spin
 int arrow_mode=1;
 int emph_mode=1;
+int field_mode=0;
 float view_angle = 90;
 int show_bbox=1;
 
 real center[3], eye[3], dir[3];
 real drag_center[3], drag_eye[3], drag_dir[3];
+real mouse_pointer[3]={0,0,0};
 int drag_mode=0; 
 int drag_point[2];
+
+void screen_to_field(real x, real y, real p[3]) {	
+	x=-2*(x-windowWidth/2.0)/windowHeight;
+	y=-2*(y-windowHeight/2.0)/windowHeight;
+	real s1,c1; rsincos(view_angle/180*M_PI,&s1,&c1); 
+	normalize3(dir); 
+	real normal[3]; sub3(eye,center,normal); normalize3(normal);
+	real dir2[3]; cross3(normal,dir,dir2);
+	real vec[3];
+	for3(c) vec[c]=(y*c1+x*c1-1)*normal[c]+y*s1*dir[c]+x*s1*dir2[c];
+	normalize3(vec);
+	real d=(0-eye[2])/vec[2]; 
+	for3(c) p[c]=eye[c]+d*vec[c]; 
+};
 
 void resetCamera() {
 	real bounds[3][2]; plot_bounds(bounds);
@@ -69,24 +85,23 @@ void drawBoundingBox() {
 	glEnd();	
 };
 
+void drawPointer() {
+	glColor3f(0.5f, 1.0f, 0.5f);
+	glPointSize(5);
+	glBegin(GL_POINTS);
+	glVertex3f(mouse_pointer[0],mouse_pointer[1],mouse_pointer[2]);
+	glEnd();		
+};
+
 void zToVector(real* vec) {
 	real c[3]={vec[0],vec[1],vec[2]}; normalize3(c);
 	real a[3]; 
 	if(rabs(c[0])<0.99) { a[0]=1; a[1]=a[2]=0; } else { a[1]=1; a[0]=a[2]=0; };
 	real p=dot3(a,c); mult_minus3(p,c,a); normalize3(a);
-	assert(rabs(dot3(a,c))<1e-6);
 	real b[3];
 	if(rabs(c[2])<0.99) { b[2]=1; b[1]=b[0]=0; } else { b[1]=1; b[0]=b[2]=0; };
 	p=dot3(b,c); mult_minus3(p,c,b); 
 	p=dot3(b,a); mult_minus3(p,a,b); normalize3(b);
-	assert(rabs(dot3(b,c))<1e-6);
-	assert(rabs(dot3(b,a))<1e-6);
-	/*GLfloat m[16]={
-		a[0],b[0],c[0],0.0f,
-		a[1],b[1],c[1],0.0f,
-		a[2],b[2],c[2],0.0f,
-		0.0f,0.0f,0.0f,1.0f
-	};*/
 	GLfloat m[16]={
 		a[0],a[1],a[2],0.0f,
 		b[0],b[1],b[2],0.0f,
@@ -212,8 +227,10 @@ void displayFunction() {
 	glLoadIdentity();
 	gluLookAt(eye[0],eye[1],eye[2],center[0],center[1],center[2],dir[0],dir[1],dir[2]);
 	
+	drawPointer();
  	if(show_bbox) drawBoundingBox();
-	if(display_buffer) drawField(display_buffer);
+ 	if(field_mode==0) if(display_buffer) drawField(display_buffer);
+ 	if(field_mode==1) if(nonuniform_field) drawField(nonuniform_field);
 	//glFlush();  // Render now
 	glutSwapBuffers();
 }
@@ -237,6 +254,7 @@ void displayKeyboard(unsigned char key, int x, int y) {
 		case 'r': resetCamera(); break;
 		case 'v': arrow_mode=(arrow_mode+1)%3; break;
 		case 't': emph_mode=(emph_mode+1)%2; break;
+		case 'm': field_mode=(field_mode+1)%2; break;
 		default: keyboard_function(key); break;
 	};
 	displayRedraw();
@@ -260,6 +278,9 @@ void displayMouse(int button, int state, int x, int y) {
 		drag_mode=2; drag_point[0]=x; drag_point[1]=y; 
 	} else if (button==2 && state==GLUT_UP) { 
 		drag_mode=0;
+	} else {
+		screen_to_field(x,y,mouse_pointer);
+		mouse_function(button,state,mouse_pointer);
 	};
 }
 
@@ -296,6 +317,9 @@ void displayMotion(int x, int y) {
 		mult_minus3(-shift[0],dir2,center); mult_minus3(-shift[0],dir2,eye); 
 		mult_minus3(-shift[1],drag_dir,center); mult_minus3(-shift[1],drag_dir,eye); 
 		displayRedraw();
+	} else {
+		screen_to_field(x, y, mouse_pointer);
+		motion_function(mouse_pointer);
 	};
 }
 

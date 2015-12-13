@@ -9,6 +9,7 @@
 
 // Physical parameters
 real magnetic_field[3]={NAN,NAN,NAN};
+real* nonuniform_field=NULL;
 // Structure of crystal lattice
 int sizex=0; // Width in unit cells
 int sizey=0; // Depth in unit cells
@@ -94,12 +95,21 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 };
 
 void subtract_field(real* restrict inout) {
-	#pragma omp parallel for collapse(4)
-	forall(u,x,y,z) for3(j) inout[INDEX(u,x,y,z)*3+j]-=magnetic_field[j];
+	if(nonuniform_field) {
+		#pragma omp parallel for collapse(4)
+		forall(u,x,y,z) {
+			int i=INDEX(u,x,y,z)*3;
+			for3(j) inout[i+j]-=nonuniform_field[i+j];
+			};
+	} else {
+		#pragma omp parallel for collapse(4)
+		forall(u,x,y,z) for3(j) 
+			inout[INDEX(u,x,y,z)*3+j]-=magnetic_field[j];
+	};
 };
 
 void set_to_field(real* restrict out) {
-		#pragma omp parallel for collapse(4)
+	#pragma omp parallel for collapse(4)
 	forall(u,x,y,z) for3(j) out[INDEX(u,x,y,z)*3+j]=magnetic_field[j];
 };
 

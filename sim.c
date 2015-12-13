@@ -4,6 +4,8 @@
 #include <time.h>
 #include <getopt.h>
 
+#include <GL/freeglut.h>
+
 #include "vector.h"
 #include "skyrmion.h"
 #include "optim.h"
@@ -23,6 +25,8 @@ int debug_every=1;
 real time_step=0;
 real sim_time=0.0;
 real damping=0;
+int powered=0;
+real power=-2;
 
 void showUsage(const char* program) {
   fprintf(stderr, "Compute stable states.\
@@ -98,10 +102,35 @@ real doStep(real* spins) {
 void keyboard_function(unsigned char key) {
   switch(key) {
     case '[': damping/=1.1; break; // SYNCHRONIZE !!!
-    case ']': if(damping>0) damping*=1.1; else damping=0.001; break;
+    case ']': if(damping>0) damping*=1.1; else damping=0.01; break;
     case '-': time_step/=1.1; break;
     case '=': if(time_step>0) time_step*=1.1; else time_step=0.001; break;
+    case '\'': power+=1; break;
+    case ';': power-=1; break;
   }
+};
+
+void mouse_function(int button, int state, real p[3]) {
+  if(state==GLUT_DOWN) {
+    powered=1;
+  } else {
+    powered=0;
+    set_to_field(nonuniform_field);
+  };
+};
+
+void motion_function(real p[3]) {
+  if(powered) {
+    //fprintf(stderr, "%"RF"g %"RF"g %"RF"g \n", p[0], p[1], p[2]);
+    forall(u,x,y,z) {
+      int i=INDEX(u,x,y,z)*3;
+      real vec[3]; COORDS(u,x,y,z,vec);
+      vec[0]-=p[0]; vec[1]-=p[1]; 
+      real dist=rsqrt(vec[0]*vec[0]+vec[1]*vec[1]);
+      dist=1+power/(1+dist);
+      for3(c) nonuniform_field[i+c]=magnetic_field[c]*dist;
+    };
+  };
 };
 
 int main(int argc, char** argv) {
@@ -122,6 +151,9 @@ int main(int argc, char** argv) {
   } else random_vector(SIZE*3, spins); 
   // Initialize graphics
   is_aborting=initDisplay(&argc, argv);
+  // initialize magnetic field
+  nonuniform_field=malloc(sizeof(real)*SIZE*3); assert(nonuniform_field);
+  set_to_field(nonuniform_field);
   // Main loop
   int iter=0;
   while(!is_aborting) { 
@@ -134,10 +166,10 @@ int main(int argc, char** argv) {
     real E=doStep(spins);
     iter++;
     // Replot
-    fprintf(stderr, "%d: T=%"RF"g E=%"RF"g dT=%"RF"g dE=%"RF"g\r", iter, sim_time, E, time_step, damping);    
+    fprintf(stderr, "%d: T=%"RF"g E=%"RF"g dT=%"RF"g dE=%"RF"g P=%"RF"g        \r", iter, sim_time, E, time_step, damping,power);    
   };
   // Deinitialization
   deinitDisplay();
-  free(spins);
+  free(spins); free(nonuniform_field);
   return 0;
 };

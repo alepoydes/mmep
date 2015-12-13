@@ -2,6 +2,7 @@
 
 // Physical parameters
 extern real magnetic_field[3];
+extern real* nonuniform_field;
 // Structure of crystal lattice
 extern int sizex; // Width in unit cells
 extern int sizey; // Depth in unit cells
