@@ -11,6 +11,7 @@
 #include "parse.h"
 #include "debug.h"
 #include "display.h"
+#include "integra.h"
 
 real epsilon=1e-6;
 int max_iter=1000;
@@ -19,6 +20,9 @@ real param2=1;
 int mode=2;
 int debug_plot=0;
 int debug_every=1;
+real time_step=0;
+real sim_time=0.0;
+real damping=0;
 
 void showUsage(const char* program) {
   fprintf(stderr, "Compute stable states.\
@@ -65,6 +69,41 @@ int parseCommandLine(int argc, char** argv) {
   return optind;
 };
 
+void dspins(real* X, real* G) {
+  hamiltonian_hessian(X, G);
+  subtract_field(G);
+  forall(u,x,y,z) {
+    int i=INDEX(u,x,y,z)*3;
+    real vec[3]; cross3(X+i,G+i,vec);
+    real vec2[3]; cross3(vec,X+i,vec2);
+    for3(c) G[i+c]=vec[c]-damping*vec2[c];
+  };
+};
+
+real doStep(real* spins) {
+  // computing next state
+  real delta=time_step;
+  runge_kutta(SIZE*3, dspins, delta, spins);
+  sim_time+=delta;
+  // check if energy conserves
+  real* g=malloc(sizeof(real)*SIZE*3); assert(g);
+  hamiltonian_hessian(spins, g);
+  real E=-dot(3*SIZE,spins,g)/2;
+  subtract_field(g);
+  E+=dot(3*SIZE,spins,g);
+  free(g);
+  return E;
+};
+
+void keyboard_function(unsigned char key) {
+  switch(key) {
+    case '[': damping/=1.1; break; // SYNCHRONIZE !!!
+    case ']': if(damping>0) damping*=1.1; else damping=0.001; break;
+    case '-': time_step/=1.1; break;
+    case '=': if(time_step>0) time_step*=1.1; else time_step=0.001; break;
+  }
+};
+
 int main(int argc, char** argv) {
   srand(time(NULL));
   // Initialize lattice
@@ -83,10 +122,19 @@ int main(int argc, char** argv) {
   } else random_vector(SIZE*3, spins); 
   // Initialize graphics
   is_aborting=initDisplay(&argc, argv);
-  lockDisplay(); copy_vector(3*SIZE,spins,display_buffer); releaseDisplay();
   // Main loop
+  int iter=0;
   while(!is_aborting) { 
-    
+    if(is_new_frame) {
+      lockDisplay(); 
+      copy_vector(3*SIZE,spins,display_buffer); 
+      releaseDisplay();
+      displayRedraw();
+    };
+    real E=doStep(spins);
+    iter++;
+    // Replot
+    fprintf(stderr, "%d: T=%"RF"g E=%"RF"g dT=%"RF"g dE=%"RF"g\r", iter, sim_time, E, time_step, damping);    
   };
   // Deinitialization
   deinitDisplay();

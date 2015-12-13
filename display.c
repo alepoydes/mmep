@@ -11,10 +11,12 @@
 // extern variables in header
 real* display_buffer=NULL;
 int is_aborting=0;
+int is_new_frame=0;
 
 // constants
 char window_title[]="Skyrmion simulation";  // Window title
 float wheel_speed=1.1;
+real desired_FPS=30;
 
 // local variables
 pthread_mutex_t displayMutex;
@@ -23,8 +25,8 @@ pthread_t displayThread;
 int windowWidth  = 800;     // Windowed mode's width
 int windowHeight = 600;     // Windowed mode's height
 float arrow = 0.45; // half of length of arrow representing spin
-int arrow_mode=0;
-int emph_mode=0;
+int arrow_mode=1;
+int emph_mode=1;
 float view_angle = 90;
 int show_bbox=1;
 
@@ -42,6 +44,7 @@ void resetCamera() {
 };
 
 void displayRedraw() {
+	lockDisplay(); is_new_frame=0; releaseDisplay();
 	glutPostRedisplay();
 };
 
@@ -68,14 +71,26 @@ void drawBoundingBox() {
 
 void zToVector(real* vec) {
 	real c[3]={vec[0],vec[1],vec[2]}; normalize3(c);
-	real a[3]={c[2],c[0],c[1]};
-	mult_minus3(dot3(a,c),c,a); normalize3(a);
-	real b[3]={c[1],c[2],c[0]};
-	mult_minus3(dot3(b,c),c,b); mult_minus3(dot3(b,a),a,b); normalize3(b);
-	GLfloat m[16]={
+	real a[3]; 
+	if(rabs(c[0])<0.99) { a[0]=1; a[1]=a[2]=0; } else { a[1]=1; a[0]=a[2]=0; };
+	real p=dot3(a,c); mult_minus3(p,c,a); normalize3(a);
+	assert(rabs(dot3(a,c))<1e-6);
+	real b[3];
+	if(rabs(c[2])<0.99) { b[2]=1; b[1]=b[0]=0; } else { b[1]=1; b[0]=b[2]=0; };
+	p=dot3(b,c); mult_minus3(p,c,b); 
+	p=dot3(b,a); mult_minus3(p,a,b); normalize3(b);
+	assert(rabs(dot3(b,c))<1e-6);
+	assert(rabs(dot3(b,a))<1e-6);
+	/*GLfloat m[16]={
 		a[0],b[0],c[0],0.0f,
 		a[1],b[1],c[1],0.0f,
 		a[2],b[2],c[2],0.0f,
+		0.0f,0.0f,0.0f,1.0f
+	};*/
+	GLfloat m[16]={
+		a[0],a[1],a[2],0.0f,
+		b[0],b[1],b[2],0.0f,
+		c[0],c[1],c[2],0.0f,
 		0.0f,0.0f,0.0f,1.0f
 	};
 	glMultMatrixf(m);
@@ -88,11 +103,27 @@ void drawField(real* field) {
 		rsincos(M_PI*2/N*n,S+n,C+n); C[n]*=width; S[n]*=width;
 	};
 	real magn[3]; copy3(magnetic_field, magn); normalize3(magn);
-	glEnable(GL_CULL_FACE);
-	lockDisplay();
+	//if(arrow_mode>=2) glEnable(GL_CULL_FACE);
+	real* dist=malloc(sizeof(real)*SIZE); assert(dist);
+	int* idx=malloc(sizeof(int)*SIZE); assert(idx);	
+	real normal[3]; sub3(eye,center,normal); normalize3(normal);
 	forall(u,x,y,z) {
 		real vec[3]; COORDS(u,x,y,z,vec);
-		int i=INDEX(u,x,y,z)*3;
+		int i=INDEX(u,x,y,z);
+		idx[i]=i;
+		dist[i]=dot3(normal,vec);
+	};
+	int cmp(const void *a, const void *b){
+    	int ia = *(int *)a;
+    	int ib = *(int *)b;
+    	return dist[ia]<dist[ib]?-1:dist[ia]>dist[ib];
+	};
+	qsort(idx, SIZE, sizeof(*idx), cmp);
+	lockDisplay();
+	for(int id=0; id<SIZE; id++) {
+		int u,x,y,z; UNPACK(idx[id],u,x,y,z);
+		real vec[3]; COORDS(u,x,y,z,vec);
+		int i=idx[id]*3;
 		real p=1.0;
 		//if(emph_mode==1) p=(1-dot3(field+i,magn)/rsqrt(normsq3(field+i)))/2.0;
 		if(emph_mode==1) p=(1-dot3(field+i,magn)/rsqrt(normsq3(field+i)))/2.0;
@@ -104,25 +135,42 @@ void drawField(real* field) {
 			glVertex3f(vec[0]-field[i]*arrow,vec[1]-field[i+1]*arrow,vec[2]-field[i+2]*arrow);
 			glVertex3f(vec[0]+field[i]*arrow,vec[1]+field[i+1]*arrow,vec[2]+field[i+2]*arrow);
 			glEnd();
-		} else {
+		} else if(arrow_mode==1) {
 			glPushMatrix();
 			glTranslatef(vec[0],vec[1],vec[2]);
 			zToVector(field+i);
 			
-			glCullFace(GL_BACK);
 			glColor4f(1.0f, 0.0f, 0.0f, p);
-	
+			glBegin(GL_TRIANGLE_FAN);
+			glVertex3f(0.0f,0.0f,arrow);
+			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],0);
+			glVertex3f(C[0],S[0],0);
+			glEnd();
+
+			glColor4f(0.0f, 0.0f, 1.0f, p);
+			glBegin(GL_TRIANGLE_FAN);
+			glVertex3f(0.0f,0.0f,-arrow);
+			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],0);
+			glVertex3f(C[0],S[0],0);
+			glEnd();
+
+			glPopMatrix();
+		} else {
+			glPushMatrix();
+			glTranslatef(vec[0],vec[1],vec[2]);
+			zToVector(field+i);
+
+			//glCullFace(GL_BACK);
+			glColor4f(1.0f, 0.0f, 0.0f, p);
 			glBegin(GL_TRIANGLE_FAN);
 			glVertex3f(0.0f,0.0f,arrow);
 			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-arrow);
 			glVertex3f(C[0],S[0],-arrow);
 			glEnd();
-
-			glCullFace(GL_FRONT);
+			//glCullFace(GL_FRONT);
 			glColor4f(0.0f, 0.0f, 1.0f, p);
-
 			glBegin(GL_TRIANGLE_FAN);
-			glVertex3f(0.0f,0.0f,arrow);
+			glVertex3f(0.0f,0.0f,-arrow);
 			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-arrow);
 			glVertex3f(C[0],S[0],-arrow);
 			glEnd();
@@ -130,8 +178,9 @@ void drawField(real* field) {
 			glPopMatrix();
 		};
 	};
-	glDisable(GL_CULL_FACE);	
+	//glDisable(GL_CULL_FACE);	
 	releaseDisplay();
+	free(dist); free(idx);
 };
 
 void initGL() {
@@ -151,49 +200,18 @@ void initGL() {
 	glEnable(GL_LIGHTING);*/
 };
 
-/*void drawBox(void) {
-	GLfloat n[6][3] = {  
-		{-1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0},
-		{0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, -1.0} };
-	GLint faces[6][4] = {  
-		{0, 1, 2, 3}, {3, 2, 6, 7}, {7, 6, 5, 4},
-		{4, 5, 1, 0}, {5, 6, 2, 1}, {7, 4, 0, 3} };
-	GLfloat v[8][3];
-	v[0][0] = v[1][0] = v[2][0] = v[3][0] = -1;
-	v[4][0] = v[5][0] = v[6][0] = v[7][0] = 1;
-	v[0][1] = v[1][1] = v[4][1] = v[5][1] = -1;
-	v[2][1] = v[3][1] = v[6][1] = v[7][1] = 1;
-	v[0][2] = v[3][2] = v[4][2] = v[7][2] = 1;
-	v[1][2] = v[2][2] = v[5][2] = v[6][2] = -1;
-	glTranslatef(0.0, 0.0, -1.0);
-	glRotatef(60, 1.0, 0.0, 0.0);
-	glRotatef(-20, 0.0, 0.0, 1.0);
-	for(int i = 0; i < 6; i++) {
-		glBegin(GL_QUADS);
-		glNormal3fv(&n[i][0]);
-		glVertex3fv(&v[faces[i][0]][0]);
-		glVertex3fv(&v[faces[i][1]][0]);
-		glVertex3fv(&v[faces[i][2]][0]);
-		glVertex3fv(&v[faces[i][3]][0]);
-		glEnd();
-  	};
-};*/
-
-
 void displayFunction() {
 	//fprintf(stderr, "draw (%"RF"g %"RF"g %"RF"g) (%"RF"g %"RF"g %"RF"g) (%"RF"g %"RF"g %"RF"g)\n",eye[0],eye[1],eye[2],center[0],center[1],center[2],dir[0],dir[1],dir[2]);
-	fprintf(stderr, "draw %d\n",emph_mode);	
 	// Drawing
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
 	glMatrixMode(GL_PROJECTION);  // To operate on the Projection matrix
 	glLoadIdentity();  
-	gluPerspective(view_angle, windowWidth/(float)windowHeight, 1.0, 100000.0);	           // Reset the projection matrix
+	gluPerspective(view_angle, windowWidth/(float)windowHeight, 0.0001, 100000.0);	           // Reset the projection matrix
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	gluLookAt(eye[0],eye[1],eye[2],center[0],center[1],center[2],dir[0],dir[1],dir[2]);
 	
-	//drawBox();
  	if(show_bbox) drawBoundingBox();
 	if(display_buffer) drawField(display_buffer);
 	//glFlush();  // Render now
@@ -217,8 +235,9 @@ void displayKeyboard(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'b': show_bbox=!show_bbox; break;
 		case 'r': resetCamera(); break;
-		case 'v': arrow_mode=(arrow_mode+1)%2; break;
+		case 'v': arrow_mode=(arrow_mode+1)%3; break;
 		case 't': emph_mode=(emph_mode+1)%2; break;
+		default: keyboard_function(key); break;
 	};
 	displayRedraw();
 }
@@ -280,6 +299,11 @@ void displayMotion(int x, int y) {
 	};
 }
 
+void displayTimer(int value) {
+	lockDisplay(); is_new_frame=1; releaseDisplay();
+	glutTimerFunc(1000/desired_FPS, displayTimer, ++value);
+};
+
 void *consumer(void *ptr) {
 	// Init graphics
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA); // Enable double buffered mode
@@ -315,6 +339,7 @@ void *consumer(void *ptr) {
 	glDepthMask(GL_TRUE);
 	//glDepthFunc(GL_LESS);
 	initGL();                  // Our own OpenGL initialization
+	glutTimerFunc(0, displayTimer, 0);
 	// Main loop
 	glutMainLoop();               // Enter event-processing loop
 	// Terminate execution

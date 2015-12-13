@@ -46,6 +46,7 @@ extern real* final_state;
 #define forall(u,x,y,z) for(int u=0;u<sizeu;u++) for(int x=0;x<sizex;x++)for(int y=0;y<sizey;y++)for(int z=0;z<sizez;z++)
 #define for3(j) for(int j=0;j<3;j++)
 #define INDEX(u,x,y,z) ((((u)*sizex+(x))*sizey+(y))*sizez+(z))
+#define UNPACK(id,u,x,y,z) { z=id%sizez; y=(id/sizez)%sizey; x=(id/sizey/sizez)%sizex; u=id/sizex/sizey/sizez; }
 
 #define SIZE (sizex*sizey*sizez*sizeu)
 

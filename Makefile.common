@@ -33,5 +33,5 @@ mepq: ${COMMON} mep.c
 README.html: README.md
 	pandoc $^ -t html -f markdown -s -o $@
 
-simq: ${COMMON} display.c sim.c 
+simq: ${COMMON} display.c integra.c sim.c 
 	gcc $^ $(OPT) -DQUAD -lm ${GLIB} -o $@	
