@@ -46,16 +46,22 @@
 # corresponds to the order of atoms in section [unit cell]
 1 0 0 0 0
 0 1 0 0 0
+1 1 0 0 0
+-1 1 0 0 0
 [exchange constant]
 # Echange constants J_{sd} for every pair of atoms stated in [neighborhood]
 # <J>
 0.8
 0.8
+0.6
+0.6
 [dzyaloshinskii moriya vector]
 # Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
 # <D_x> <D_y> <D_z>
 1 1 0 0
 1 0 1 0
+0.5 1 1 0
+0.5 -1 1 0
 [initial state]
 # Initial state for MEP and stable state calculation.
 # Empty section means that all momentum are along the external field.

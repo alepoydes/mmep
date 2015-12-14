@@ -153,6 +153,14 @@ void parse_lattice(FILE* file) {
 					fprintf(stderr,"Parse error:%d: <x> <y> <z> <s> <d> is expected\n",line); 
 					exit(1); 
 				};
+				if(neighbours[5*sizen+3]<0 || neighbours[5*sizen+3]>=sizeu) {
+					fprintf(stderr,"Parse error:%d: Wrong source %d\n",line,neighbours[5*sizen+3]);
+					exit(1);
+				};
+				if(neighbours[5*sizen+4]<0 || neighbours[5*sizen+4]>=sizeu) {
+					fprintf(stderr,"Parse error:%d: Wrong destination %d\n",line,neighbours[5*sizen+4]);
+					exit(1);
+				};				
 				sizen++;
 			};
 		} else if(match(buf,sec_ec)) {
@@ -171,10 +179,12 @@ void parse_lattice(FILE* file) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
 				if(dmv_size>=capacityn) { capacityn=capacityn*2+1; realloc_n(capacityn); };
-				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",dzyaloshinskii_moriya_vector+3*dmv_size+0,dzyaloshinskii_moriya_vector+3*dmv_size+1,dzyaloshinskii_moriya_vector+3*dmv_size+2)!=3) {
-					fprintf(stderr,"Parse error:%d: not a real vector\n",line); 
+				real leng;
+				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g",&leng,dzyaloshinskii_moriya_vector+3*dmv_size+0,dzyaloshinskii_moriya_vector+3*dmv_size+1,dzyaloshinskii_moriya_vector+3*dmv_size+2)!=4) {
+					fprintf(stderr,"Parse error:%d: not of the form: <length> <x> <y> <z>\n",line); 
 					exit(1); 
 				};
+				for3(c) dzyaloshinskii_moriya_vector[3*dmv_size+c]*=leng;
 				dmv_size++;
 			};
 		} else if(match(buf,sec_initial)) {	
@@ -226,7 +236,7 @@ void parse_lattice(FILE* file) {
 		fprintf(stderr,"Parse error: lattice size is negative: %dx%dx%dx%d\n",sizeu,sizex,sizey,sizez);
 		exit(1);
 	};
-	if(sizeu*sizex*sizey*sizez==0) {
+	if(SIZE==0) {
 		fprintf(stderr,"Parse error: Lattice is empty: %dx%dx%dx%d\n",sizeu,sizex,sizey,sizez);
 		exit(1);
 	};
@@ -253,6 +263,7 @@ void parse_lattice(FILE* file) {
 		fprintf(stderr,"Parse error: Bad boundary conditions: %d,%d,%d\n",boundary_conditions[0],boundary_conditions[1],boundary_conditions[2]);
 		exit(1);		
 	}
+	fprintf(stderr,"Using lattice %dx%dx%dx%d with %d bonds\n",sizeu,sizex,sizey,sizez,sizen);
 	// Freeing some memory
 	realloc_u(sizeu); realloc_n(sizen);
 };

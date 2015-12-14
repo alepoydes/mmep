@@ -26,7 +26,7 @@ real time_step=0;
 real sim_time=0.0;
 real damping=0;
 int powered=0;
-real power=-2;
+real power=-1;
 
 void showUsage(const char* program) {
   fprintf(stderr, "Compute stable states.\
@@ -173,17 +173,17 @@ int main(int argc, char** argv) {
   set_to_field(nonuniform_field);
   // Main loop
   int iter=0;
+  real E=NAN;
   while(!is_aborting) { 
     if(is_new_frame) {
+      fprintf(stderr, "%d: T=%"RF"g E=%"RF"g dT=%"RF"g dE=%"RF"g P=%"RF"g        \r", iter, sim_time, E, time_step, damping,power);    
       lockDisplay(); 
       copy_vector(3*SIZE,spins,display_buffer); 
       releaseDisplay();
       displayRedraw();
     };
-    real E=doStep(spins);
+    E=doStep(spins);
     iter++;
-    // Replot
-    fprintf(stderr, "%d: T=%"RF"g E=%"RF"g dT=%"RF"g dE=%"RF"g P=%"RF"g        \r", iter, sim_time, E, time_step, damping,power);    
   };
   // Deinitialization
   deinitDisplay();

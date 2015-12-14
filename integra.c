@@ -27,7 +27,7 @@ void runge_kutta(
 {
 	// Allocate buffers
 	real* k=malloc(sizeof(real)*N); assert(k);
-	real* y=malloc(sizeof(real)*N); assert(k);
+	real* y=malloc(sizeof(real)*N); assert(y);
 	real* g=malloc(sizeof(real)*N); assert(g);
 	// Prepare data
 	copy_vector(N,X,y);

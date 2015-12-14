@@ -1,4 +1,4 @@
-all: minf mind minq min2f min2d min2q mepf mepd mepq README.html simq
+all: minf mind minq min2f min2d min2q mepf mepd mepq README.html simf simd simq
 
 COMMON=parse.c vector.c skyrmion.c plot.c optim.c
 GLIB=-lGLEW -lglut -lGLU -lGL -pthread
@@ -35,3 +35,9 @@ README.html: README.md
 
 simq: ${COMMON} display.c integra.c sim.c 
 	gcc $^ $(OPT) -DQUAD -lm ${GLIB} -o $@	
+
+simd: ${COMMON} display.c integra.c sim.c 
+	gcc $^ $(OPT) -DDOUBLE -lm ${GLIB} -o $@		
+
+simf: ${COMMON} display.c integra.c sim.c 
+	gcc $^ $(OPT) -lm ${GLIB} -o $@	

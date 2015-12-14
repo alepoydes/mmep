@@ -42,7 +42,7 @@ int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param,
 	real epsilon, int max_iter) 
 {
 	return steepest_descend(
-		sizeu*sizex*sizey*sizez*3, (real*)x, 
+		SIZE*3, (real*)x, 
 		hamiltonian_hessian,	subtract_field,
 		mode, mode_param, epsilon, max_iter,
 		skyrmion_display, 
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
   	parse_lattice(file);
   	fclose(file);
   } else parse_lattice(stdin);
-  int size=sizeu*sizex*sizey*sizez*3;
+  int size=SIZE*3;
   real* spins=(real*)malloc(sizeof(real)*size); assert(spins);
   if(initial_state) {
     copy_vector(size, initial_state, spins);

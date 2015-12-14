@@ -63,7 +63,7 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 	// Comput exchange part
 	for(int n=0;n<sizen;n++) {
 		// local cache
-		int d=neighbours[5*n+3], s=neighbours[5*n+4];
+		int s=neighbours[5*n+3], d=neighbours[5*n+4];
 		int sx=neighbours[5*n+0], sy=neighbours[5*n+1], sz=neighbours[5*n+2];		
 		// Minimum and maximum indices
 		int minx, maxx, miny, maxy, minz, maxz; 
@@ -79,15 +79,16 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 		// Compute interaction fo the pair neighbours[n]
 		#pragma omp parallel for collapse(3)
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
-			int i1=INDEX(s,(x+sx)%sizex,(y+sy)%sizey,(z+sz)%sizez)*3;
-			int i2=INDEX(d,x,y,z)*3;
+			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
+			int i2=INDEX(s,x,y,z)*3;
 			cross_minus3(dzyaloshinskii_moriya_vector+3*n,arg+i1,out+i2);
 			mult_minus3(exchange_constant[n],arg+i1,out+i2);
 		};
 		#pragma omp parallel for collapse(3)
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
-			int i1=INDEX(d,(x+sx)%sizex,(y+sy)%sizey,(z+sz)%sizez)*3;
+			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
 			int i2=INDEX(s,x,y,z)*3;
+			//fprintf(stderr, "%d@ %d %d %d %d -> %d\n",n,d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez,i1);
 			cross_plus3(dzyaloshinskii_moriya_vector+3*n,arg+i2,out+i1);
 			mult_minus3(exchange_constant[n],arg+i2,out+i1);
 		};
@@ -169,7 +170,7 @@ void skyrmion_middle(const real* restrict a, const real* restrict b, real* restr
 };
 	
 void skyrmion_geodesic_rec(real* p, int n, int m) {
-	int size=sizeu*sizex*sizey*sizez*3;
+	int size=SIZE*3;
 	if(n+1>=m) return;
 	int k=(n+m)/2; // Точка разбиения
 	// Находим середину на прямой между n и m и проецируем на сферы

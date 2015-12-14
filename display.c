@@ -56,7 +56,7 @@ void resetCamera() {
 	real bounds[3][2]; plot_bounds(bounds);
 	for3(c) center[c]=(bounds[c][1]+bounds[c][0])/2;
 	real dims[3]; for3(c) dims[c]=bounds[c][1]-bounds[c][0];
-	for3(c) eye[c]=center[c]; eye[2]+=dims[0]+dims[1]+dims[2];
+	for3(c) eye[c]=center[c]; eye[2]+=(dims[0]+dims[1]+dims[2])/3;
 	for3(c) dir[c]=0; dir[1]=1;
 };
 
