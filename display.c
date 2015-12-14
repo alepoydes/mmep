@@ -30,6 +30,7 @@ int emph_mode=1;
 int field_mode=0;
 float view_angle = 90;
 int show_bbox=1;
+int night_mode=2;
 
 real center[3], eye[3], dir[3];
 real drag_center[3], drag_eye[3], drag_dir[3];
@@ -65,7 +66,8 @@ void displayRedraw() {
 };
 
 void drawBoundingBox() {
-	glColor3f(0.0f, 0.0f, 0.0f);
+	if(night_mode==1) glColor3f(0.5f, 0.5f, 0.5f);
+	else glColor3f(0.0f, 0.0f, 0.0f);
 	float x1=sizex*translation_vectors[0][0], y1=sizex*translation_vectors[0][1], z1=sizex*translation_vectors[0][2];
 	float x2=sizey*translation_vectors[1][0], y2=sizey*translation_vectors[1][1], z2=sizey*translation_vectors[1][2];
 	float x3=sizez*translation_vectors[2][0], y3=sizez*translation_vectors[2][1], z3=sizez*translation_vectors[2][2];	
@@ -145,32 +147,34 @@ void drawField(real* field) {
 
 		if(arrow_mode==0) {
 			glBegin(GL_LINES);
-			if(field[i+2]>0) glColor4f(1.0f, 0.0f, 0.0f, p);
-			else glColor4f(0.0f, 0.0f, 1.0f, p);
-			glVertex3f(vec[0]-field[i]*arrow,vec[1]-field[i+1]*arrow,vec[2]-field[i+2]*arrow);
+			glColor4f(1.0f, 0.0f, 0.0f, p);
 			glVertex3f(vec[0]+field[i]*arrow,vec[1]+field[i+1]*arrow,vec[2]+field[i+2]*arrow);
+			glColor4f(0.0f, 0.0f, 1.0f, p);
+			glVertex3f(vec[0]-field[i]*arrow,vec[1]-field[i+1]*arrow,vec[2]-field[i+2]*arrow);
 			glEnd();
 		} else if(arrow_mode==1) {
+			real length=rsqrt(normsq3(field+i))*arrow;
 			glPushMatrix();
 			glTranslatef(vec[0],vec[1],vec[2]);
 			zToVector(field+i);
 			
 			glColor4f(1.0f, 0.0f, 0.0f, p);
 			glBegin(GL_TRIANGLE_FAN);
-			glVertex3f(0.0f,0.0f,arrow);
+			glVertex3f(0.0f,0.0f,length);
 			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],0);
 			glVertex3f(C[0],S[0],0);
 			glEnd();
 
 			glColor4f(0.0f, 0.0f, 1.0f, p);
 			glBegin(GL_TRIANGLE_FAN);
-			glVertex3f(0.0f,0.0f,-arrow);
+			glVertex3f(0.0f,0.0f,-length);
 			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],0);
 			glVertex3f(C[0],S[0],0);
 			glEnd();
 
 			glPopMatrix();
-		} else {
+		} else if(arrow_mode==2) {
+			real length=rsqrt(normsq3(field+i))*arrow;
 			glPushMatrix();
 			glTranslatef(vec[0],vec[1],vec[2]);
 			zToVector(field+i);
@@ -178,16 +182,31 @@ void drawField(real* field) {
 			//glCullFace(GL_BACK);
 			glColor4f(1.0f, 0.0f, 0.0f, p);
 			glBegin(GL_TRIANGLE_FAN);
-			glVertex3f(0.0f,0.0f,arrow);
-			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-arrow);
-			glVertex3f(C[0],S[0],-arrow);
+			glVertex3f(0.0f,0.0f,length);
+			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-length);
+			glVertex3f(C[0],S[0],-length);
 			glEnd();
 			//glCullFace(GL_FRONT);
 			glColor4f(0.0f, 0.0f, 1.0f, p);
 			glBegin(GL_TRIANGLE_FAN);
-			glVertex3f(0.0f,0.0f,-arrow);
-			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-arrow);
-			glVertex3f(C[0],S[0],-arrow);
+			glVertex3f(0.0f,0.0f,-length);
+			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-length);
+			glVertex3f(C[0],S[0],-length);
+			glEnd();
+
+			glPopMatrix();
+		} else if(arrow_mode==3) {
+			real length=rsqrt(normsq3(field+i))*arrow;
+			glPushMatrix();
+			glTranslatef(vec[0],vec[1],vec[2]);
+			zToVector(field+i);
+
+			glBegin(GL_TRIANGLE_FAN);
+			glColor4f(1.0f, 0.0f, 0.0f, p);
+			glVertex3f(0.0f,0.0f,length);
+			glColor4f(0.0f, 0.0f, 1.0f, p);
+			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-length);
+			glVertex3f(C[0],S[0],-length);
 			glEnd();
 
 			glPopMatrix();
@@ -204,7 +223,6 @@ void initGL() {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//glBlendFunc(GL_ZERO, GL_SRC_COLOR);
 	//glBlendFunc(GL_ONE, GL_ONE);
-	glClearColor(0.9, 0.9, 0.9, 1.0); // Set background (clear) color to black
 	resetCamera();
 
 	/*GLfloat light_diffuse[] = {1.0, 0.0, 0.0, 1.0};  
@@ -215,10 +233,51 @@ void initGL() {
 	glEnable(GL_LIGHTING);*/
 };
 
+void drawBackground() {
+	if(night_mode==2) {
+		glMatrixMode(GL_PROJECTION );
+		glLoadIdentity();
+		glOrtho(0,1,0,1,-1,1);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+		glDisable(GL_DEPTH_TEST);
+		glDepthMask(GL_FALSE);
+		
+		GLfloat light_diffuse[] = {1.0, 1.0, 1.0, 1.0};  
+		GLfloat light_position[] = {0.4, 0.7, 1.0, 1.0}; 
+		glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+		glEnable(GL_LIGHT0);
+		glEnable(GL_LIGHTING);
+
+		int tics=10; float delta=1.0/tics;
+		glColor3f(1,1,1);
+		for(int x=0;x<tics;x++) {
+			glBegin(GL_QUAD_STRIP);
+			glNormal3f(0,0,1);
+			glVertex2f(delta*x,0);
+   		  	glVertex2f(delta*(x+1),0);
+			for(int y=0;y<tics;y++) {
+   		  		glVertex2f(delta*x,delta*(y+1));
+   		  		glVertex2f(delta*(x+1),delta*(y+1));
+   			};
+	    	glEnd();
+	    };
+		
+	};
+};
+
 void displayFunction() {
 	//fprintf(stderr, "draw (%"RF"g %"RF"g %"RF"g) (%"RF"g %"RF"g %"RF"g) (%"RF"g %"RF"g %"RF"g)\n",eye[0],eye[1],eye[2],center[0],center[1],center[2],dir[0],dir[1],dir[2]);
 	// Drawing
+	// Set background (clear) color to black
+	if(night_mode==1) glClearColor(0.0, 0.0, 0.0, 1.0); 
+	else glClearColor(1.0, 1.0, 1.0, 1.0); 
+	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
+	drawBackground();
 
 	glMatrixMode(GL_PROJECTION);  // To operate on the Projection matrix
 	glLoadIdentity();  
@@ -226,7 +285,10 @@ void displayFunction() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	gluLookAt(eye[0],eye[1],eye[2],center[0],center[1],center[2],dir[0],dir[1],dir[2]);
-	
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_LIGHTING);
+
 	drawPointer();
  	if(show_bbox) drawBoundingBox();
  	if(field_mode==0) if(display_buffer) drawField(display_buffer);
@@ -252,9 +314,10 @@ void displayKeyboard(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'b': show_bbox=!show_bbox; break;
 		case 'r': resetCamera(); break;
-		case 'v': arrow_mode=(arrow_mode+1)%3; break;
+		case 'v': arrow_mode=(arrow_mode+1)%4; break;
 		case 't': emph_mode=(emph_mode+1)%2; break;
 		case 'm': field_mode=(field_mode+1)%2; break;
+		case 'n': night_mode=(night_mode+1)%3; break;
 		default: keyboard_function(key); break;
 	};
 	displayRedraw();

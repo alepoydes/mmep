@@ -184,7 +184,7 @@ void parse_lattice(FILE* file) {
 			};
 			initial_state=(real*)malloc(sizeof(real)*sizeu*sizex*sizey*sizez*3);
 			assert(initial_state);
-			set_to_field(initial_state);
+			set_to_field(initial_state); normalize(initial_state);
 			while(1) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
@@ -202,7 +202,7 @@ void parse_lattice(FILE* file) {
 			};
 			final_state=(real*)malloc(sizeof(real)*sizeu*sizex*sizey*sizez*3);
 			assert(final_state);
-			set_to_field(final_state);
+			set_to_field(final_state); normalize(final_state);
 			while(1) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
