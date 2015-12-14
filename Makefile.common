@@ -1,7 +1,8 @@
 all: minf mind minq min2f min2d min2q mepf mepd mepq README.html simf simd simq
 
 COMMON=parse.c vector.c skyrmion.c plot.c optim.c
-GLIB=-lGLEW -lglut -lGLU -lGL -pthread
+#GLIB=-lGLEW -lglut -lGLU -lGL -pthread
+GLIB=-lglut -lGLU -lGL -pthread
 
 minf: ${COMMON} min.c 
 	gcc $^ $(OPT) -lm -o $@	

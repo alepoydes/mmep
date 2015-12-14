@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include <assert.h>
 #include <pthread.h>
-#include <GL/glew.h>
+//#include <GL/glew.h>
 #include <GL/freeglut.h>
 
 #include "display.h"
@@ -400,7 +400,7 @@ void *consumer(void *ptr) {
 	glutInitWindowSize(windowWidth, windowHeight);  // Initial window width and height
 	//glutInitWindowPosition(windowPosX, windowPosY); // Initial window top-left corner (x, y)
 	glutCreateWindow(window_title);      // Create window with given title
-	glewExperimental=GL_TRUE;
+	/*glewExperimental=GL_TRUE;
 	GLenum err = glewInit();
 	if (GLEW_OK != err){
 		fprintf(stderr,"Error: %s\n",glewGetErrorString(err));
@@ -412,7 +412,7 @@ void *consumer(void *ptr) {
 	fprintf(stderr,"  Renderer: %s\n",glGetString (GL_RENDERER));
 	fprintf(stderr,"  Version: %s\n",glGetString (GL_VERSION));
 	fprintf(stderr,"  GLSL: %s\n",glGetString(GL_SHADING_LANGUAGE_VERSION));
-
+	*/
 	glutDisplayFunc(displayFunction);
 	glutReshapeFunc(displayReshape);     // Register callback handler for window re-shape
 	//glutTimerFunc(0, Timer, 0);   // First timer call immediately
