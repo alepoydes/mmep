@@ -104,6 +104,7 @@ void keyboard_function(unsigned char key) {
   switch(key) {
     case '[': damping/=1.1; break; // SYNCHRONIZE !!!
     case ']': if(damping>0) damping*=1.1; else damping=0.01; break;
+    case '\\': damping=-damping; break;
     case '-': time_step/=1.1; break;
     case '=': if(time_step>0) time_step*=1.1; else time_step=0.001; break;
     case '\'': power+=0.1; break;

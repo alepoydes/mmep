@@ -25,12 +25,12 @@ pthread_t displayThread;
 int windowWidth  = 800;     // Windowed mode's width
 int windowHeight = 600;     // Windowed mode's height
 float arrow = 0.45; // half of length of arrow representing spin
-int arrow_mode=1;
+int arrow_mode=2;
 int emph_mode=1;
 int field_mode=0;
 float view_angle = 90;
-int show_bbox=1;
-int night_mode=2;
+int show_bbox=0;
+int night_mode=1;
 
 real center[3], eye[3], dir[3];
 real drag_center[3], drag_eye[3], drag_dir[3];
@@ -98,12 +98,10 @@ void drawPointer() {
 void zToVector(real* vec) {
 	real c[3]={vec[0],vec[1],vec[2]}; normalize3(c);
 	real a[3]; 
-	if(rabs(c[0])<0.99) { a[0]=1; a[1]=a[2]=0; } else { a[1]=1; a[0]=a[2]=0; };
+	if(rabs(c[0])<0.9) { a[0]=1; a[1]=a[2]=0; } else { a[1]=1; a[0]=a[2]=0; };
 	real p=dot3(a,c); mult_minus3(p,c,a); normalize3(a);
-	real b[3];
-	if(rabs(c[2])<0.99) { b[2]=1; b[1]=b[0]=0; } else { b[1]=1; b[0]=b[2]=0; };
-	p=dot3(b,c); mult_minus3(p,c,b); 
-	p=dot3(b,a); mult_minus3(p,a,b); normalize3(b);
+	real b[3]; cross3(c,a,b);
+	
 	GLfloat m[16]={
 		a[0],a[1],a[2],0.0f,
 		b[0],b[1],b[2],0.0f,
@@ -179,17 +177,17 @@ void drawField(real* field) {
 			glTranslatef(vec[0],vec[1],vec[2]);
 			zToVector(field+i);
 
-			//glCullFace(GL_BACK);
-			glColor4f(1.0f, 0.0f, 0.0f, p);
-			glBegin(GL_TRIANGLE_FAN);
-			glVertex3f(0.0f,0.0f,length);
-			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-length);
-			glVertex3f(C[0],S[0],-length);
-			glEnd();
 			//glCullFace(GL_FRONT);
 			glColor4f(0.0f, 0.0f, 1.0f, p);
 			glBegin(GL_TRIANGLE_FAN);
 			glVertex3f(0.0f,0.0f,-length);
+			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-length);
+			glVertex3f(C[0],S[0],-length);
+			glEnd();
+			//glCullFace(GL_BACK);
+			glColor4f(1.0f, 0.0f, 0.0f, p);
+			glBegin(GL_TRIANGLE_FAN);
+			glVertex3f(0.0f,0.0f,length);
 			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-length);
 			glVertex3f(C[0],S[0],-length);
 			glEnd();
@@ -331,15 +329,15 @@ void displayMouse(int button, int state, int x, int y) {
 	} else if (button==3 && state==GLUT_DOWN) { // wheel down
 		scale3(1/wheel_speed,center,eye);
 		displayRedraw();
-	} else if (button==1 && state==GLUT_DOWN) { // middle mouse
+	} else if (button==2 && state==GLUT_DOWN) { // middle mouse
 		copy3(eye,drag_eye); copy3(center,drag_center); copy3(dir,drag_dir); 
 	 	drag_mode=1; drag_point[0]=x; drag_point[1]=y; 
-	} else if (button==1 && state==GLUT_UP) { 
+	} else if (button==2 && state==GLUT_UP) { 
 		drag_mode=0;
-	} else if (button==2 && state==GLUT_DOWN) {
+	} else if (button==1 && state==GLUT_DOWN) {
 		copy3(eye,drag_eye); copy3(center,drag_center); copy3(dir,drag_dir); 
 		drag_mode=2; drag_point[0]=x; drag_point[1]=y; 
-	} else if (button==2 && state==GLUT_UP) { 
+	} else if (button==1 && state==GLUT_UP) { 
 		drag_mode=0;
 	} else {
 		screen_to_field(x,y,mouse_pointer);
@@ -394,7 +392,7 @@ void displayTimer(int value) {
 void *consumer(void *ptr) {
 	// Init graphics
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA); // Enable double buffered mode
-	glutInitContextVersion (3, 3);
+	//glutInitContextVersion (3, 3);
 	glutInitContextFlags (GLUT_CORE_PROFILE | GLUT_DEBUG);
 	glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
 	glutInitWindowSize(windowWidth, windowHeight);  // Initial window width and height
