@@ -11,7 +11,7 @@
 #include "parse.h"
 #include "debug.h"
 
-#define OUTDIR "../fields"
+#define OUTDIR "fields"
 
 int size=0; // Dimenion of vector containing skyrmionic solutions
 int sizep=0; // Number of nodes on path

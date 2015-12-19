@@ -11,7 +11,7 @@
 #include "parse.h"
 #include "debug.h"
 
-#define OUTDIR "../fields"
+#define OUTDIR "fields"
 
 real epsilon=1e-6;
 int max_iter=1000;

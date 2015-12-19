@@ -1,3 +1,4 @@
+B=0.001; export B
 B=0.092; export B
 B=0.096; export B
 B=0.1; export B

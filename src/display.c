@@ -12,6 +12,7 @@
 real* display_buffer=NULL;
 int is_aborting=0;
 int is_new_frame=0;
+void (*print_screen)(int width, int height, void* buffer);
 
 // constants
 char window_title[]="Skyrmion simulation";  // Window title
@@ -287,7 +288,7 @@ void displayFunction() {
 	glDepthMask(GL_TRUE);
 	glDisable(GL_LIGHTING);
 
-	drawPointer();
+	if(drag_mode==3) drawPointer();
  	if(show_bbox) drawBoundingBox();
  	if(field_mode==0) if(display_buffer) drawField(display_buffer);
  	if(field_mode==1) if(nonuniform_field) drawField(nonuniform_field);
@@ -322,7 +323,6 @@ void displayKeyboard(unsigned char key, int x, int y) {
 }
 
 void displayMouse(int button, int state, int x, int y) {
-	//fprintf(stderr, "B %d S %d X %d Y %d\n",button,state,x,y);
 	if (button==4 && state==GLUT_DOWN) { // wheel down
 		scale3(wheel_speed,center,eye);
 		displayRedraw();
@@ -340,9 +340,12 @@ void displayMouse(int button, int state, int x, int y) {
 	} else if (button==1 && state==GLUT_UP) { 
 		drag_mode=0;
 	} else {
+		if(button==0) drag_mode=state==GLUT_DOWN?3:0;
 		screen_to_field(x,y,mouse_pointer);
 		mouse_function(button,state,mouse_pointer);
+		displayRedraw();
 	};
+	//fprintf(stderr, "B %d S %d X %d Y %d drag_mode %d\n",button,state,x,y,drag_mode);
 }
 
 void displayMotion(int x, int y) {

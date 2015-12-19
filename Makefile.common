@@ -29,18 +29,19 @@ endef
 	pandoc $^ -t html -f markdown -s -o $@
 
 $(OBJDIR)/%.f.o: %.c $(SRCDIR)/*.h
-	gcc $< $(OPT) -c -o $@	
+	gcc $< $(OPT) -I $(SRCDIR) -c -o $@	
 
 $(OBJDIR)/%.d.o: %.c $(SRCDIR)/*.h
-	gcc $< $(OPT) -c -DDOUBLE -o $@	
+	gcc $< $(OPT) -I $(SRCDIR) -c -DDOUBLE -o $@	
 
 $(OBJDIR)/%.q.o: %.c $(SRCDIR)/*.h
-	gcc $< $(OPT) -c -DQUAD -o $@	
+	gcc $< $(OPT) -I $(SRCDIR) -c -DQUAD -o $@	
 
 $(eval $(call binary,min,$(SRC),$(LIB)))
 $(eval $(call binary,min2,$(SRC),$(LIB)))
 $(eval $(call binary,mep,$(SRC),$(LIB)))
 $(eval $(call binary,sim,$(SRC) display.c integra.c,$(LIB) -lglut -lGLU -lGL -pthread))
+$(eval $(call binary,play,$(SRC) display.c,$(LIB) -lglut -lGLU -lGL -pthread))
 
 BINEXP=$(addprefix $(BINDIR)/,$(BIN))
 all: README.html $(BINEXP)

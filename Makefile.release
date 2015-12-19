@@ -1,4 +1,4 @@
-OPT=-std=c99 -flto -Ofast -march=native -fopenmp
-#OPT=-std=c99 -flto -Ofast -march=native
+OPT=-std=gnu99 -flto -Ofast -march=native -fopenmp
+#OPT=-std=gnu99 -flto -Ofast -march=native
 
 include Makefile.common
