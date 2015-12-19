@@ -2,6 +2,7 @@ MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
 LIB:=-lm
+LIBGL:=-lglut -lGLU -lGL -pthread -lpng
 
 OBJDIR:=obj
 BINDIR:=bin
@@ -9,6 +10,7 @@ SRCDIR:=src
 vpath %.c  $(SRCDIR)
 vpath %.h  $(SRCDIR)
 SRC:=parse.c vector.c skyrmion.c plot.c optim.c
+SRCGL:=display.c integra.c bitmap.c
 
 all:
 
@@ -40,8 +42,8 @@ $(OBJDIR)/%.q.o: %.c $(SRCDIR)/*.h
 $(eval $(call binary,min,$(SRC),$(LIB)))
 $(eval $(call binary,min2,$(SRC),$(LIB)))
 $(eval $(call binary,mep,$(SRC),$(LIB)))
-$(eval $(call binary,sim,$(SRC) display.c integra.c,$(LIB) -lglut -lGLU -lGL -pthread))
-$(eval $(call binary,play,$(SRC) display.c,$(LIB) -lglut -lGLU -lGL -pthread))
+$(eval $(call binary,sim,$(SRC) $(SRCGL),$(LIB) $(LIBGL)))
+$(eval $(call binary,play,$(SRC) $(SRCGL),$(LIB) $(LIBGL)))
 
 BINEXP=$(addprefix $(BINDIR)/,$(BIN))
 all: README.html $(BINEXP)

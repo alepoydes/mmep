@@ -17,5 +17,6 @@ void displayRedraw();
 void keyboard_function(unsigned char key);
 void mouse_function(int button, int state, real p[3]);
 void motion_function(real p[3]);
+void (*print_screen)(int width, int height, void* buffer);
 
 #endif

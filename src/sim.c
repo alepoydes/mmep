@@ -14,6 +14,7 @@
 #include "debug.h"
 #include "display.h"
 #include "integra.h"
+#include "bitmap.h"
 
 #define OUTDIR "fields"
 
@@ -102,15 +103,26 @@ real doStep(real* spins) {
   return E;
 };
 
+void do_print(int width, int height, void* buffer) {
+  print_screen=NULL;
+  fprintf(stderr, "Saving screenshot\n");
+  FILE* file=fopen(OUTDIR"/screen.png","wb");
+  write_png(file, width, height, (unsigned char*) buffer);
+  fclose(file);
+  fprintf(stderr, "Saved\n");
+};
+
 void keyboard_function(unsigned char key) {
   switch(key) {
     case '[': damping/=1.1; break; // SYNCHRONIZE !!!
-    case ']': if(damping>0) damping*=1.1; else damping=0.01; break;
+    case ']': if(damping!=0) damping*=1.1; else damping=0.01; break;
     case '\\': damping=-damping; break;
     case '-': time_step/=1.1; break;
-    case '=': if(time_step>0) time_step*=1.1; else time_step=0.001; break;
+    case '=': if(time_step!=0) time_step*=1.1; else time_step=0.001; break;
     case '\'': power+=0.1; break;
     case ';': power-=0.1; break;
+    case 13: print_screen=do_print; break;
+    case ' ': time_step=0; break;
   }
 };
 
@@ -177,6 +189,7 @@ int main(int argc, char** argv) {
   // Main loop
   int iter=0;
   real E=NAN;
+  display_buffer=malloc(sizeof(real)*SIZE*3); assert(display_buffer);
   while(!is_aborting) { 
     if(is_new_frame) {
       fprintf(stderr, "%d: T=%"RF"g E=%"RF"g dT=%"RF"g dE=%"RF"g P=%"RF"g        \r", iter, sim_time, E, time_step, damping,power);    
@@ -190,6 +203,6 @@ int main(int argc, char** argv) {
   };
   // Deinitialization
   deinitDisplay();
-  free(spins); free(nonuniform_field);
+  free(spins); free(nonuniform_field); free(display_buffer);
   return 0;
 };

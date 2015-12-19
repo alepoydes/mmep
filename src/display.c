@@ -217,11 +217,15 @@ void drawField(real* field) {
 };
 
 void initGL() {
+	glEnable (GL_LINE_SMOOTH);
+	//glEnable (GL_POLYGON_SMOOTH);
 	glEnable (GL_BLEND);
 	glBlendEquation(GL_FUNC_ADD);
+	//glBlendFunc (GL_SRC_ALPHA_SATURATE, GL_ONE);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//glBlendFunc(GL_ZERO, GL_SRC_COLOR);
 	//glBlendFunc(GL_ONE, GL_ONE);
+	glHint (GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
 	resetCamera();
 
 	/*GLfloat light_diffuse[] = {1.0, 0.0, 0.0, 1.0};  
@@ -244,7 +248,7 @@ void drawBackground() {
 		glDepthMask(GL_FALSE);
 		
 		GLfloat light_diffuse[] = {1.0, 1.0, 1.0, 1.0};  
-		GLfloat light_position[] = {0.4, 0.7, 1.0, 1.0}; 
+		GLfloat light_position[] = {0.4, 0.7, 0.5, 1.0}; 
 		glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
 		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 		glEnable(GL_LIGHT0);
@@ -294,6 +298,17 @@ void displayFunction() {
  	if(field_mode==1) if(nonuniform_field) drawField(nonuniform_field);
 	//glFlush();  // Render now
 	glutSwapBuffers();
+
+	lockDisplay();
+	void (*print)(int,int,void*)=print_screen;
+	releaseDisplay();
+	if(print) {
+		void* buffer=malloc(4*windowWidth*windowHeight); assert(buffer);
+		glReadBuffer(GL_FRONT);
+		glReadPixels(0, 0, windowWidth, windowHeight, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+		print(windowWidth,windowHeight,buffer);
+		free(buffer);
+	};
 }
 
 void displayReshape(GLsizei width, GLsizei height) {  // GLsizei for non-negative integer
@@ -436,8 +451,6 @@ void *consumer(void *ptr) {
 };
 
 int initDisplay(int* argc, char** argv) {
-	// Внутренние структуры
-	display_buffer=malloc(sizeof(real)*SIZE*3); assert(display_buffer);
 	// Подготавливаем синхронизацию процессов
 	pthread_mutex_init(&displayMutex, NULL);
 	// Инициализируем графику
@@ -450,7 +463,6 @@ int initDisplay(int* argc, char** argv) {
 void deinitDisplay() {
 	pthread_join(displayThread, NULL);
 	pthread_mutex_destroy(&displayMutex);
-	free(display_buffer);
 }
 
 void lockDisplay() {
