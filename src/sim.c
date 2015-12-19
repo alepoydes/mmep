@@ -15,6 +15,8 @@
 #include "display.h"
 #include "integra.h"
 
+#define OUTDIR "../fields"
+
 real epsilon=1e-6;
 int max_iter=1000;
 real mode_param=0.2;

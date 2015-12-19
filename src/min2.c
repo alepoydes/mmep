@@ -11,6 +11,8 @@
 #include "parse.h"
 #include "debug.h"
 
+#define OUTDIR "../fields"
+
 real epsilon=1e-6;
 int max_iter=1000;
 real mode_param=0.1;
@@ -150,11 +152,11 @@ int main(int argc, char** argv) {
   int status=skyrmion_lagrange_conjugate(spins, mode, mode_param, epsilon, max_iter);
   fprintf(stderr, "Status: %d\n", status);
   // Saving result
-  const char* filename="fields/state.gnuplot";
+  const char* filename=OUTDIR"/state.gnuplot";
   FILE* file=fopen(filename,"w");
   if(file) {
     fprintf(file,"set terminal pngcairo\n");
-    fprintf(file,"set output 'fields/state.png'\n");
+    fprintf(file,"set output '"OUTDIR"/state.png'\n");
     plot_field3(file, spins);
     fclose(file);
   } else {

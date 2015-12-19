@@ -1,44 +1,49 @@
-all: minf mind minq min2f min2d min2q mepf mepd mepq README.html simf simd simq
+MAKEFLAGS += --no-builtin-rules
+.SUFFIXES:
 
-COMMON=parse.c vector.c skyrmion.c plot.c optim.c
-#GLIB=-lGLEW -lglut -lGLU -lGL -pthread
-GLIB=-lglut -lGLU -lGL -pthread
+LIB:=-lm
 
-minf: ${COMMON} min.c 
-	gcc $^ $(OPT) -lm -o $@	
+OBJDIR:=obj
+BINDIR:=bin
+SRCDIR:=src
+vpath %.c  $(SRCDIR)
+vpath %.h  $(SRCDIR)
+SRC:=parse.c vector.c skyrmion.c plot.c optim.c
 
-mind: ${COMMON} min.c 
-	gcc $^ $(OPT) -DDOUBLE -lm -o $@	
+all:
 
-minq: ${COMMON} min.c 
-	gcc $^ $(OPT) -DQUAD -lm -o $@	
+define binary
+BIN+=$(1)f $(1)d $(1)q
 
-min2f: ${COMMON} min2.c 
-	gcc $^ $(OPT) -lm -o $@	
+$(BINDIR)/$(1)f: $(addprefix $(OBJDIR)/,$(2:.c=.f.o)) $(OBJDIR)/$(1).f.o
+	gcc $$^ $$(OPT) $(3) -o $$@
 
-min2d: ${COMMON} min2.c 
-	gcc $^ $(OPT) -DDOUBLE -lm -o $@	
+$(BINDIR)/$(1)d: $(addprefix $(OBJDIR)/,$(2:.c=.d.o)) $(OBJDIR)/$(1).d.o
+	gcc $$^ $$(OPT) $(3) -o $$@
 
-min2q: ${COMMON} min2.c 
-	gcc $^ $(OPT) -DQUAD -lm -o $@	
+$(BINDIR)/$(1)q: $(addprefix $(OBJDIR)/,$(2:.c=.q.o)) $(OBJDIR)/$(1).q.o
+	gcc $$^ $$(OPT) $(3) -o $$@
+endef
 
-mepf: ${COMMON} mep.c 
-	gcc $^ $(OPT) -lm -o $@	
-
-mepd: ${COMMON} mep.c 
-	gcc $^ $(OPT) -DDOUBLE -lm -o $@	
-
-mepq: ${COMMON} mep.c 
-	gcc $^ $(OPT) -DQUAD -lm -o $@	
-
-README.html: README.md
+%.html: %.md
 	pandoc $^ -t html -f markdown -s -o $@
 
-simq: ${COMMON} display.c integra.c sim.c 
-	gcc $^ $(OPT) -DQUAD -lm ${GLIB} -o $@	
+$(OBJDIR)/%.f.o: %.c $(SRCDIR)/*.h
+	gcc $< $(OPT) -c -o $@	
 
-simd: ${COMMON} display.c integra.c sim.c 
-	gcc $^ $(OPT) -DDOUBLE -lm ${GLIB} -o $@		
+$(OBJDIR)/%.d.o: %.c $(SRCDIR)/*.h
+	gcc $< $(OPT) -c -DDOUBLE -o $@	
 
-simf: ${COMMON} display.c integra.c sim.c 
-	gcc $^ $(OPT) -lm ${GLIB} -o $@	
+$(OBJDIR)/%.q.o: %.c $(SRCDIR)/*.h
+	gcc $< $(OPT) -c -DQUAD -o $@	
+
+$(eval $(call binary,min,$(SRC),$(LIB)))
+$(eval $(call binary,min2,$(SRC),$(LIB)))
+$(eval $(call binary,mep,$(SRC),$(LIB)))
+$(eval $(call binary,sim,$(SRC) display.c integra.c,$(LIB) -lglut -lGLU -lGL -pthread))
+
+BINEXP=$(addprefix $(BINDIR)/,$(BIN))
+all: README.html $(BINEXP)
+
+clean:
+	rm -f $(OBJDIR)/*.o $(BINEXP) 

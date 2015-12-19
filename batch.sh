@@ -1,6 +1,6 @@
 #!/bin/bash
 OUTPUT=fields/batch.gnuplot
-OPTIMIZE=./mepq
+OPTIMIZE=bin/mepq
 echo "# $@" > ${OUTPUT}
 DESC=$1
 SUFF=$2

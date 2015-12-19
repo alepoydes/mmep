@@ -11,6 +11,8 @@
 #include "parse.h"
 #include "debug.h"
 
+#define OUTDIR "../fields"
+
 int size=0; // Dimenion of vector containing skyrmionic solutions
 int sizep=0; // Number of nodes on path
 int max_sizep=65; // Number of nodes on path
@@ -300,21 +302,21 @@ int main(int argc, char** argv) {
 
   // save energy
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Saving result\n"COLOR_RESET);
-  const char* energyname="fields/energy.gnuplot";
+  const char* energyname=OUTDIR"/energy.gnuplot";
   FILE* file=fopen(energyname,"w");
   if(file) {
-    fprintf(file,"set terminal png\nset output 'fields/energy.png'\n");
+    fprintf(file,"set terminal png\nset output '"OUTDIR"/energy.png'\n");
     energy_display(file);
     fclose(file);
    } else {
     fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,energyname);
   }; 
   // save field
-  const char* filename="fields/mep.gnuplot";
+  const char* filename=OUTDIR"/mep.gnuplot";
   file=fopen(filename,"w");
   if(file) {
     fprintf(file,"set terminal gif animate delay 10\n");
-    fprintf(file,"set output 'fields/mep.gif'\n");
+    fprintf(file,"set output '"OUTDIR"/mep.gif'\n");
     animate_path(file, sizep, path);
     fclose(file);
   } else {

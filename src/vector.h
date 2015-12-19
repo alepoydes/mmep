@@ -28,7 +28,7 @@
 	#define RF ""
 	#define EPSILON FLT_EPSILON
 #endif
-#endif
+#endif  
 
 // считает длину вектора
 #define normsq3(x) ((x)[0]*(x)[0]+(x)[1]*(x)[1]+(x)[2]*(x)[2])
