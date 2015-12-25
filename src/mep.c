@@ -25,23 +25,28 @@ int debug_plot_path=0;
 int debug_every=100;
 
 real *distance=NULL, *energy=NULL, *diff=NULL, *tdiff=NULL;
-int post_optimization=0;
+int post_optimization=1;
+int single_maximum=1;
 
 void energy_evaluate(real* path) {
   real* q=(real*)malloc(sizeof(real)*size); assert(q);
   real* u=(real*)malloc(sizeof(real)*size); assert(u);
   for(int p=0; p<sizep; p++) {
-    distance[p]=(p<=0)?0:distance[p-1]+rsqrt(distsq(size,path+size*(p-1),path+size*p));
+    distance[p]=(p<=0)?0:distance[p-1]+rsqrt(distsq(size,path+size*(p-1),path+size*p)/SIZE);
     hamiltonian_hessian(path+size*p, q);
     energy[p]=-dot(size,path+size*p, q)/2;
     subtract_field(q);
     energy[p]+=dot(size,path+size*p, q);
+    // gradient of energy is in q
     project_to_tangent(path+size*p,q);
+    // q is orthogonal to normales to all spheres
     diff[p]=rsqrt(normsq(size,q)/size);
     tdiff[p]=diff[p];
     if(p>0 && p<sizep-1) {
       three_point_tangent(path+size*(p-1),path+size*(p+1),path+size*p,u);
-      project_to_tangent(u,q);
+      real proj=dot(size,u,q)/dot(size,u,u);
+      mult_sub(size, proj, u, q);
+      // q is orthogonal to tangent to MEP
       tdiff[p]=rsqrt(normsq(size,q)/size);
     };
   };
@@ -110,9 +115,9 @@ void path_display(int iter, real* restrict mep, real* restrict grad_f
   static real prev_f=NAN;
   static real prev_res=NAN;
   if(iter%debug_every==0 || iter<0) {
-    fprintf(stderr, "%d: E %"RF"g", abs(iter), f);
-    if(f<prev_f) fprintf(stderr, COLOR_GREEN"%+"RF"g "COLOR_RESET, f-prev_f);
-    else fprintf(stderr, COLOR_RED"%+"RF"g "COLOR_RESET, f-prev_f);
+    fprintf(stderr, "%d: E %"RF"g", abs(iter), f/(sizep-1));
+    if(f<prev_f) fprintf(stderr, COLOR_GREEN"%+"RF"g "COLOR_RESET, (f-prev_f)/(sizep-1));
+    else fprintf(stderr, COLOR_RED"%+"RF"g "COLOR_RESET, (f-prev_f)/(sizep-1));
     if(res<prev_res) fprintf(stderr, "R "COLOR_GREEN"%"RF"g "COLOR_RESET, res);
     else fprintf(stderr, "R "COLOR_RED"%"RF"g "COLOR_RESET, res);
     fprintf(stderr, "A %"RF"g\n", alpha);    
@@ -124,9 +129,53 @@ void path_display(int iter, real* restrict mep, real* restrict grad_f
   };
 };
 
+
+// Move nodes from+1..to-1 along path so that 
+// all intervals between nodes in interval from..to are 
+// of the same length
+void path_equilize_rec(real* mep, int from, int to) {  
+  if(from-to<2) return;
+  for(int p=to-1; p>from; p--) {
+    real d=distance[from]+p*(distance[to]-distance[from])/(to-from); // desired position
+    int f; for(f=to-1; f--; f>=from) if(distance[f]<=d) break; 
+    assert(f>=0); assert(f<=p);
+    // move node to interval [dist(f),dist(f+1)]
+    real loc=(d-distance[f])/(distance[f+1]-distance[f]); // local coordinate
+    linear_comb(size,1-loc,mep+f*size,loc,mep+(f+1)*size,mep+p*size);
+    distance[p]=d;
+  };
+};
+
+void path_equilize(real* mep) {
+  energy_evaluate(mep);
+  if(sizep<2) return;
+  if(post_optimization) {
+    if(single_maximum) {
+      real max=-INFINITY; int f=-1;
+      for(int p=sizep-1; p>=0; p--) 
+        if(energy[p]>max) { max=energy[p]; f=p; };
+      if(f>0 && f<sizep-1) {
+        path_equilize_rec(mep, 0, f);
+        path_equilize_rec(mep, f, sizep-1);
+      } else path_equilize_rec(mep, 0, sizep-1);
+    } else {
+      int end=sizep-1;
+      for(int p=end-1; p>0; p--) 
+        if((energy[p]<energy[p-1] && energy[p]<energy[p+1]) 
+          || (energy[p]>energy[p-1] && energy[p]>energy[p+1]))
+        { // Found a stationary point. Let it move to the extremum 
+          path_equilize_rec(mep, p, end);
+          end=p;
+        };
+      path_equilize_rec(mep, 0, end);
+    };
+  } else path_equilize_rec(mep, 0, sizep-1);
+};
+
 real path_normalize(real* mep) {
-  for(int p=0; p<sizep; p++) normalize(mep+size*p);
-  
+  //for(int p=0; p<sizep; p++) normalize(mep+size*p);
+  path_equilize(mep);
+  for(int p=0; p<sizep; p++) normalize(mep+size*p);  
   /*real* shifted=(real*)malloc(sizeof(real)*size*sizep); assert(shifted);
   for(int p=1; p<sizep-1; p++) {
     //if(energy[p]>=energy[p-1] && energy[p]>=energy[p+1]) {
@@ -143,14 +192,13 @@ real path_normalize(real* mep) {
   copy_vector(size*(sizep-2), shifted+size, mep+size);
   free(shifted);*/
  
-  for(int p=1; p<sizep-1; p++) {
+  /*for(int p=1; p<sizep-1; p++) {
     if(post_optimization && energy[p]>=energy[p-1] && energy[p]>=energy[p+1]) {
     } else if(post_optimization && energy[p]<energy[p-1] && energy[p]<energy[p+1]) { 
     } else {
-      three_point_equalize(mep+size*(p-1), mep+size*(p+1), mep+size*p);
+      //three_point_equalize(mep+size*(p-1), mep+size*(p+1), mep+size*p);
     };
-  };
-  
+  };*/
   energy_evaluate(mep);
   /*real res=0; for(int p=0; p<sizep; p++) res+=tdiff[p]*tdiff[p]; res=rsqrt(res/sizep);
   if(res<10*epsilon) {
@@ -161,24 +209,39 @@ real path_normalize(real* mep) {
 };
 
 void path_tangent(const real* restrict mep, real* restrict grad) {
+  real* u=malloc(sizeof(real)*size); assert(u);
+  real max=-INFINITY; int f=-1;
+  for(int p=sizep-1; p>=0; p--) if(energy[p]>max) { max=energy[p]; f=p; };
+  if(f==0 || f==sizep-1) f=-1;
   for(int p=0; p<sizep; p++) {
     project_to_tangent(mep+size*p,grad+size*p);
     if(p>0 && p<sizep-1) {
-      if(post_optimization && energy[p]>=energy[p-1] && energy[p]>=energy[p+1]) {
-        three_point_reverse(mep+size*(p-1), mep+size*(p+1), grad+p*size);
-      } else if(post_optimization && energy[p]<energy[p-1] && energy[p]<energy[p+1]) { 
+      if(post_optimization && energy[p]<energy[p-1] && energy[p]<energy[p+1]) {
+      } else if(post_optimization && (p==f || (energy[p]>=energy[p-1] && energy[p]>=energy[p+1] && !single_maximum))) {
+        three_point_tangent(mep+size*(p-1), mep+size*(p+1), mep+p*size, u);
+        real proj=dot(size,u,grad+p*size)/dot(size,u,u);
+        mult_sub(size, 2*proj, u, grad+p*size);
       } else {
-        three_point_project(mep+size*(p-1), mep+size*(p+1), grad+p*size);
+        three_point_tangent(mep+size*(p-1), mep+size*(p+1), mep+p*size, u);
+        real normu=rsqrt(normsq(size,u));
+        real normg=rsqrt(normsq(size,grad+p*size));
+        real a=distance[p]-distance[p-1];
+        real b=distance[p+1]-distance[p];
+        real proj=-dot(size,u,grad+p*size)/normu;
+        //proj+=(distance[p]-p*distance[sizep-1]/sizep)*normg*0.5;
+        mult_add(size, proj/normu, u, grad+p*size);
+        //fprintf(stderr,"proj %"RF"g\n",proj);
       };
     };
   };
+  free(u);
 }
 
 int path_steepest_descent(real* restrict path, int mode, 
   real mode_param, real epsilon, int max_iter) 
 {
   real updated_param=mode_param;
-  if(mode==2) updated_param=mode_param/sizep;
+  if(mode==2 || mode==0) updated_param=mode_param/sizep;
   return steepest_descend(
     size*sizep, (real*)path, 
     path_hessian, path_subtract_field,
@@ -255,7 +318,7 @@ int main(int argc, char** argv) {
   fprintf(stderr, "Size of real: %zd\n", sizeof(real));
   fprintf(stderr, "Nodes on path: %d\n", max_sizep);
   srand(time(NULL));
-  size=sizeu*sizex*sizey*sizez*3;
+  size=SIZE*3;
   real* path=(real*)malloc(sizeof(real)*size*max_sizep); assert(path);
   distance=(real*)malloc(sizeof(real)*max_sizep); assert(distance);
   energy=(real*)malloc(sizeof(real)*max_sizep); assert(energy);

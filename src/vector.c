@@ -83,3 +83,8 @@ void add_constant_inplace(int n, real a, real* restrict c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]+=a;
 };
+
+void linear_comb(int n, real a, const real* restrict b, real c, real* restrict d, real* restrict e) {
+	#pragma omp parallel for 
+	for(int k=0; k<n; k++) e[k]=a*b[k]+c*d[k];
+}; 

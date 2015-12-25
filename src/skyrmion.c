@@ -131,7 +131,10 @@ real seminormalize(real factor, real* restrict a) {
 // Project vector field 't' to tangent space of unit length vector field 'a'
 void project_to_tangent(const real* restrict a, real* restrict b) {
 	#pragma omp parallel for collapse(4)
-	forall(u,x,y,z) tangent3(a+INDEX(u,x,y,z)*3,b+INDEX(u,x,y,z)*3);
+	forall(u,x,y,z) {
+		int i=INDEX(u,x,y,z)*3;
+		tangent3(a+i,b+i);
+	};
 };
 
 // C:x->(<x|P_j x>/2-1/2)_j
@@ -190,29 +193,7 @@ void three_point_tangent(const real* restrict a, const real* restrict b, const r
 		int i=INDEX(u,x,y,z)*3;
 		sub3(b+i,a+i,r+i); 
 		tangent3(c+i,r+i); 
-		normalize3(r+i);
-	};
-};
-
-void three_point_project(const real* restrict a, const real* restrict b, real* restrict r) {
-	#pragma omp parallel for collapse(4)	
-	forall(u,x,y,z) {	
-		real tangent[3];
-		int i=INDEX(u,x,y,z)*3;
-		sub3(b+i,a+i,tangent); 
-		normalize3(tangent);
-		tangent3(tangent,r+i); 
-	};
-};
-
-void three_point_reverse(const real* restrict a, const real* restrict b, real* restrict r) {
-	#pragma omp parallel for collapse(4)	
-	forall(u,x,y,z) {	
-		real tangent[3];
-		int i=INDEX(u,x,y,z)*3;
-		sub3(b+i,a+i,tangent); 
-		normalize3(tangent);
-		reverse3(tangent,r+i); 
+		//normalize3(r+i);
 	};
 };
 

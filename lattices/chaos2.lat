@@ -5,11 +5,11 @@
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>
-0 0 0.02
+0 0 1
 [magnetic anisotropy]
 # Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)
 # <absolute value> <K_x> <K_y> <K_z>
-0.1 0 0 1
+0 0 1 1
 [boundary conditions]
 # Boundary conditions along every axis
 # <BC along x> <BC along y> <BC along z>
@@ -25,7 +25,7 @@
 # Cell with indices (a,b,c) has origin at
 # (a*<X_x>+b*<Y_x>+c*<Z_x>, a*<X_y>+b*<Y_y>+c*<Z_y>, a*<X_z>+b*<Y_z>+c*<Z_z>)
 1 0 0
-0.5 0.8660254 0
+0 1 0
 0 0 1
 [unit cell]
 # Position of every atom in the unit cell
@@ -34,7 +34,7 @@
 # <x_u> <y_u> <z_u>
 # All coordinates age given in the basis of translation vectors,
 # hence <x_i>,<y_i>,<z_i> belongs to [0,1].
-0 0 0
+0.5 0.5 0.5
 [neigborood]
 # All nearest neighbours of every atom in the unit cell
 # <x> <y> <z> <s> <d>
@@ -46,28 +46,13 @@
 # corresponds to the order of atoms in section [unit cell]
 1 0 0 0 0
 0 1 0 0 0
--1 1 0 0 0
 [exchange constant]
 # Echange constants J_{sd} for every pair of atoms stated in [neighborhood]
 # <J>
-1
-1
-1
+0.8
+0.8
 [dzyaloshinskii moriya vector]
 # Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
 # <D_x> <D_y> <D_z>
-0.3 0 -1 0
-0.3 0.8660254 -0.5 0
-0.3 0.8660254 0.5 0
-#0.3 0 0 1
-#0.3 0 0 1
-#0.3 0 0 1
-[initial state]
-# Initial state for MEP and stable state calculation.
-# Empty section means that all momentum are along the external field.
-# <x> <y> <z> <radius> <winding number> <rotation>
-#20 15 0 30 0 -2
-20 15 0 10 0 -1
-[final state]
-# Final state for MEP.
-# The same format as for [initial state]
+3 1 0 0
+3 0 1 0
