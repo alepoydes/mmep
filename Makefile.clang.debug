@@ -1,0 +1,4 @@
+OPT=-std=c99 -g -Wall -DDEBUG -Wno-unknown-pragmas
+CC=clang
+
+include Makefile.common

@@ -1,0 +1,4 @@
+OPT=-std=c99 -Ofast -fopenmp
+CC=clang
+
+include Makefile.common

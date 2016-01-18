@@ -1,12 +1,12 @@
-#define _GNU_SOURCE
+#include "display.h"
+#include "skyrmion.h"
+#include "plot.h"
+
 #include <assert.h>
 #include <pthread.h>
 //#include <GL/glew.h>
 #include <GL/freeglut.h>
 
-#include "display.h"
-#include "skyrmion.h"
-#include "plot.h"
 
 // extern variables in header
 real* display_buffer=NULL;
@@ -112,15 +112,21 @@ void zToVector(real* vec) {
 	glMultMatrixf(m);
 };
 
+real* dist;
+int drawField_cmp(const void *a, const void *b){
+   	int ia = *(int *)a;
+   	int ib = *(int *)b;
+   	return dist[ia]<dist[ib]?-1:dist[ia]>dist[ib];
+};
 void drawField(real* field) {
 	float width=arrow/2;
 	int N=10; real C[N], S[N]; 
-	for(int n=0;n<=N;n++) {
+	for(int n=0;n<N;n++) {
 		rsincos(M_PI*2/N*n,S+n,C+n); C[n]*=width; S[n]*=width;
 	};
 	real magn[3]; copy3(magnetic_field, magn); normalize3(magn);
 	//if(arrow_mode>=2) glEnable(GL_CULL_FACE);
-	real* dist=malloc(sizeof(real)*SIZE); assert(dist);
+	dist=malloc(sizeof(real)*SIZE); assert(dist);
 	int* idx=malloc(sizeof(int)*SIZE); assert(idx);	
 	real normal[3]; sub3(eye,center,normal); normalize3(normal);
 	forall(u,x,y,z) {
@@ -129,12 +135,7 @@ void drawField(real* field) {
 		idx[i]=i;
 		dist[i]=dot3(normal,vec);
 	};
-	int cmp(const void *a, const void *b){
-    	int ia = *(int *)a;
-    	int ib = *(int *)b;
-    	return dist[ia]<dist[ib]?-1:dist[ia]>dist[ib];
-	};
-	qsort(idx, SIZE, sizeof(*idx), cmp);
+	qsort(idx, SIZE, sizeof(*idx), drawField_cmp);
 	lockDisplay();
 	for(int id=0; id<SIZE; id++) {
 		int u,x,y,z; UNPACK(idx[id],u,x,y,z);
@@ -160,14 +161,14 @@ void drawField(real* field) {
 			glColor4f(1.0f, 0.0f, 0.0f, p);
 			glBegin(GL_TRIANGLE_FAN);
 			glVertex3f(0.0f,0.0f,length);
-			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],0);
+			for(int n=0;n<N;n++) glVertex3f(C[n],S[n],0);
 			glVertex3f(C[0],S[0],0);
 			glEnd();
 
 			glColor4f(0.0f, 0.0f, 1.0f, p);
 			glBegin(GL_TRIANGLE_FAN);
 			glVertex3f(0.0f,0.0f,-length);
-			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],0);
+			for(int n=0;n<N;n++) glVertex3f(C[n],S[n],0);
 			glVertex3f(C[0],S[0],0);
 			glEnd();
 
@@ -182,14 +183,14 @@ void drawField(real* field) {
 			glColor4f(0.0f, 0.0f, 1.0f, p);
 			glBegin(GL_TRIANGLE_FAN);
 			glVertex3f(0.0f,0.0f,-length);
-			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-length);
+			for(int n=0;n<N;n++) glVertex3f(C[n],S[n],-length);
 			glVertex3f(C[0],S[0],-length);
 			glEnd();
 			//glCullFace(GL_BACK);
 			glColor4f(1.0f, 0.0f, 0.0f, p);
 			glBegin(GL_TRIANGLE_FAN);
 			glVertex3f(0.0f,0.0f,length);
-			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-length);
+			for(int n=0;n<N;n++) glVertex3f(C[n],S[n],-length);
 			glVertex3f(C[0],S[0],-length);
 			glEnd();
 
@@ -204,7 +205,7 @@ void drawField(real* field) {
 			glColor4f(1.0f, 0.0f, 0.0f, p);
 			glVertex3f(0.0f,0.0f,length);
 			glColor4f(0.0f, 0.0f, 1.0f, p);
-			for(int n=0;n<=N;n++) glVertex3f(C[n],S[n],-length);
+			for(int n=0;n<N;n++) glVertex3f(C[n],S[n],-length);
 			glVertex3f(C[0],S[0],-length);
 			glEnd();
 

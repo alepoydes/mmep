@@ -12,6 +12,7 @@
 	#define rsincos(x,y,z) sincos(x,y,z)
 	#define RF "l"
 	#define EPSILON DBL_EPSILON
+	#define DIGITS DBL_DIG
 #else
 #ifdef QUAD
 	#define real long double
@@ -20,6 +21,7 @@
 	#define rsincos(x,y,z) sincosl(x,y,z)
 	#define RF "L"
 	#define EPSILON LDBL_EPSILON
+	#define DIGITS LDBL_DIG
 #else 
 	#define real float
 	#define rsqrt(x) sqrtf(x)
@@ -27,6 +29,7 @@
 	#define rsincos(x,y,z) sincosf(x,y,z)
 	#define RF ""
 	#define EPSILON FLT_EPSILON
+	#define DIGITS FLT_DIG
 #endif
 #endif  
 

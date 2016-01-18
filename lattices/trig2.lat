@@ -5,7 +5,7 @@
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>
-0 0 0.02
+0 0 0.1
 [magnetic anisotropy]
 # Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)
 # <absolute value> <K_x> <K_y> <K_z>
@@ -71,3 +71,4 @@
 [final state]
 # Final state for MEP.
 # The same format as for [initial state]
+21 16 0 10 0 -1

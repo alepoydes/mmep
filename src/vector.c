@@ -1,7 +1,7 @@
+#include "vector.h"
+
 #include <stdlib.h>
 #include <math.h>
-
-#include "vector.h"
 
 real normsq(int n, const real* a) {
 	real nrm=0;

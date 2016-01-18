@@ -1,3 +1,8 @@
+#ifndef DEBUG_H
+#define DEBUG_H
+
+#include "vector.h"
+
 #define COLOR_RESET "\033[m"
 #define COLOR_BOLD "\033[1m"
 #define COLOR_FAINT "\033[2m"
@@ -6,3 +11,7 @@
 #define COLOR_GREEN "\033[32m"
 #define COLOR_YELLOW "\033[33m"
 #define COLOR_BLUE "\033[34m"
+
+void watch_number(real next, real prev, int digits);
+
+#endif

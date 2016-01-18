@@ -60,7 +60,7 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 		real m=dot3(magnetic_anisotropy_unit,arg+i);
 		for3(j) out[i+j]=m*K2[j];
 	};
-	// Comput exchange part
+	// Compute exchange part
 	for(int n=0;n<sizen;n++) {
 		// local cache
 		int s=neighbours[5*n+3], d=neighbours[5*n+4];

@@ -1,15 +1,16 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-#include <time.h>
-#include <getopt.h>
-
 #include "vector.h"
 #include "skyrmion.h"
 #include "optim.h"
 #include "plot.h"
 #include "parse.h"
 #include "debug.h"
+#include "octave.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <time.h>
+#include <getopt.h>
 
 #define OUTDIR "fields"
 
@@ -23,6 +24,7 @@ int mode=2;
 int debug_plot=0;
 int debug_plot_path=0;
 int debug_every=100;
+int save_octave=0;
 
 real *distance=NULL, *energy=NULL, *diff=NULL, *tdiff=NULL;
 int post_optimization=1;
@@ -57,11 +59,10 @@ void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f,
   static real prev_f=NAN; 
   static real prev_res=NAN; 
   if(iter%(debug_every*sizep)==0 || iter<0) {
-  	fprintf(stderr, "%d: E %"RF"g", abs(iter), f);
-    if(f<prev_f) fprintf(stderr, COLOR_GREEN"%+"RF"g "COLOR_RESET, f-prev_f);
-    else fprintf(stderr, COLOR_RED"%+"RF"g "COLOR_RESET, f-prev_f);
-    if(res<prev_res) fprintf(stderr, "R "COLOR_GREEN"%"RF"g "COLOR_RESET, res);
-    else fprintf(stderr, "R "COLOR_RED"%"RF"g "COLOR_RESET, res);
+    fprintf(stderr, "%d: E ", abs(iter));
+    watch_number(f,prev_f,16);
+    fprintf(stderr, " R ");
+    watch_number(res,prev_res,16);    
     fprintf(stderr, "A %"RF"g\n", alpha);
 
   	if(debug_plot && size<=1024) plot_field3(stdout,a);
@@ -115,11 +116,10 @@ void path_display(int iter, real* restrict mep, real* restrict grad_f
   static real prev_f=NAN;
   static real prev_res=NAN;
   if(iter%debug_every==0 || iter<0) {
-    fprintf(stderr, "%d: E %"RF"g", abs(iter), f/(sizep-1));
-    if(f<prev_f) fprintf(stderr, COLOR_GREEN"%+"RF"g "COLOR_RESET, (f-prev_f)/(sizep-1));
-    else fprintf(stderr, COLOR_RED"%+"RF"g "COLOR_RESET, (f-prev_f)/(sizep-1));
-    if(res<prev_res) fprintf(stderr, "R "COLOR_GREEN"%"RF"g "COLOR_RESET, res);
-    else fprintf(stderr, "R "COLOR_RED"%"RF"g "COLOR_RESET, res);
+    fprintf(stderr, "%d: E ", abs(iter));
+    watch_number(f/(sizep-1),prev_f/(sizep-1),16);
+    fprintf(stderr, " R ");
+    watch_number(res,prev_res,16);
     fprintf(stderr, "A %"RF"g\n", alpha);    
     if(debug_plot) { 
       if(debug_plot_path) plot_path(stdout, sizep, mep);
@@ -137,7 +137,7 @@ void path_equilize_rec(real* mep, int from, int to) {
   if(from-to<2) return;
   for(int p=to-1; p>from; p--) {
     real d=distance[from]+p*(distance[to]-distance[from])/(to-from); // desired position
-    int f; for(f=to-1; f--; f>=from) if(distance[f]<=d) break; 
+    int f=to-1; while(f>=from) if(distance[f--]<=d) break; 
     assert(f>=0); assert(f<=p);
     // move node to interval [dist(f),dist(f+1)]
     real loc=(d-distance[f])/(distance[f+1]-distance[f]); // local coordinate
@@ -216,21 +216,17 @@ void path_tangent(const real* restrict mep, real* restrict grad) {
   for(int p=0; p<sizep; p++) {
     project_to_tangent(mep+size*p,grad+size*p);
     if(p>0 && p<sizep-1) {
-      if(post_optimization && energy[p]<energy[p-1] && energy[p]<energy[p+1]) {
-      } else if(post_optimization && (p==f || (energy[p]>=energy[p-1] && energy[p]>=energy[p+1] && !single_maximum))) {
+      //if(post_optimization && energy[p]<energy[p-1] && energy[p]<energy[p+1]) {
+      //} else 
+      if(post_optimization && (p==f || (energy[p]>=energy[p-1] && energy[p]>=energy[p+1] && !single_maximum))) {
         three_point_tangent(mep+size*(p-1), mep+size*(p+1), mep+p*size, u);
         real proj=dot(size,u,grad+p*size)/dot(size,u,u);
         mult_sub(size, 2*proj, u, grad+p*size);
       } else {
         three_point_tangent(mep+size*(p-1), mep+size*(p+1), mep+p*size, u);
         real normu=rsqrt(normsq(size,u));
-        real normg=rsqrt(normsq(size,grad+p*size));
-        real a=distance[p]-distance[p-1];
-        real b=distance[p+1]-distance[p];
         real proj=-dot(size,u,grad+p*size)/normu;
-        //proj+=(distance[p]-p*distance[sizep-1]/sizep)*normg*0.5;
         mult_add(size, proj/normu, u, grad+p*size);
-        //fprintf(stderr,"proj %"RF"g\n",proj);
       };
     };
   };
@@ -259,6 +255,7 @@ void showUsage(const char* program) {
 \n   -h|--help              Show this message and exit\
 \n   -p|--plot              Enable GNUPlot output of energy\
 \n   -P|--plot-path         Enable GNUPlot output of MEP\
+\n   -o                     Save result in Octave format\
 \n   -e|--epsilon REAL      Desired residual\
 \n   -n           INT       Nodes along path\
 \n   -i           INT       Set maximum number of iterations\
@@ -280,11 +277,12 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "hpPe:n:i:r:m:a:", long_options, &option_index);
+    c = getopt_long(argc, argv, "ohpPe:n:i:r:m:a:", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
       case 'P': debug_plot=1; debug_plot_path=1; break;
+      case 'o': save_octave=1; break;      
       case 'h': showUsage(argv[0]); exit(0);
       case 'e': epsilon=atof(optarg); break;
       case 'n': sizep=atoi(optarg); 
@@ -325,13 +323,20 @@ int main(int argc, char** argv) {
   diff=(real*)malloc(sizeof(real)*max_sizep); assert(diff);
   tdiff=(real*)malloc(sizeof(real)*max_sizep); assert(tdiff);
   // Set initla path size
-  sizep=9; if(max_sizep<sizep) sizep=max_sizep;
+  sizep=17; if(max_sizep<sizep) sizep=max_sizep;
   // find two minima
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating initial state\n"COLOR_RESET);
   if(initial_state) {
     copy_vector(size, initial_state, path);
     free(initial_state);
-  } else random_vector(size, path); 
+  } else {
+    random_vector(size, path); 
+    /*forall(u,x,y,z) {
+      int i=3*INDEX(u,x,y,z);
+      real s,c; rsincos(2*M_PI*(x-y)/(real)sizex,&s,&c);
+      path[i]=path[i+1]=s; path[i+2]=c;
+    };*/
+  };
   skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating final state\n"COLOR_RESET);
   if(final_state) {
@@ -366,6 +371,7 @@ int main(int argc, char** argv) {
   // save energy
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Saving result\n"COLOR_RESET);
   const char* energyname=OUTDIR"/energy.gnuplot";
+  fprintf(stderr, COLOR_YELLOW"Saving %s\n"COLOR_RESET,energyname);
   FILE* file=fopen(energyname,"w");
   if(file) {
     fprintf(file,"set terminal png\nset output '"OUTDIR"/energy.png'\n");
@@ -376,6 +382,7 @@ int main(int argc, char** argv) {
   }; 
   // save field
   const char* filename=OUTDIR"/mep.gnuplot";
+  fprintf(stderr, COLOR_YELLOW"Saving %s\n"COLOR_RESET,filename);
   file=fopen(filename,"w");
   if(file) {
     fprintf(file,"set terminal gif animate delay 10\n");
@@ -385,7 +392,25 @@ int main(int argc, char** argv) {
   } else {
     fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,filename);
   };
-
+  // Octave output
+  if(save_octave) {
+    const char* octfile=OUTDIR"/mep.oct";
+    fprintf(stderr, COLOR_YELLOW"Saving %s\n"COLOR_RESET,octfile);
+    file=fopen(octfile,"w");
+    if(file) {
+      oct_save_init(file);
+      oct_save_hessian(file);
+      oct_save_linear(file);
+      oct_save_state(file,"initial",path);
+      oct_save_state(file,"final",path+3*SIZE*(sizep-1));
+      real mx=energy[0]; int mi=0; for(int p=1; p<sizep; p++) if(energy[p]>mx) { mx=energy[p]; mi=p; }; 
+      if(mi>0 && mi<sizep-1) oct_save_state(file,"saddle",path+3*SIZE*mi);
+      oct_save_vertices(file);
+      oct_save_finish(file);
+      fclose(file);
+    } else 
+      fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,octfile);
+  };
   // Deinitialization
   free(path); free(tdiff); free(diff); free(energy); free(distance);
   return 0;

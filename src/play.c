@@ -1,12 +1,3 @@
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-#include <time.h>
-#include <getopt.h>
-
-#include <GL/freeglut.h>
-
 #include "vector.h"
 #include "skyrmion.h"
 #include "optim.h"
@@ -15,6 +6,15 @@
 #include "debug.h"
 #include "display.h"
 #include "bitmap.h"
+
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <time.h>
+#include <getopt.h>
+
+#include <GL/freeglut.h>
 
 #define OUTDIR "fields"
 

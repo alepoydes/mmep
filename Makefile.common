@@ -9,7 +9,7 @@ BINDIR:=bin
 SRCDIR:=src
 vpath %.c  $(SRCDIR)
 vpath %.h  $(SRCDIR)
-SRC:=parse.c vector.c skyrmion.c plot.c optim.c
+SRC:=parse.c vector.c skyrmion.c plot.c optim.c debug.c octave.c
 SRCGL:=display.c integra.c bitmap.c
 
 all:
@@ -18,26 +18,26 @@ define binary
 BIN+=$(1)f $(1)d $(1)q
 
 $(BINDIR)/$(1)f: $(addprefix $(OBJDIR)/,$(2:.c=.f.o)) $(OBJDIR)/$(1).f.o
-	gcc $$^ $$(OPT) $(3) -o $$@
+	$(CC) $$^ $$(OPT) $(3) -o $$@
 
 $(BINDIR)/$(1)d: $(addprefix $(OBJDIR)/,$(2:.c=.d.o)) $(OBJDIR)/$(1).d.o
-	gcc $$^ $$(OPT) $(3) -o $$@
+	$(CC) $$^ $$(OPT) $(3) -o $$@
 
 $(BINDIR)/$(1)q: $(addprefix $(OBJDIR)/,$(2:.c=.q.o)) $(OBJDIR)/$(1).q.o
-	gcc $$^ $$(OPT) $(3) -o $$@
+	$(CC) $$^ $$(OPT) $(3) -o $$@
 endef
 
 %.html: %.md
 	pandoc $^ -t html -f markdown -s -o $@
 
 $(OBJDIR)/%.f.o: %.c $(SRCDIR)/*.h
-	gcc $< $(OPT) -I $(SRCDIR) -c -o $@	
+	$(CC) $< $(OPT) -I $(SRCDIR) -c -o $@	
 
 $(OBJDIR)/%.d.o: %.c $(SRCDIR)/*.h
-	gcc $< $(OPT) -I $(SRCDIR) -c -DDOUBLE -o $@	
+	$(CC) $< $(OPT) -I $(SRCDIR) -c -DDOUBLE -o $@	
 
 $(OBJDIR)/%.q.o: %.c $(SRCDIR)/*.h
-	gcc $< $(OPT) -I $(SRCDIR) -c -DQUAD -o $@	
+	$(CC) $< $(OPT) -I $(SRCDIR) -c -DQUAD -o $@	
 
 $(eval $(call binary,min,$(SRC),$(LIB)))
 $(eval $(call binary,min2,$(SRC),$(LIB)))
