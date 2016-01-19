@@ -1,1 +1,1 @@
-include Makefile.clang.release
+include Makefile.gcc.release
