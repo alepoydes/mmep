@@ -9,10 +9,12 @@
 	#define real double
 	#define rsqrt(x) sqrt(x)
 	#define rabs(x) fabs(x)
-#ifdef __GNUC__
+#if defined(__clang__)
+	#define rsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
+#elif defined(__GNUC__) || defined(__GNUG__)
 	#define rsincos(x,y,z) sincos(x,y,z)
-#else
-	#define rsincos(x,y,z) { y=sin(x); z=cos(x); }
+#elif defined(_MSC_VER)
+	#define rsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
 #endif
 	#define RF "l"
 	#define EPSILON DBL_EPSILON
@@ -22,10 +24,12 @@
 	#define real long double
 	#define rsqrt(x) sqrtl(x)
 	#define rabs(x) fabsl(x)
-#ifdef __GNUC__
+#if defined(__clang__)
+	#define rsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
+#elif defined(__GNUC__) || defined(__GNUG__)
 	#define rsincos(x,y,z) sincosl(x,y,z)
-#else
-	#define rsincos(x,y,z) { y=sinl(x); z=cosl(x); }
+#elif defined(_MSC_VER)
+	#define rsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
 #endif
 	#define RF "L"
 	#define EPSILON LDBL_EPSILON
@@ -34,10 +38,12 @@
 	#define real float
 	#define rsqrt(x) sqrtf(x)
 	#define rabs(x) fabsf(x)
-#ifdef __GNUC__
+#if defined(__clang__)
+	#define rsincos(x,y,z) { *(y)=sinf(x); *(z)=cosf(x); }
+#elif defined(__GNUC__) || defined(__GNUG__)
 	#define rsincos(x,y,z) sincosf(x,y,z)
-#else
-	#define rsincos(x,y,z) { y=sinf(x); z=cosf(x); }
+#elif defined(_MSC_VER)
+	#define rsincos(x,y,z) { *(y)=sinf(x); *(z)=cosf(x); }
 #endif
 	#define RF ""
 	#define EPSILON FLT_EPSILON
