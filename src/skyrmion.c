@@ -171,6 +171,24 @@ void skyrmion_middle(const real* restrict a, const real* restrict b, real* restr
 	  	middle3(a+3*i,b+3*i,r+3*i);
   	};
 };
+
+// calculate point in between of b and c by interpolation of curve given by
+// points a,b,c and d in that order
+void skyrmion_middle_fourth_order(const real* restrict a, const real* restrict b, const real* restrict c, const real* restrict d, real* restrict r) {
+	#pragma omp parallel for collapse(4)	
+  	forall(u,x,y,z) {
+	  	int i=INDEX(u,x,y,z);
+	  	middle_fourth_order3(a+3*i,b+3*i,c+3*i,d+3*i,r+3*i);
+  	};
+};
+
+void skyrmion_middle_third_order(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {
+	#pragma omp parallel for collapse(4)	
+  	forall(u,x,y,z) {
+	  	int i=INDEX(u,x,y,z);
+	  	middle_third_order3(a+3*i,b+3*i,c+3*i,r+3*i);
+  	};
+};
 	
 void skyrmion_geodesic_rec(real* p, int n, int m) {
 	int size=SIZE*3;
@@ -187,16 +205,65 @@ void skyrmion_geodesic(int sizep, real* p) {
 	skyrmion_geodesic_rec(p, 0, sizep-1); 
 }
 
+// tangent r to path defined by three consequative points a,b,c
 void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z)*3;
-		sub3(b+i,a+i,r+i); 
-		tangent3(c+i,r+i); 
+		sub3(c+i,a+i,r+i); 
+		tangent3(b+i,r+i); 
 		//normalize3(r+i);
 	};
 };
 
+void three_point_tangent_stable(real ea, real eb, real ec, const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {
+	if(ea<eb && eb<ec) {
+		#pragma omp parallel for collapse(4)	
+		forall(u,x,y,z) {	
+			int i=INDEX(u,x,y,z)*3;
+			sub3(c+i,b+i,r+i); 
+			tangent3(b+i,r+i); 
+		};
+	} else if(ea>eb && eb>ec) {
+		#pragma omp parallel for collapse(4)	
+		forall(u,x,y,z) {	
+			int i=INDEX(u,x,y,z)*3;
+			sub3(b+i,a+i,r+i); 
+			tangent3(b+i,r+i); 
+		};
+	} else {
+		real w1=rabs(eb-ea); real w2=rabs(ec-eb);
+		if(w1>w2) { real t=w1; w1=w2; w2=t; }; // w1=min(|eb-ea|,|ec-eb|), w2=max(...)
+		if(ec<ea) { real t=w1; w1=w2; w2=t; }; // w1=min if ec>ea  w1=max otherwise
+		#pragma omp parallel for collapse(4)	
+		forall(u,x,y,z) {	
+			int i=INDEX(u,x,y,z)*3;
+			real t1[3],t2[3];
+			sub3(b+i,a+i,t1); 
+			sub3(c+i,b+i,t2);
+			for3(j) (r+i)[j]=w1*t1[j]+w2*t2[j];
+			tangent3(b+i,r+i); 
+		};
+	}
+};
+
+// tangent r to path defined by three consequative points a,b,c
+void three_point_tangent_mean(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {
+	#pragma omp parallel for collapse(4)	
+	forall(u,x,y,z) {	
+		real t1[3],t2[3];
+		int i=INDEX(u,x,y,z)*3;
+		sub3(b+i,a+i,t1); 
+		sub3(c+i,b+i,t2); 
+		real l1=1./rsqrt(normsq3(t1)); real l2=1./rsqrt(normsq3(t2));
+		for3(j) (r+i)[j]=t1[j]*l1+t2[j]*l2;
+		tangent3(b+i,r+i); 
+		//normalize3(r+i);
+	};
+};
+
+
+/*
 // r moved along b-a to satisfy |r-a|=|r-b|
 void three_point_equalize(const real* restrict a, const real* restrict b, real* restrict r) {
 	#pragma omp parallel for collapse(4)	
@@ -226,7 +293,7 @@ void three_point_equalizer(const real* restrict a, const real* restrict c, const
 		normalize3(r+i);
 	};
 };
-
+*/
 void append_skyrmion(const real center[3], real distance, int winding, 
 	int rotation, real* restrict data) 
 {

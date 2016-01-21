@@ -17,10 +17,10 @@
 int size=0; // Dimenion of vector containing skyrmionic solutions
 int sizep=0; // Number of nodes on path
 int max_sizep=65; // Number of nodes on path
-real epsilon=1e-6;
-int max_iter=10000;
+real epsilon=1e-5;
+int max_iter=5000;
 real mode_param=0.05;
-int mode=2;
+int mode=3;
 int debug_plot=0;
 int debug_plot_path=0;
 int debug_every=100;
@@ -45,7 +45,8 @@ void energy_evaluate(real* path) {
     diff[p]=rsqrt(normsq(size,q)/size);
     tdiff[p]=diff[p];
     if(p>0 && p<sizep-1) {
-      three_point_tangent(path+size*(p-1),path+size*(p+1),path+size*p,u);
+      three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],path+size*(p-1),path+size*p,path+size*(p+1),u);
+      //three_point_tangent(path+size*(p-1),path+size*p,path+size*(p+1),u);
       real proj=dot(size,u,q)/dot(size,u,u);
       mult_sub(size, proj, u, q);
       // q is orthogonal to tangent to MEP
@@ -219,11 +220,13 @@ void path_tangent(const real* restrict mep, real* restrict grad) {
       //if(post_optimization && energy[p]<energy[p-1] && energy[p]<energy[p+1]) {
       //} else 
       if(post_optimization && (p==f || (energy[p]>=energy[p-1] && energy[p]>=energy[p+1] && !single_maximum))) {
-        three_point_tangent(mep+size*(p-1), mep+size*(p+1), mep+p*size, u);
+        three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
+        //three_point_tangent(mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
         real proj=dot(size,u,grad+p*size)/dot(size,u,u);
         mult_sub(size, 2*proj, u, grad+p*size);
       } else {
-        three_point_tangent(mep+size*(p-1), mep+size*(p+1), mep+p*size, u);
+        three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
+        //three_point_tangent(mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
         real normu=rsqrt(normsq(size,u));
         real proj=-dot(size,u,grad+p*size)/normu;
         mult_add(size, proj/normu, u, grad+p*size);
@@ -343,7 +346,7 @@ int main(int argc, char** argv) {
     copy_vector(size, final_state, path+size*(sizep-1));
     free(final_state);
   } else set_to_field(path+size*(sizep-1));
-  skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, epsilon, max_iter);
+  skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, 0.1*epsilon, max_iter);
   // Set initial path as geodesic approximation
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating MEP\n"COLOR_RESET);
   skyrmion_geodesic(sizep, path);
@@ -352,8 +355,12 @@ int main(int argc, char** argv) {
   while(2*(sizep-1)+1<=max_sizep) {
     // interpolating path
     for(int p=sizep-1; p>0; p--) copy_vector(size, path+p*size, path+2*p*size);
-    for(int p=1; p<sizep; p++) 
-      skyrmion_middle(path+2*size*(p-1), path+2*size*p, path+size*(2*p-1));
+    for(int p=1; p<sizep; p++) {
+      if(p==1) skyrmion_middle_third_order(path+2*size*(p-1), path+2*size*p, path+2*size*(p+1), path+size*(2*p-1));
+      else if(p==sizep-1) skyrmion_middle_third_order(path+2*size*p, path+2*size*(p-1), path+2*size*(p-2), path+size*(2*p-1));
+      else skyrmion_middle_fourth_order(path+2*size*(p-2), path+2*size*(p-1), path+2*size*p, path+2*size*(p+1), path+size*(2*p-1));
+      //skyrmion_middle(path+2*size*(p-1), path+2*size*p, path+size*(2*p-1));
+    };
     sizep=2*(sizep-1)+1;
     fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Increasing number of nodes: %d\n"COLOR_RESET, sizep);
     path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
