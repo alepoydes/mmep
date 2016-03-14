@@ -6,6 +6,7 @@
 
 #include "vector.h"
 #include "skyrmion.h"
+#include "debug.h"
 
 // Physical parameters
 real magnetic_field[3]={NAN,NAN,NAN};
@@ -407,6 +408,57 @@ void append_skyrmion(const real center[3], real distance, int winding,
 		copy3(q1+1,data+i);
 	};
 }
+
+
+// axis: 0=x, 1=y, 2=z
+void group_generator(const real* restrict spins, 
+int axis, real* restrict gen) {
+	int N;
+	switch(axis) {
+		case 0: N=sizex; break;
+		case 1: N=sizey; break;
+		case 2: N=sizez; break;
+		default: 
+			fprintf(stderr, "Wrong axis: %d not in 0..2\n",axis);
+			exit(1);
+	};
+// checking parameters
+	if(N%2==0) {
+		fprintf(stderr, COLOR_BOLD COLOR_RED"Error:"COLOR_RESET 
+			"Axis %d has even length %d\n",axis,N);
+		exit(1);
+	};
+// computing kernel	
+	real* kernel=malloc(sizeof(real)*N); assert(kernel);
+	real mult=M_PI/N; 
+	kernel[0]=0;
+	for(int n=1; n<N; n++) {
+		real s,c; rsincos(mult*n,&s,&c);
+		kernel[n]=mult/s;
+		if(n%2==1) kernel[n]=-kernel[n];
+	};
+// doing covolution
+	forall(u,x,y,z) for3(j) gen[j+3*INDEX(u,x,y,z)]=0;
+	for(int n=0; n<N; n++) {
+		real a=kernel[n]; 
+		if(a==0) continue;
+		forall(u,x,y,z) {
+			int i=3*INDEX(u,x,y,z); int k;
+			switch(axis) {
+				case 0: k=3*INDEX(u,n>=x?n-x:n-x+N,y,z); break;
+				case 1: k=3*INDEX(u,x,n>=y?n-y:n-y+N,z); break;
+				case 2: k=3*INDEX(u,x,y,n>=z?n-z:n-z+N); break;
+				default: assert(0);
+			};
+			for3(j) gen[j+i]+=a*spins[j+k];
+		};
+	};
+
+// finilizing
+	free(kernel);
+};
+
+
 
 void fourier_table(const real* restrict angles, real* restrict table) {
 	#pragma omp parallel for collapse(4)	

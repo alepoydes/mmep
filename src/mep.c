@@ -27,6 +27,7 @@ int debug_every=100;
 int save_octave=0;
 int use_ftt=0;
 int use_first_order_repar=1;
+int remove_zero_modes=0;
 
 static int flat_distance=1;
 
@@ -319,6 +320,12 @@ void path_tangent_ftt(const real* restrict mep, real* restrict grad) {
 
 void path_tangent_neb(const real* restrict mep, real* restrict grad) {
   real* u=malloc(sizeof(real)*size); assert(u);
+  real *g1=NULL, *g2=NULL, *g3=NULL; 
+  if(remove_zero_modes) {
+    g1=malloc(sizeof(real)*size); assert(g1);
+    g2=malloc(sizeof(real)*size); assert(g2);
+    g3=malloc(sizeof(real)*size); assert(g3);
+  };
   // Find index f of node with
   real max=-INFINITY; int f=-1;
   for(int p=sizep-1; p>=0; p--) if(energy[p]>max) { max=energy[p]; f=p; };
@@ -336,13 +343,23 @@ void path_tangent_neb(const real* restrict mep, real* restrict grad) {
       } else {
         three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
         //three_point_tangent(mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
-        real normu=rsqrt(normsq(size,u));
-        real proj=dot(size,u,grad+p*size)/normu;
-        mult_add(size, -proj/normu, u, grad+p*size);
+        if(remove_zero_modes) {
+          group_generator(mep+size*p, 0, g1);
+          group_generator(mep+size*p, 1, g2);
+          group_generator(mep+size*p, 2, g3);
+          real* basis[5]={g1,g2,g3,u,grad+p*size};
+          gram_schmidt(size, 5, basis);
+        } else {
+          real* basis[2]={u,grad+p*size};
+          gram_schmidt(size, 2, basis);
+          //real normu=rsqrt(normsq(size,u));
+          //real proj=dot(size,u,grad+p*size)/normu;
+          //mult_add(size, -proj/normu, u, grad+p*size);
+        };
       };
     };
   };
-  free(u);
+  free(u); if(g1)free(g1); if(g2)free(g2); if(g3)free(g3);
 }
 
 void path_tangent(const real* restrict mep, real* restrict grad) {
@@ -380,6 +397,7 @@ void showUsage(const char* program) {
 \n   -m|--mode    INT       Optimization method\
 \n   -a           REAL      A parameter for optimization methods\
 \n   --ftt                  Use FTT instead of NEB method\
+\n   -z|--zero              Disable translations preserving energy\
 \n", program);
 };
 
@@ -396,7 +414,7 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "ohpPe:n:i:r:m:a:", long_options, &option_index);
+    c = getopt_long(argc, argv, "zohpPe:n:i:r:m:a:", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
@@ -411,6 +429,7 @@ int parseCommandLine(int argc, char** argv) {
       case 'r': debug_every=atoi(optarg); break;
       case 'm': mode=atoi(optarg); break;
       case 'a': mode_param=atof(optarg); break;
+      case 'z': remove_zero_modes=1; break;
       case '?': break;
       case 1000: use_ftt=1; break;
       default: fprintf(stderr,"Unprocessed option '%c'\n", c); exit(1);
@@ -436,11 +455,14 @@ int main(int argc, char** argv) {
   fprintf(stderr, "Size of real: %zd\n", sizeof(real));
   fprintf(stderr, "Nodes on path: %d\n", max_sizep);
   fprintf(stderr, "%s method in use\n", use_ftt?"FTT":"NEB");
+  if(remove_zero_modes)
+    fprintf(stderr, "Zero modes (translations) are removed\n");
+
   srand(time(NULL));
   size=SIZE*3;
   real* path=(real*)malloc(sizeof(real)*size*max_sizep); assert(path);
   distance=(real*)malloc(sizeof(real)*max_sizep); assert(distance);
-  energy=(real*)malloc(sizeof(real)*max_sizep); assert(energy);
+  energy=(real*)calloc(sizeof(real),max_sizep); assert(energy);
   diff=(real*)malloc(sizeof(real)*max_sizep); assert(diff);
   tdiff=(real*)malloc(sizeof(real)*max_sizep); assert(tdiff);
   inflation=(real*)malloc(sizeof(real)*max_sizep); assert(inflation);

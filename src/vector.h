@@ -110,6 +110,9 @@ void add_inplace(int n, const real* restrict a, real* restrict c);
 void add_constant_inplace(int n, real a, real* restrict c);
 void negate_inplace(int n, real* restrict c);
 void negate_div(int n, real* restrict a, real* restrict c);
+void const_div_inplace(int n, real a, real* restrict c);
 void linear_comb(int n, real a, const real* restrict b, real c, real* restrict d, real* restrict e);
+
+void gram_schmidt(int N, int K, real* restrict* V);
 
 #endif

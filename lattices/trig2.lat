@@ -1,7 +1,7 @@
 [size]
 # Grid dimesions <x> x <y> x <z>
 # <x> <y> <z>
-30 30 1
+31 31 1
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>
@@ -67,4 +67,4 @@
 [final state]
 # Final state for MEP.
 # The same format as for [initial state]
-21 16 0 10 0 -1
+#21 16 0 10 0 -1

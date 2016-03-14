@@ -100,3 +100,26 @@ void linear_comb(int n, real a, const real* restrict b, real c, real* restrict d
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) e[k]=a*b[k]+c*d[k];
 }; 
+
+void const_div_inplace(int n, real a, real* restrict c) {
+	#pragma omp parallel for 
+	for(int k=0; k<n; k++) c[k]/=a;
+};
+
+// Orthogonalize family of K vectors V each of the length N.
+// Vectors are not normalized.
+// The resulting V[k] is the projection of input V[k]
+// onto orthogonal subspace to V[j] for all j<k.
+void gram_schmidt(int N, int K, real* restrict* V) {
+	real* sqnorms=alloca(sizeof(real)*K);
+	for(int k=0; k<K; k++) {
+		for(int j=0; j<k; j++) 
+			if(sqnorms[j]>1e-7) {
+			// subtract from V[k] projection onto V[j]
+			real proj=dot(N,V[j],V[k]);
+			mult_sub(N,proj/sqnorms[j],V[j],V[k]);
+		};
+		// Normalize V[k]
+		sqnorms[k]=normsq(N,V[k]);
+	};
+}
