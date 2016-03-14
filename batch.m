@@ -1,7 +1,8 @@
-dir='fields/HRBVW2/';
-d=dlmread([dir,'batch.txt']);
+dir='fields/HRBVW3/';
+d=dlmread([dir,'energy.txt']);
+x=dlmread([dir,'distance.txt']);
 b=0.02:0.004:0.116;
-e=d-d(:,end);
+a=d-d(:,end);
 
 figure(1);
 plot(linspace(0,1,size(d,2)),d','-');

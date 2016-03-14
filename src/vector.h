@@ -9,6 +9,7 @@
 	#define real double
 	#define rsqrt(x) sqrt(x)
 	#define rabs(x) fabs(x)
+	#define racos(x) acos(x)
 #if defined(__clang__)
 	#define rsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
 #elif defined(__GNUC__) || defined(__GNUG__)
@@ -24,6 +25,7 @@
 	#define real long double
 	#define rsqrt(x) sqrtl(x)
 	#define rabs(x) fabsl(x)
+	#define racos(x) acosl(x)
 #if defined(__clang__)
 	#define rsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
 #elif defined(__GNUC__) || defined(__GNUG__)
@@ -38,6 +40,7 @@
 	#define real float
 	#define rsqrt(x) sqrtf(x)
 	#define rabs(x) fabsf(x)
+	#define racos(x) acosf(x)
 #if defined(__clang__)
 	#define rsincos(x,y,z) { *(y)=sinf(x); *(z)=cosf(x); }
 #elif defined(__GNUC__) || defined(__GNUG__)
@@ -86,8 +89,12 @@
 #define copy3(a,c) { (c)[0]=(a)[0]; (c)[1]=(a)[1]; (c)[2]=(a)[2]; }
 #define quaternion_product(a,b,c) { (c)[0]=a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3]; (c)[1]=a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2]; (c)[2]=a[0]*b[2]-a[1]*b[3]+a[2]*b[0]+a[3]*b[1]; (c)[3]=a[0]*b[3]+a[1]*b[2]-a[2]*b[1]+a[3]*b[0]; }
 #define scale3(a,b,c) { (c)[0]=a*(c)[0]+(1-a)*(b)[0]; (c)[1]=a*(c)[1]+(1-a)*(b)[1]; (c)[2]=a*(c)[2]+(1-a)*(b)[2]; }
+// calculate great-circle distance  on the sphere between points a and b given by decard coordinates.
+// a and b assumed to have unit length.
+#define dist_sphere_sq3(a,b) (racos(dot3(a,b)))
 
 real distsq(int n, const real* a, const real* b);
+real dist_sphere_sq(int n, const real* a, const real* b);
 real normsq(int n, const real* a);
 real dot(int n, const real* a, const real* b);
 void mult_sub(int n, real a, const real* b, real* c);
@@ -98,6 +105,7 @@ void random_vector(int n, real* a);
 void zero_vector(int n, real* a);
 void copy_vector(int n, const real* a, real* b);
 void sub_inplace(int n, const real* restrict a, real* restrict c);
+void sub(int n, const real* restrict a, const real* restrict b, real* restrict c);
 void add_inplace(int n, const real* restrict a, real* restrict c);
 void add_constant_inplace(int n, real a, real* restrict c);
 void negate_inplace(int n, real* restrict c);

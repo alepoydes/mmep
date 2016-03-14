@@ -72,10 +72,11 @@ int steepest_descend(
   real last_f=-INFINITY;
   real constres;
   if(P) constres=P(a); else constres=0;
+  real f=NAN; real res=NAN;
   for(iter=0; iter<max_iter; iter++) {
     real next_alpha;
   	Q(a,grad);
-  	real f=-dot(n,a,grad)/2;
+  	f=-dot(n,a,grad)/2;
   	L(grad);
   	f+=dot(n,a,grad);
   	// grad contains Hx+B
@@ -84,7 +85,8 @@ int steepest_descend(
     //fprintf(stderr,"res: %g\n",rsqrt(normsq(n,grad)));
     assert(!isnan(normsq(n,grad)));
     if(T) T(a,grad);
-    real res2=normsq(n,grad); real res=rsqrt(res2/n);
+    real res2=normsq(n,grad); 
+    res=rsqrt(res2/n);
     assert(!isnan(res));
     switch(mode) {
       case SDM_INERTIAL: 
@@ -101,7 +103,7 @@ int steepest_descend(
         break; 
     };
     if(res+constres<epsilon) { // If solution is found
-      if(display) display(-iter,a,grad,f,res,constres,alpha);
+      //if(display) display(-iter,a,grad,f,res,constres,alpha);
       status=0; break; 
     };
     if(display) display(iter,a,grad,f,res,constres,alpha); 
@@ -113,6 +115,7 @@ int steepest_descend(
     last_f=f;
     if(mode==SDM_CAUCHY) alpha=next_alpha;
   };
+  if(display) display(-iter,a,grad,f,res,constres,alpha);
   free(grad); free(hess);
   return status;
 };

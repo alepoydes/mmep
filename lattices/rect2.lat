@@ -9,7 +9,7 @@
 [magnetic anisotropy]
 # Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)
 # <absolute value> <K_x> <K_y> <K_z>
-0 0 1 1
+0 0 0 1
 [boundary conditions]
 # Boundary conditions along every axis
 # <BC along x> <BC along y> <BC along z>
@@ -62,8 +62,7 @@
 # <x> <y> <z> <radius> <winding number> <rotation>
 #0 0 0 0 1 0
 17.5 15.5 0.5 0 1 0
-13.5 15.5 0.5 0 1 0
 [final state]
 # Final state for MEP.
 # The same format as for [initial state]
-11.5 15.5 0.5 0 1 0
+16.5 16.5 0.5 0 1 0

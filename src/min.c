@@ -125,6 +125,13 @@ int main(int argc, char** argv) {
   };
   skyrmion_steepest_descent(spins, mode, mode_param, epsilon, max_iter);
   // Saving result
+  real energy[4]; skyrmion_energy(spins, energy);
+  fprintf(stderr,COLOR_YELLOW"Zeeman energy:"COLOR_RESET" %.10"RF"f\n",energy[1]);
+  fprintf(stderr,COLOR_YELLOW"Exchange energy:"COLOR_RESET" %.10"RF"f\n",energy[2]);
+  fprintf(stderr,COLOR_YELLOW"Anisotropy energy:"COLOR_RESET" %.10"RF"f\n",energy[0]);
+  fprintf(stderr,COLOR_YELLOW"Dzyaloshinskii-Moriya energy:"COLOR_RESET" %.10"RF"f\n",energy[3]);
+  fprintf(stderr,COLOR_YELLOW"TOTAL energy:"COLOR_RESET" %.10"RF"f\n",energy[0]+energy[1]+energy[2]+energy[3]);  
+
   fprintf(stderr, COLOR_YELLOW"Saving gnuplot\n"COLOR_RESET);
   const char* filename=OUTDIR"/state.gnuplot";
   FILE* file=fopen(filename,"w");

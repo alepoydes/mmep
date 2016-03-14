@@ -4,7 +4,7 @@
 #include "debug.h"
 
 void watch_number(real next, real prev, int digits) {
-	char bufn[100],bufp[100];
+	char bufn[100],bufp[100]; 
 	int nn=sprintf(bufn,"%.*"RF"f",digits,next); assert(nn<sizeof(bufn));
 	int np=sprintf(bufp,"%.*"RF"f",digits,prev); assert(np<sizeof(bufp));
 	//int ap=0; 

@@ -56,17 +56,14 @@
 [dzyaloshinskii moriya vector]
 # Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
 # <D_x> <D_y> <D_z>
--0.3 0 -1 0
--0.3 0.8660254 -0.5 0
--0.3 0.8660254 0.5 0
-#0.3 0 0 1
-#0.3 0 0 1
-#0.3 0 0 1
+0.3 0 -1 0
+0.3 0.8660254 -0.5 0
+0.3 0.8660254 0.5 0
 [initial state]
 # Initial state for MEP and stable state calculation.
 # Empty section means that all momentum are along the external field.
 # <x> <y> <z> <radius> <winding number> <rotation>
-20 15 0 15 0 -1
+20 15 0 10 0 -1
 [final state]
 # Final state for MEP.
 # The same format as for [initial state]

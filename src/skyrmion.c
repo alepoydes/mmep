@@ -95,6 +95,59 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 	};
 };
 
+// energy[0] - anisotropy part
+// energy[1] - zeeman part (external field)
+// energy[2] - exchange part
+// energy[3] - D-M energy
+void skyrmion_energy(const real* restrict arg, real energy[4]) {
+	for(int j=0;j<4;j++) energy[j]=0;
+	// Compute anisotropy part
+	forall(u,x,y,z) {
+		int i=3*INDEX(u,x,y,z);
+		real m=dot3(magnetic_anisotropy_unit,arg+i);
+		energy[0]-=m*m;
+		if(nonuniform_field) energy[1]-=dot3(nonuniform_field+i,arg+i);
+		else energy[1]-=dot3(magnetic_field,arg+i);
+	};
+	energy[0]*=magnetic_anisotropy_norm;
+	// Compute exchange part
+	for(int n=0;n<sizen;n++) {
+		// local cache
+		int s=neighbours[5*n+3], d=neighbours[5*n+4];
+		int sx=neighbours[5*n+0], sy=neighbours[5*n+1], sz=neighbours[5*n+2];		
+		// Minimum and maximum indices
+		int minx, maxx, miny, maxy, minz, maxz; 
+		if(boundary_conditions[0]==BC_PERIODIC) { minx=0; maxx=sizex; 
+		} else if(sx<0) { minx=-sx; maxx=sizex; 
+		} else { maxx=sizex-sx; minx=0; };
+		if(boundary_conditions[1]==BC_PERIODIC) { miny=0; maxy=sizey; 
+		} else if(sy<0) { miny=-sy; maxy=sizey; 
+		} else { maxy=sizey-sy; miny=0; };
+		if(boundary_conditions[2]==BC_PERIODIC) { minz=0; maxz=sizez; 
+		} else if(sz<0) { minz=-sz; maxz=sizez; 
+		} else { maxz=sizez-sz; minz=0; };
+		// Compute interaction fo the pair neighbours[n]
+		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
+			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
+			int i2=INDEX(s,x,y,z)*3;
+			real t[3]; 
+			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
+			energy[3]-=dot3(t,arg+i2);
+			energy[2]-=exchange_constant[n]*dot3(arg+i1,arg+i2);
+		};
+
+		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
+			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
+			int i2=INDEX(s,x,y,z)*3;
+			real t[3]; 
+			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i2,t);
+			energy[3]+=dot3(t,arg+i1);
+			energy[2]-=exchange_constant[n]*dot3(arg+i2,arg+i1);
+		};
+	};
+	energy[2]/=2; energy[3]/=2; 
+};
+
 void subtract_field(real* restrict inout) {
 	if(nonuniform_field) {
 		#pragma omp parallel for collapse(4)
@@ -204,6 +257,26 @@ void skyrmion_geodesic_rec(real* p, int n, int m) {
 void skyrmion_geodesic(int sizep, real* p) { 
 	skyrmion_geodesic_rec(p, 0, sizep-1); 
 }
+
+void two_point_tangent0(const real* restrict a, const real* restrict b, real* restrict r) {
+	#pragma omp parallel for collapse(4)	
+	forall(u,x,y,z) {	
+		int i=INDEX(u,x,y,z)*3;
+		sub3(b+i,a+i,r+i); 
+		tangent3(a+i,r+i); 
+		//normalize3(r+i);
+	};
+};
+
+void two_point_tangent1(const real* restrict a, const real* restrict b, real* restrict r) {
+	#pragma omp parallel for collapse(4)	
+	forall(u,x,y,z) {	
+		int i=INDEX(u,x,y,z)*3;
+		sub3(b+i,a+i,r+i); 
+		tangent3(b+i,r+i); 
+		//normalize3(r+i);
+	};
+};
 
 // tangent r to path defined by three consequative points a,b,c
 void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {

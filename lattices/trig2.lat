@@ -16,7 +16,7 @@
 # Every BC can be one of
 #   0 : free
 #   1 : periodic
-1 1 0
+1 1 1
 [translation vectors]
 # Lattice generators
 # <X_x> <X_y> <X_z>
@@ -59,14 +59,10 @@
 0.3 0 -1 0
 0.3 0.8660254 -0.5 0
 0.3 0.8660254 0.5 0
-#0.3 0 0 1
-#0.3 0 0 1
-#0.3 0 0 1
 [initial state]
 # Initial state for MEP and stable state calculation.
 # Empty section means that all momentum are along the external field.
 # <x> <y> <z> <radius> <winding number> <rotation>
-#20 15 0 30 0 -2
 20 15 0 10 0 -1
 [final state]
 # Final state for MEP.

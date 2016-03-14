@@ -17,6 +17,14 @@ real distsq(int n, const real* a, const real* b) {
 	return nrm;
 };
 
+// n is three times smaller than for distsq
+real dist_sphere_sq(int n, const real* a, const real* b) {
+	real nrm=0;
+	#pragma omp parallel for reduction(+:nrm)
+	for(int k=0; k<n; k++) nrm+=dist_sphere_sq3(a+3*k,b+3*k);
+	return nrm;	
+};
+
 real dot(int n, const real* a, const real* b) {
 	real nrm=0;
 	#pragma omp parallel for reduction(+:nrm)
@@ -62,6 +70,10 @@ void sub_inplace(int n, const real* restrict a, real* restrict c) {
 	#pragma omp parallel for
 	for(int k=0; k<n; k++) c[k]-=a[k];
 }; 
+void sub(int n, const real* restrict a, const real* restrict b, real* restrict c) {
+	#pragma omp parallel for
+	for(int k=0; k<n; k++) c[k]=a[k]-b[k];
+};
 
 void add_inplace(int n, const real* restrict a, real* restrict c) {
 	#pragma omp parallel for 

@@ -1,11 +1,16 @@
 #!/bin/bash
 OUTPUT=fields/batch.gnuplot
+TMP=/tmp/$$
+ENERGYFILE=fields/energy.txt
+DISTANCEFILE=fields/distance.txt
 OPTIMIZE=bin/mepq
 echo "# $@" > ${OUTPUT}
 DESC=$1
 SUFF=$2
 shift 2
 
+echo -n "" > ${ENERGYFILE}
+echo -n "" > ${DISTANCEFILE}
 echo 'set title "Energy variation"' >> ${OUTPUT}
 echo 'unset key' >> ${OUTPUT}
 echo 'load "moreland.pal"' >> ${OUTPUT}
@@ -20,7 +25,10 @@ let "a=1"
 while IFS='' read -r line || [[ -n "$line" ]]; do
 	eval "${line}"
 	#envsubst < ${DESC} 
-	envsubst < ${DESC} | ${OPTIMIZE} $@ >> ${OUTPUT}
+	envsubst < ${DESC} | ${OPTIMIZE} $@ > ${TMP}
+	cat ${TMP} >> ${OUTPUT}
+	sed -n '1p' ${TMP} >> ${ENERGYFILE}
+	sed -n '2p' ${TMP} >> ${DISTANCEFILE}
 	gnuplot fields/mep.gnuplot
 	gnuplot fields/energy.gnuplot
 	mv -f fields/mep.gnuplot fields/mep.${a}.gnuplot
@@ -35,3 +43,5 @@ echo 'set view map' >> ${OUTPUT}
 echo 'splot "$data" matrix with image' >> ${OUTPUT}
 
 gnuplot5 fields/batch.gnuplot
+
+rm -f ${TMP}

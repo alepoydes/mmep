@@ -45,11 +45,14 @@ extern real* final_state;
 // Fields are stored as if defined by 'field' type.
 
 #define forall(u,x,y,z) for(int u=0;u<sizeu;u++) for(int x=0;x<sizex;x++)for(int y=0;y<sizey;y++)for(int z=0;z<sizez;z++)
+#define forlla(u,x,y,z) for(int z=0;z<sizez;z++)for(int y=0;y<sizey;y++)for(int x=0;x<sizex;x++)for(int u=0;u<sizeu;u++)
 #define for3(j) for(int j=0;j<3;j++)
 #define INDEX(u,x,y,z) ((((u)*sizex+(x))*sizey+(y))*sizez+(z))
 #define UNPACK(id,u,x,y,z) { z=id%sizez; y=(id/sizez)%sizey; x=(id/sizey/sizez)%sizex; u=id/sizex/sizey/sizez; }
 
 #define SIZE (sizex*sizey*sizez*sizeu)
+
+void skyrmion_energy(const real* restrict arg, real energy[4]);
 
 void hamiltonian_hessian(const real* restrict arg, real* restrict out);
 void subtract_field(real* restrict inout);
@@ -68,6 +71,8 @@ void skyrmion_middle_fourth_order(const real* restrict a, const real* restrict b
 void skyrmion_middle_third_order(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
 void skyrmion_geodesic(int sizep, real* p);
 void skyrmion_geodesic_rec(real* p, int n, int m);
+void two_point_tangent0(const real* restrict a, const real* restrict b, real* restrict r);
+void two_point_tangent1(const real* restrict a, const real* restrict b, real* restrict r);
 void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
 void three_point_tangent_mean(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
 void three_point_tangent_stable(real ea, real eb, real ec, const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
