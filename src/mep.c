@@ -26,8 +26,9 @@ int debug_plot_path=0;
 int debug_every=100;
 int save_octave=0;
 int use_ftt=0;
-int use_first_order_repar=1;
+int use_first_order_repar=0;
 int remove_zero_modes=0;
+real random_noise=0;
 
 static int flat_distance=1;
 
@@ -85,7 +86,7 @@ void energy_evaluate_ftt(real* path) {
   for(int p=0; p<sizep; p++) {
     if(p>0 && p<sizep-1) {
       three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],path+size*(p-1),path+size*p,path+size*(p+1),u+size*p);
-      //three_point_tangent(path+size*(p-1),path+size*p,path+size*(p+1),u);
+      //three_point_tangent(path+size*(p-1),path+size*p,path+size*(p+1),u+size*p);
     } else if (p==0) {
       two_point_tangent0(path+size*p,path+size*(p+1),u+size*p);
     } else {
@@ -203,13 +204,17 @@ void path_display(int iter, real* restrict mep, real* restrict grad_f
 // all intervals between nodes in interval from..to are 
 // of the same length
 void path_equilize_rec(real* mep, int from, int to) {  
-  if(from-to<2) return;
+  //fprintf(stderr, "path_equilize_rec: %d %d\n",from, to);
+  if(to-from<2) return;
+  //for(int p=from; p<=to; p++) fprintf(stderr,"%d:%"RF"g ",p,distance[p]); fprintf(stderr,"\n");
   for(int p=to-1; p>from; p--) {
     real d=distance[from]+p*(distance[to]-distance[from])/(to-from); // desired position
-    int f=to-1; while(f>=from) if(distance[f--]<=d) break; 
-    assert(f>=0); assert(f<=p);
+    int f=to; while(f>from) if(distance[--f]<=d) break; 
+    assert(f>=0); assert(f<=p); 
     // move the image to interval [dist(f),dist(f+1)]
     real loc=(d-distance[f])/(distance[f+1]-distance[f]); // local coordinate
+    //fprintf(stderr,"[%d] %"RF"g [%d] %"RF"g + %"RF"g * %"RF"g\n",p,d,f,distance[f],loc,distance[f+1]-distance[f]);
+    assert(loc>=0); assert(loc<=1);
     linear_comb(size,1-loc,mep+f*size,loc,mep+(f+1)*size,mep+p*size);
     distance[p]=d;
   };
@@ -398,6 +403,7 @@ void showUsage(const char* program) {
 \n   -a           REAL      A parameter for optimization methods\
 \n   --ftt                  Use FTT instead of NEB method\
 \n   -z|--zero              Disable translations preserving energy\
+\n   -R           REAL      Noise amplitude for initial path\
 \n", program);
 };
 
@@ -414,7 +420,7 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "zohpPe:n:i:r:m:a:", long_options, &option_index);
+    c = getopt_long(argc, argv, "zohpPe:n:i:r:m:a:R:", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
@@ -430,6 +436,7 @@ int parseCommandLine(int argc, char** argv) {
       case 'm': mode=atoi(optarg); break;
       case 'a': mode_param=atof(optarg); break;
       case 'z': remove_zero_modes=1; break;
+      case 'R': random_noise=atof(optarg); break;
       case '?': break;
       case 1000: use_ftt=1; break;
       default: fprintf(stderr,"Unprocessed option '%c'\n", c); exit(1);
@@ -457,6 +464,8 @@ int main(int argc, char** argv) {
   fprintf(stderr, "%s method in use\n", use_ftt?"FTT":"NEB");
   if(remove_zero_modes)
     fprintf(stderr, "Zero modes (translations) are removed\n");
+  if(random_noise>0) 
+    fprintf(stderr, "Initial path noise amplitude: %"RF"g\n", random_noise);
 
   srand(time(NULL));
   size=SIZE*3;
@@ -490,7 +499,7 @@ int main(int argc, char** argv) {
   skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, 0.1*epsilon, max_iter);
   // Set initial path as geodesic approximation
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating MEP\n"COLOR_RESET);
-  skyrmion_geodesic(sizep, path);
+  skyrmion_geodesic(random_noise/sizep, sizep, path);
   // MEP calculation
   post_optimization=0;
   path_steepest_descent(path, mode, mode_param, epsilon, max_iter);

@@ -69,8 +69,8 @@ void skyrmion_constrain_adjucent(const real* restrict a, const real* restrict b,
 void skyrmion_middle(const real* restrict a, const real* restrict b, real* restrict r);
 void skyrmion_middle_fourth_order(const real* restrict a, const real* restrict b, const real* restrict c, const real* restrict d, real* restrict r);
 void skyrmion_middle_third_order(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
-void skyrmion_geodesic(int sizep, real* p);
-void skyrmion_geodesic_rec(real* p, int n, int m);
+void skyrmion_geodesic(real noise, int sizep, real* p);
+void skyrmion_geodesic_rec(real noise, real* p, int n, int m);
 void two_point_tangent0(const real* restrict a, const real* restrict b, real* restrict r);
 void two_point_tangent1(const real* restrict a, const real* restrict b, real* restrict r);
 void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);

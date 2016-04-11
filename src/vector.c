@@ -46,6 +46,11 @@ void random_vector(int n, real* a) {
 	for(int k=0; k<n; k++) a[k]=(real)rand()/(real)(RAND_MAX)-0.5;
 };
 
+void add_random_vector(real alpha, int n, real* a) {
+	#pragma omp parallel for 
+	for(int k=0; k<n; k++) a[k]+=alpha*((real)rand()/(real)(RAND_MAX)-0.5);	
+};
+
 void zero_vector(int n, real* a) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) a[k]=0;

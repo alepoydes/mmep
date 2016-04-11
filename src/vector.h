@@ -102,6 +102,7 @@ void mult_add(int n, real a, const real* b, real* c);
 void add_mult(int n, const real* a, real b, real* c); 
 void sub_const(int n, real a, real* c);
 void random_vector(int n, real* a);
+void add_random_vector(real alpha, int n, real* a);
 void zero_vector(int n, real* a);
 void copy_vector(int n, const real* a, real* b);
 void sub_inplace(int n, const real* restrict a, real* restrict c);

@@ -244,19 +244,23 @@ void skyrmion_middle_third_order(const real* restrict a, const real* restrict b,
   	};
 };
 	
-void skyrmion_geodesic_rec(real* p, int n, int m) {
+void skyrmion_geodesic_rec(real noise, real* p, int n, int m) {
 	int size=SIZE*3;
 	if(n+1>=m) return;
 	int k=(n+m)/2; // Точка разбиения
 	// Находим середину на прямой между n и m и проецируем на сферы
 	skyrmion_middle(p+n*size,p+m*size,p+k*size);
+	if(noise!=0) {
+		add_random_vector(noise*(m-n),size,p+k*size);
+		normalize(p+k*size);
+	};
 	// Заполняем пробелы
-	skyrmion_geodesic_rec(p,n,k);
-	skyrmion_geodesic_rec(p,k,m);
+	skyrmion_geodesic_rec(noise,p,n,k);
+	skyrmion_geodesic_rec(noise,p,k,m);
 }
 
-void skyrmion_geodesic(int sizep, real* p) { 
-	skyrmion_geodesic_rec(p, 0, sizep-1); 
+void skyrmion_geodesic(real noise, int sizep, real* p) { 
+	skyrmion_geodesic_rec(noise, p, 0, sizep-1); 
 }
 
 void two_point_tangent0(const real* restrict a, const real* restrict b, real* restrict r) {
