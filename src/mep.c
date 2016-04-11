@@ -208,7 +208,7 @@ void path_equilize_rec(real* mep, int from, int to) {
   if(to-from<2) return;
   //for(int p=from; p<=to; p++) fprintf(stderr,"%d:%"RF"g ",p,distance[p]); fprintf(stderr,"\n");
   for(int p=to-1; p>from; p--) {
-    real d=distance[from]+p*(distance[to]-distance[from])/(to-from); // desired position
+    real d=distance[from]+(p-from)*(distance[to]-distance[from])/(to-from); // desired position
     int f=to; while(f>from) if(distance[--f]<=d) break; 
     assert(f>=0); assert(f<=p); 
     // move the image to interval [dist(f),dist(f+1)]
