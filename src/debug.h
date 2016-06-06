@@ -11,6 +11,8 @@
 #define COLOR_GREEN "\033[32m"
 #define COLOR_YELLOW "\033[33m"
 #define COLOR_BLUE "\033[34m"
+#define CLEAR_SCREEN "\033[2J"
+#define RESET_CURSOR "\033[1;1H"
 
 void watch_number(real next, real prev, int digits);
 

@@ -30,6 +30,7 @@ real sim_time=0.0;
 real damping=0;
 int powered=0;
 real power=-1;
+int integrator=1; // 0 - RK, 1 - simplectic RK
 
 void showUsage(const char* program) {
   fprintf(stderr, "Compute stable states.\
@@ -76,6 +77,60 @@ int parseCommandLine(int argc, char** argv) {
   return optind;
 };
 
+// state
+int iter=0;
+real E=NAN;
+real L=NAN;
+
+void screen() {
+  static real E0=NAN;
+  static real sim_time0=0;
+  static real L0=NAN;
+  fprintf(stderr,RESET_CURSOR);
+  fprintf(stderr,"%d: ", iter); 
+  fprintf(stderr,"Time ");
+  watch_number(sim_time,sim_time0,4);
+  fprintf(stderr," Time step %"RF"g "COLOR_YELLOW"-/="COLOR_RESET" inc./dec.\n",time_step);
+
+  fprintf(stderr,"Energy "); 
+  watch_number(E,E0,6);
+  fprintf(stderr," Damping %"RF"g ", damping);   
+  fprintf(stderr,COLOR_YELLOW"[/]"COLOR_RESET" dec./inc. ");
+  fprintf(stderr,COLOR_YELLOW"\\"COLOR_RESET" neg.    \n");
+
+  fprintf(stderr,"Total length "); 
+  watch_number(L,L0,10);
+  fprintf(stderr,"           \n");  
+
+  fprintf(stderr,"Field %s ",powered?"on":"off");
+  fprintf(stderr,"Strength %"RF"g ", power);
+  fprintf(stderr,COLOR_YELLOW";/'"COLOR_RESET" dec./inc.      \n");
+
+  fprintf(stderr,"Integrator: ");
+  switch(integrator) {
+    case 0: fprintf(stderr,"Runge-Kutta"); break;
+    case 1: fprintf(stderr,"simplectic Runge-Kutta"); break;
+    default: fprintf(stderr,"unknown"); break;
+  };
+  fprintf(stderr," "COLOR_YELLOW"i"COLOR_RESET" chng.                      \n");  
+
+  fprintf(stderr,"Key bindings:\n");
+  fprintf(stderr,"  "COLOR_YELLOW"ENTER"COLOR_RESET" - make screenshot\n");  
+  fprintf(stderr,"  "COLOR_YELLOW"SPACE"COLOR_RESET" - pause\n");
+  fprintf(stderr,"  "COLOR_YELLOW"m"COLOR_RESET" - select spins/external field\n");
+  fprintf(stderr,"  "COLOR_YELLOW"n"COLOR_RESET" - choose background\n");
+  fprintf(stderr,"  "COLOR_YELLOW"b"COLOR_RESET" - show/hide boundung box\n");
+  fprintf(stderr,"  "COLOR_YELLOW"r"COLOR_RESET" - reset camers\n");
+  fprintf(stderr,"  "COLOR_YELLOW"v"COLOR_RESET" - cycle arrow styles\n");
+  fprintf(stderr,"  "COLOR_YELLOW"t"COLOR_RESET" - turn transparency on/off\n");
+  fprintf(stderr,"Mouse actions:\n");
+  fprintf(stderr,"  "COLOR_YELLOW"wheel"COLOR_RESET" - change scale\n");
+  fprintf(stderr,"  "COLOR_YELLOW"right drag"COLOR_RESET" - translate scene\n");
+  fprintf(stderr,"  "COLOR_YELLOW"middle drag"COLOR_RESET" - rotate scene\n");
+  fprintf(stderr,"  "COLOR_YELLOW"hold left"COLOR_RESET" - emit magnetic field\n");
+
+};
+
 void dspins(real* X, real* G) {
   hamiltonian_hessian(X, G);
   subtract_field(G);
@@ -88,11 +143,19 @@ void dspins(real* X, real* G) {
 };
 
 real doStep(real* spins) {
-  // computing next state
-  real delta=time_step;
-  runge_kutta(SIZE*3, dspins, delta, spins);
-  normalize(spins);
-  sim_time+=delta;
+  if(time_step>0) {
+    // computing next state
+    real delta=time_step;
+    if(integrator==0) {
+      runge_kutta(SIZE*3, dspins, delta, spins);
+      normalize(spins);
+    } else {
+      //radau_integrator(SIZE*3, dspins, delta, spins, 12*SIZE*EPSILON, 10);
+      radau_integrator(SIZE*3, dspins, delta, spins, 1e-7, 10);      
+    };
+    sim_time+=delta;
+    iter++;
+  };
   // check if energy conserves
   real* g=malloc(sizeof(real)*SIZE*3); assert(g);
   hamiltonian_hessian(spins, g);
@@ -100,6 +163,7 @@ real doStep(real* spins) {
   subtract_field(g);
   E+=dot(3*SIZE,spins,g);
   free(g);
+  L=dot(3*SIZE,spins,spins);
   return E;
 };
 
@@ -123,6 +187,7 @@ void keyboard_function(unsigned char key) {
     case ';': power-=0.1; break;
     case 13: print_screen=do_print; break;
     case ' ': time_step=0; break;
+    case 'i': integrator=(integrator+1)%2; break;
   }
 };
 
@@ -167,39 +232,22 @@ int main(int argc, char** argv) {
   } else random_vector(SIZE*3, spins); 
   // Initialize graphics
   is_aborting=initDisplay(&argc, argv);
-  fprintf(stderr,"Mouse actions:\n");
-  fprintf(stderr,"  wheel - change scale\n");
-  fprintf(stderr,"  right drag - translate scene\n");
-  fprintf(stderr,"  middle drag - rotate scene\n");
-  fprintf(stderr,"  hold left - emit magnetic field\n");
-  fprintf(stderr,"Key bindings:\n");
-  fprintf(stderr,"  b - show/hide boundung box\n");
-  fprintf(stderr,"  r - reset camers\n");
-  fprintf(stderr,"  v - cycle arrow styles\n");
-  fprintf(stderr,"  t - turn transparency on/off\n");
-  fprintf(stderr,"  m - select spins/external field\n");
-  fprintf(stderr,"  n - choose background\n");
-  fprintf(stderr,"  -/= - decrease/increase time speed\n");
-  fprintf(stderr,"  [/] - decrease/increase damping\n");
-  fprintf(stderr,"  ;/' - decrease/increase emited field strength\n");
 
   // initialize magnetic field
   nonuniform_field=malloc(sizeof(real)*SIZE*3); assert(nonuniform_field);
   set_to_field(nonuniform_field);
   // Main loop
-  int iter=0;
-  real E=NAN;
+  fprintf(stderr, CLEAR_SCREEN);
   display_buffer=malloc(sizeof(real)*SIZE*3); assert(display_buffer);
   while(!is_aborting) { 
     if(is_new_frame) {
-      fprintf(stderr, "%d: T=%"RF"g E=%"RF"g dT=%"RF"g dE=%"RF"g P=%"RF"g        \r", iter, sim_time, E, time_step, damping,power);    
+      screen();
       lockDisplay(); 
       copy_vector(3*SIZE,spins,display_buffer); 
       releaseDisplay();
       displayRedraw();
     };
     E=doStep(spins);
-    iter++;
   };
   // Deinitialization
   deinitDisplay();
