@@ -136,3 +136,18 @@ real radau_integrator(
 		(85-10*r)/180,(85+10*r)/180,1./18};
 	return runge_kutta_implicit(N, F, T, 3, A, B, X, tol, max_iter);
 };
+
+real gauss_integrator(
+	int N, 
+	void (*F)(real* x, real* g),
+	real T,
+	real* X,
+	int tol,
+	int max_iter
+	)
+{
+	real r=rsqrt(3);
+	real B[2]={0.5,0.5};
+	real A[4]={1./4, 1./4-r/6, 1./4+r/6, 1./4};
+	return runge_kutta_implicit(N, F, T, 2, A, B, X, tol, max_iter);
+};

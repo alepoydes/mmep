@@ -31,4 +31,13 @@ real radau_integrator(
 	int max_iter
 	);
 
+real gauss_integrator(
+	int N, 
+	void (*F)(real* x, real* g),
+	real T,
+	real* X,
+	int tol,
+	int max_iter
+	);
+
 #endif

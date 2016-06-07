@@ -89,17 +89,19 @@ void screen() {
   fprintf(stderr,RESET_CURSOR);
   fprintf(stderr,"%d: ", iter); 
   fprintf(stderr,"Time ");
-  watch_number(sim_time,sim_time0,4);
-  fprintf(stderr," Time step %"RF"g "COLOR_YELLOW"-/="COLOR_RESET" inc./dec.\n",time_step);
+  watch_number(sim_time,sim_time0,4); sim_time0=sim_time;
+  fprintf(stderr," Time step %"RF"g ",time_step);
+  fprintf(stderr,COLOR_YELLOW"-/="COLOR_RESET" inc./dec. ");
+  fprintf(stderr,COLOR_YELLOW"`123"COLOR_RESET" speed \n");
 
   fprintf(stderr,"Energy "); 
-  watch_number(E,E0,6);
+  watch_number(E,E0,6); E0=E;
   fprintf(stderr," Damping %"RF"g ", damping);   
   fprintf(stderr,COLOR_YELLOW"[/]"COLOR_RESET" dec./inc. ");
   fprintf(stderr,COLOR_YELLOW"\\"COLOR_RESET" neg.    \n");
 
   fprintf(stderr,"Total length "); 
-  watch_number(L,L0,10);
+  watch_number(L,L0,6); L0=L;
   fprintf(stderr,"           \n");  
 
   fprintf(stderr,"Field %s ",powered?"on":"off");
@@ -109,7 +111,8 @@ void screen() {
   fprintf(stderr,"Integrator: ");
   switch(integrator) {
     case 0: fprintf(stderr,"Runge-Kutta"); break;
-    case 1: fprintf(stderr,"simplectic Runge-Kutta"); break;
+    case 1: fprintf(stderr,"Gauss-Legendre Runge-Kutta"); break;
+    case 2: fprintf(stderr,"Radau"); break;
     default: fprintf(stderr,"unknown"); break;
   };
   fprintf(stderr," "COLOR_YELLOW"i"COLOR_RESET" chng.                      \n");  
@@ -125,8 +128,8 @@ void screen() {
   fprintf(stderr,"  "COLOR_YELLOW"t"COLOR_RESET" - turn transparency on/off\n");
   fprintf(stderr,"Mouse actions:\n");
   fprintf(stderr,"  "COLOR_YELLOW"wheel"COLOR_RESET" - change scale\n");
-  fprintf(stderr,"  "COLOR_YELLOW"right drag"COLOR_RESET" - translate scene\n");
-  fprintf(stderr,"  "COLOR_YELLOW"middle drag"COLOR_RESET" - rotate scene\n");
+  fprintf(stderr,"  "COLOR_YELLOW"middle drag"COLOR_RESET" - translate scene\n");
+  fprintf(stderr,"  "COLOR_YELLOW"right drag"COLOR_RESET" - rotate scene\n");
   fprintf(stderr,"  "COLOR_YELLOW"hold left"COLOR_RESET" - emit magnetic field\n");
 
 };
@@ -142,29 +145,33 @@ void dspins(real* X, real* G) {
   };
 };
 
-real doStep(real* spins) {
+void doStep(real* spins) {
   if(time_step>0) {
     // computing next state
     real delta=time_step;
-    if(integrator==0) {
-      runge_kutta(SIZE*3, dspins, delta, spins);
-      normalize(spins);
-    } else {
-      //radau_integrator(SIZE*3, dspins, delta, spins, 12*SIZE*EPSILON, 10);
-      radau_integrator(SIZE*3, dspins, delta, spins, 1e-7, 10);      
+    switch(integrator) {
+      case 0:
+        runge_kutta(SIZE*3, dspins, delta, spins);
+        normalize(spins);
+        break;
+      case 1:
+        gauss_integrator(SIZE*3, dspins, delta, spins, 1e-7, 10);
+        break;
+      case 2: 
+        radau_integrator(SIZE*3, dspins, delta, spins, 1e-7, 10);
+        break;
     };
     sim_time+=delta;
     iter++;
-  };
   // check if energy conserves
-  real* g=malloc(sizeof(real)*SIZE*3); assert(g);
-  hamiltonian_hessian(spins, g);
-  real E=-dot(3*SIZE,spins,g)/2;
-  subtract_field(g);
-  E+=dot(3*SIZE,spins,g);
-  free(g);
-  L=dot(3*SIZE,spins,spins);
-  return E;
+    real* g=malloc(sizeof(real)*SIZE*3); assert(g);
+    hamiltonian_hessian(spins, g);
+    E=-dot(3*SIZE,spins,g)/2;
+    subtract_field(g);
+    E+=dot(3*SIZE,spins,g);
+    free(g);
+    L=dot(3*SIZE,spins,spins);
+  };
 };
 
 void do_print(int width, int height, void* buffer) {
@@ -186,8 +193,11 @@ void keyboard_function(unsigned char key) {
     case '\'': power+=0.1; break;
     case ';': power-=0.1; break;
     case 13: print_screen=do_print; break;
-    case ' ': time_step=0; break;
-    case 'i': integrator=(integrator+1)%2; break;
+    case 'i': integrator=(integrator+1)%3; break;
+    case '`': time_step=0; break;
+    case '1': time_step=0.001; break;
+    case '2': time_step=0.01; break;
+    case '3': time_step=0.1; break;
   }
 };
 
@@ -247,7 +257,7 @@ int main(int argc, char** argv) {
       releaseDisplay();
       displayRedraw();
     };
-    E=doStep(spins);
+    doStep(spins);
   };
   // Deinitialization
   deinitDisplay();
