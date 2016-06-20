@@ -3,7 +3,7 @@ OUTPUT=fields/batch.gnuplot
 TMP=/tmp/$$
 ENERGYFILE=fields/energy.txt
 DISTANCEFILE=fields/distance.txt
-OPTIMIZE=bin/mepq
+OPTIMIZE="bin/mepq -o"
 echo "# $@" > ${OUTPUT}
 DESC=$1
 SUFF=$2
@@ -34,6 +34,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 	mv -f fields/mep.gnuplot fields/mep.${a}.gnuplot
 	mv -f fields/energy.gnuplot fields/energy.${a}.gnuplot
 	mv -f fields/mep.gif fields/mep.${a}.gif
+	mv -f fields/mep.oct fields/mep.${a}.oct
 	mv -f fields/energy.png fields/energy.${a}.png
 	let "a=a+1"
 done < ${SUFF}

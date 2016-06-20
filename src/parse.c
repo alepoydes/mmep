@@ -66,8 +66,7 @@ void parse_lattice(FILE* file) {
 	const char sec_n[]="[neigborood]";
 	const char sec_ec[]="[exchange constant]";
 	const char sec_dmv[]="[dzyaloshinskii moriya vector]";
-	const char sec_initial[]="[initial state]";
-	const char sec_final[]="[final state]";
+	const char sec_image[]="[image]";
 	// Allocated memory size
 	int capacityu=sizeu; int capacityn=sizen; 
 	// Number of lines in sections
@@ -187,42 +186,27 @@ void parse_lattice(FILE* file) {
 				for3(c) dzyaloshinskii_moriya_vector[3*dmv_size+c]*=leng;
 				dmv_size++;
 			};
-		} else if(match(buf,sec_initial)) {	
-			if(initial_state) {
-				fprintf(stderr, "%s is not unique\n", sec_initial);
-				exit(1);
+		} else if(match(buf,sec_image)) {
+			if(!initial_state) {
+				initial_state=(real*)malloc(sizeof(real)*SIZE*3);				
+				initial_states_count=1;
+			} else {
+				initial_states_count++;
+				initial_state=(real*)realloc(initial_state, sizeof(real)*SIZE*3*initial_states_count);			
 			};
-			initial_state=(real*)malloc(sizeof(real)*sizeu*sizex*sizey*sizez*3);
 			assert(initial_state);
-			set_to_field(initial_state); normalize(initial_state);
+			real* image=initial_state+SIZE*3*(initial_states_count-1);
+			set_to_field(image); normalize(image);
 			while(1) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
-				real center[3]; real radius; int winding, rotation;
-				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g %d %d",center+0,center+1,center+2,&radius,&winding,&rotation)!=6) {
+				real center[3]; real radius; real winding, rotation;
+				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g",center+0,center+1,center+2,&radius,&winding,&rotation)!=6) {
 					fprintf(stderr,"Parse error:%d: wrong format\n",line); 
 					exit(1); 
 				};
-				append_skyrmion(center, radius, winding, rotation, initial_state);
+				append_skyrmion(center, radius, winding, rotation, image);
 			};
-		} else if(match(buf,sec_final)) {	
-			if(final_state) {
-				fprintf(stderr, "%s is not unique\n", sec_final);
-				exit(1);
-			};
-			final_state=(real*)malloc(sizeof(real)*sizeu*sizex*sizey*sizez*3);
-			assert(final_state);
-			set_to_field(final_state); normalize(final_state);
-			while(1) {
-				if(!READLINE) break;
-				if(buf[0]=='[') { ready=1; break; };
-				real center[3]; real radius; int winding, rotation;
-				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g %d %d",center+0,center+1,center+2,&radius,&winding,&rotation)!=6) {
-					fprintf(stderr,"Parse error:%d: wrong format\n",line); 
-					exit(1); 
-				};
-				append_skyrmion(center, radius, winding, rotation, final_state);
-			};			
 		} else if(buf[0]=='[') {
 			fprintf(stderr,"Parse error:%d: Unknown section %s\n",line,buf);
 			exit(1);	

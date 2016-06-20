@@ -29,6 +29,7 @@ int use_ftt=0;
 int use_first_order_repar=0;
 int remove_zero_modes=0;
 real random_noise=0;
+int skip_projection=0;
 
 static int flat_distance=1;
 
@@ -346,15 +347,16 @@ void path_tangent_neb(const real* restrict mep, real* restrict grad) {
         real proj=dot(size,u,grad+p*size)/dot(size,u,u);
         mult_add(size, -2*proj, u, grad+p*size);
       } else {
-        three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
         //three_point_tangent(mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
         if(remove_zero_modes) {
+          three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
           group_generator(mep+size*p, 0, g1);
           group_generator(mep+size*p, 1, g2);
           group_generator(mep+size*p, 2, g3);
           real* basis[5]={g1,g2,g3,u,grad+p*size};
           gram_schmidt(size, 5, basis);
-        } else {
+        } else if(!skip_projection) {
+          three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
           real* basis[2]={u,grad+p*size};
           gram_schmidt(size, 2, basis);
           //real normu=rsqrt(normsq(size,u));
@@ -394,7 +396,8 @@ void showUsage(const char* program) {
 \n   -h|--help              Show this message and exit\
 \n   -p|--plot              Enable GNUPlot output of energy\
 \n   -P|--plot-path         Enable GNUPlot output of MEP\
-\n   -o                     Save result in Octave format\
+\n   -O                     Save result in Octave format\
+\n   -o                     Save result in Octave format but Hessian matrix\
 \n   -e|--epsilon REAL      Desired residual\
 \n   -n           INT       Nodes along path\
 \n   -i           INT       Set maximum number of iterations\
@@ -420,12 +423,13 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "zohpPe:n:i:r:m:a:R:", long_options, &option_index);
+    c = getopt_long(argc, argv, "zoOhpPe:n:i:r:m:a:R:", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
       case 'P': debug_plot=1; debug_plot_path=1; break;
       case 'o': save_octave=1; break;      
+      case 'O': save_octave=2; break;      
       case 'h': showUsage(argv[0]); exit(0);
       case 'e': epsilon=atof(optarg); break;
       case 'n': sizep=atoi(optarg); 
@@ -478,28 +482,30 @@ int main(int argc, char** argv) {
   // Set initla path size
   sizep=17; if(max_sizep<sizep) sizep=max_sizep;
   // find two minima
-  fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating initial state\n"COLOR_RESET);
-  if(initial_state) {
-    copy_vector(size, initial_state, path);
-    free(initial_state);
-  } else {
-    random_vector(size, path); 
-    /*forall(u,x,y,z) {
-      int i=3*INDEX(u,x,y,z);
-      real s,c; rsincos(2*M_PI*(x-y)/(real)sizex,&s,&c);
-      path[i]=path[i+1]=s; path[i+2]=c;
-    };*/
+  fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Initializing path\n"COLOR_RESET);
+  if(initial_states_count<2) {
+    fprintf(stderr, COLOR_RED COLOR_BOLD"There should be at least two images in the path\n"COLOR_RESET);
+    exit(1);
   };
+  copy_vector(size, initial_state, path);
+  int last_image=0;
+  for (int n=1; n<initial_states_count; n++) {
+    int next_image=n*sizep/(initial_states_count-1)-1;
+    assert(next_image<sizep); assert(last_image<next_image);
+    copy_vector(size, initial_state+size*n, path+size*next_image);
+    // Set initial path as geodesic approximation between given states
+    skyrmion_geodesic(random_noise/(next_image-last_image), next_image-last_image+1, path+size*last_image);
+    last_image=next_image;
+  };
+
+  // minimize initial and final states
+  /*
+  fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing initial state\n"COLOR_RESET);
   skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter);
-  fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating final state\n"COLOR_RESET);
-  if(final_state) {
-    copy_vector(size, final_state, path+size*(sizep-1));
-    free(final_state);
-  } else set_to_field(path+size*(sizep-1));
+  fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing final state\n"COLOR_RESET);
   skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, 0.1*epsilon, max_iter);
-  // Set initial path as geodesic approximation
+  */
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating MEP\n"COLOR_RESET);
-  skyrmion_geodesic(random_noise/sizep, sizep, path);
   // MEP calculation
   post_optimization=0;
   path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
@@ -520,8 +526,12 @@ int main(int argc, char** argv) {
   // Ouput result
   energy_evaluate(path);
   real max_energy=energy[0];
-  for(int p=1; p<sizep; p++) if(max_energy<energy[p]) max_energy=energy[p];
-  fprintf(stderr, COLOR_BLUE"Energy:"COLOR_RESET" initial %.8"RF"f maximum %.8"RF"f final %.8"RF"f\n", energy[0],max_energy,energy[sizep-1]);
+  real min_energy=energy[0];  
+  for(int p=1; p<sizep; p++) {
+    if(max_energy<energy[p]) max_energy=energy[p];
+    if(min_energy>energy[p]) min_energy=energy[p];    
+  };
+  fprintf(stderr, COLOR_BLUE"Energy:"COLOR_RESET" initial %.8"RF"f maximum %.8"RF"f minimum %.8"RF"f final %.8"RF"f\n", energy[0],max_energy,min_energy,energy[sizep-1]);
   if(!debug_plot) {
     for(int p=0;p<sizep;p++) printf("%.8"RF"g ", energy[p]);
     printf("\n");
@@ -561,7 +571,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,filename);
   };
   // Octave output
-  if(save_octave) {
+  if(save_octave>0) {
     const char* octfile=OUTDIR"/mep.oct";
     fprintf(stderr, COLOR_YELLOW"Saving %s\n"COLOR_RESET,octfile);
     file=fopen(octfile,"w");
@@ -590,7 +600,7 @@ int main(int argc, char** argv) {
       oct_save_vector(file,"DISTANCE",distance,sizep);
       oct_save_vector(file,"DIFF",diff,sizep);
       oct_save_vector(file,"TDIFF",tdiff,sizep);
-      oct_save_hessian(file);
+      if(save_octave>1) oct_save_hessian(file);
       oct_save_finish(file);
       fclose(file);
     } else 

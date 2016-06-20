@@ -140,7 +140,6 @@ void oct_save_field(FILE* file, char* name, real* data) {
 void oct_save_path(FILE* file, char* name, real* data, int sizep) {
 	fprintf(file,"# name: %s\n",name);
 	fprintf(file,"# type: matrix\n");
-	assert(sizeu==1);
 	fprintf(file,"# ndims: 6\n%d %d %d %d %d 3\n",sizep,sizeu,sizex,sizey,sizez);
 	for3(j) forlla(u,x,y,z) for(int p=0; p<sizep; p++) 		
 		fprintf(file,"%.*"RF"g\n",DIGITS,data[3*(p*SIZE+INDEX(u,x,y,z))+j]);

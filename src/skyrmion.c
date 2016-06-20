@@ -40,7 +40,7 @@ real* exchange_constant=NULL;
 // Dzyaloshinskii Moriya vector for every pair of atoms
 real* dzyaloshinskii_moriya_vector=NULL;
 real* initial_state=NULL;
-real* final_state=NULL;
+int initial_states_count=0;
 
 real skyrmion_minimum_energy() {
 	int size=sizeu*sizex*sizey*sizez;
@@ -372,8 +372,8 @@ void three_point_equalizer(const real* restrict a, const real* restrict c, const
 	};
 };
 */
-void append_skyrmion(const real center[3], real distance, int winding, 
-	int rotation, real* restrict data) 
+void append_skyrmion(const real center[3], real distance, real winding, 
+	real rotation, real* restrict data) 
 {
 	real field[3]; copy3(magnetic_field, field); normalize3(field);
 	#pragma omp parallel for collapse(4)	
@@ -387,7 +387,7 @@ void append_skyrmion(const real center[3], real distance, int winding,
 		real dist=rsqrt(normsq3(vec));
 		if(dist>distance) continue;
 		if(dist==0) {
-			if((rotation+winding)%2!=0) mult3(-1,data+i,data+i);
+			mult3(-1,data+i,data+i);
 			continue;
 		};
 		multinv3(dist, vec, vec);
