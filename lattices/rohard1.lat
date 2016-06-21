@@ -1,0 +1,81 @@
+[size]
+# Grid dimesions <x> x <y> x <z>
+# <x> <y> <z>
+31 31 1
+[boundary conditions]
+# Boundary conditions along every axis
+# <BC along x> <BC along y> <BC along z>
+# Every BC can be one of
+#   0 : free
+#   1 : periodic
+1 1 1
+[translation vectors]
+# Lattice generators
+# <X_x> <X_y> <X_z>
+# <Y_x> <Y_y> <Y_z>
+# <Z_x> <Z_y> <Z_z>
+# Cell with indices (a,b,c) has origin at
+# (a*<X_x>+b*<Y_x>+c*<Z_x>, a*<X_y>+b*<Y_y>+c*<Z_y>, a*<X_z>+b*<Y_z>+c*<Z_z>)
+1 0 0
+0.5 0.8660254 0
+0 0 1
+[unit cell]
+# Position of every atom in the unit cell
+# <x_1> <y_1> <z_1>
+# ...
+# <x_u> <y_u> <z_u>
+# All coordinates age given in the basis of translation vectors,
+# hence <x_i>,<y_i>,<z_i> belongs to [0,1].
+0 0 0
+[neigborood]
+# All nearest neighbours of every atom in the unit cell
+# <x> <y> <z> <s> <d>
+# Each line corrsponds to couple of interacting atoms
+# where first is the atom <s> in the cell (0,0,0)
+# and the second is the atom <d> in the cell (<x>,<y>,<z>).
+# <x>,<y>,<z> refer to a cell, hence are integer.
+# <s> and <d> are integer from 0 to u, where enumeration
+# corresponds to the order of atoms in section [unit cell]
+1 0 0 0 0
+0 1 0 0 0
+-1 1 0 0 0
+
+# The parameters are
+# μ_{at}=\|S_i\|=2.1μ_B/atom, J=29 meV/bond,
+# d=−1.5 meV/bond, and k=0.4 meV/atom
+# (including the shape anisotropy, the effective anisotropy is
+# 0.276 meV/atom, in good agreement with literature).
+[external field]
+# Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
+# <H_x> <H_y> <H_z>
+0 0 1e-12
+[magnetic anisotropy]
+# Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)
+# <absolute value> <K_x> <K_y> <K_z>
+# 0.276 meV/atom*31^2=265.236 meV
+#265.236 0 0 1 
+0.0276 0 0 1
+[exchange constant]
+# Echange constants J_{sd} for every pair of atoms stated in [neighborhood]
+# <J>
+# 29 meV/bond*31*31*3=83607 meV
+#83607 
+#83607
+#83607
+2.9
+2.9 
+2.9
+[dzyaloshinskii moriya vector]
+# Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
+# <D_x> <D_y> <D_z>
+# 1.5 meV/bond*31*31*3=4324.5 meV
+#4324.5 0 -1 0 
+#4324.5 0.8660254 -0.5 0
+#4324.5 0.8660254 0.5 0
+1.5 0 -1 0 
+1.5 0.8660254 -0.5 0
+1.5 0.8660254 0.5 0
+
+[image]
+19.75 15.433 0 5 0 -1
+[image]

@@ -16,7 +16,8 @@
 
 int size=0; // Dimenion of vector containing skyrmionic solutions
 int sizep=0; // Number of nodes on path
-int max_sizep=65; // Number of nodes on path
+int min_sizep=7; // Number of nodes on path
+int max_sizep=25; // Number of nodes on path
 real epsilon=1e-5;
 int max_iter=5000;
 real mode_param=0.05;
@@ -206,19 +207,41 @@ void path_display(int iter, real* restrict mep, real* restrict grad_f
 // of the same length
 void path_equilize_rec(real* mep, int from, int to) {  
   //fprintf(stderr, "path_equilize_rec: %d %d\n",from, to);
+  assert(from>=0); assert(to<sizep);
   if(to-from<2) return;
+  int* idx=(int*)alloca(sizeof(int)*sizep);
+  real* loc=(real*)alloca(sizeof(real)*sizep);
+  real* dist=(real*)alloca(sizeof(real)*sizep);
+  for(int p=0; p<sizep; p++) dist[p]=distance[p];  
   //for(int p=from; p<=to; p++) fprintf(stderr,"%d:%"RF"g ",p,distance[p]); fprintf(stderr,"\n");
   for(int p=to-1; p>from; p--) {
     real d=distance[from]+(p-from)*(distance[to]-distance[from])/(to-from); // desired position
     int f=to; while(f>from) if(distance[--f]<=d) break; 
-    assert(f>=0); assert(f<=p); 
+    assert(f>=from); assert(f<=to); 
     // move the image to interval [dist(f),dist(f+1)]
-    real loc=(d-distance[f])/(distance[f+1]-distance[f]); // local coordinate
+    idx[p]=f;
+    loc[p]=(distance[f+1]>distance[f])?(d-distance[f])/(distance[f+1]-distance[f]):0; // local coordinate
     //fprintf(stderr,"[%d] %"RF"g [%d] %"RF"g + %"RF"g * %"RF"g\n",p,d,f,distance[f],loc,distance[f+1]-distance[f]);
-    assert(loc>=0); assert(loc<=1);
-    linear_comb(size,1-loc,mep+f*size,loc,mep+(f+1)*size,mep+p*size);
-    distance[p]=d;
+    assert(loc[p]>=0); assert(loc[p]<=1);
+    dist[p]=d;
   };
+  idx[from]=from; idx[to]=to;
+
+  for(int j=to-1; j>to; j++) {
+    int p=j;
+    assert(p>from && p<to);
+    assert(idx[p]>=from && idx[p+1]<=to);
+    if(idx[idx[p]]>=0 && idx[idx[p+1]]>=0) {
+      fprintf(stderr, "Failed to resolve order\n");
+      for(int p=from; p<=to; p++) fprintf(stderr, "%d ", idx[p]-from);
+      fprintf(stderr, "\n");  
+      exit(1);
+    };
+    linear_comb(size,1-loc[p],mep+idx[p]*size,loc[p],mep+(idx[p]+1)*size,mep+p*size);
+    idx[p]=-idx[p];
+  };
+
+  for(int p=0; p<sizep; p++) distance[p]=dist[p];
 };
 
 void path_equilize(real* mep) {
@@ -399,7 +422,8 @@ void showUsage(const char* program) {
 \n   -O                     Save result in Octave format\
 \n   -o                     Save result in Octave format but Hessian matrix\
 \n   -e|--epsilon REAL      Desired residual\
-\n   -n           INT       Nodes along path\
+\n   -n           INT       Minimum number of images on MEP\
+\n   -N           INT       Maximum number of images on MEP\
 \n   -i           INT       Set maximum number of iterations\
 \n   -r           INT       Progress will be shown every given iteration\
 \n   -m|--mode    INT       Optimization method\
@@ -432,7 +456,8 @@ int parseCommandLine(int argc, char** argv) {
       case 'O': save_octave=2; break;      
       case 'h': showUsage(argv[0]); exit(0);
       case 'e': epsilon=atof(optarg); break;
-      case 'n': sizep=atoi(optarg); 
+      case 'n': min_sizep=atoi(optarg); break;
+      case 'N': sizep=atoi(optarg); 
         max_sizep=3; while(max_sizep<sizep) max_sizep=2*(max_sizep-1)+1;
         break;
       case 'i': max_iter=atoi(optarg); break;
@@ -479,8 +504,10 @@ int main(int argc, char** argv) {
   diff=(real*)malloc(sizeof(real)*max_sizep); assert(diff);
   tdiff=(real*)malloc(sizeof(real)*max_sizep); assert(tdiff);
   inflation=(real*)malloc(sizeof(real)*max_sizep); assert(inflation);
-  // Set initla path size
-  sizep=17; if(max_sizep<sizep) sizep=max_sizep;
+  // Set initial path size
+  sizep=min_sizep; 
+  if(sizep<initial_states_count) sizep=initial_states_count;
+  if(max_sizep<sizep) sizep=max_sizep;
   // find two minima
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Initializing path\n"COLOR_RESET);
   if(initial_states_count<2) {
@@ -491,12 +518,14 @@ int main(int argc, char** argv) {
   int last_image=0;
   for (int n=1; n<initial_states_count; n++) {
     int next_image=n*sizep/(initial_states_count-1)-1;
-    assert(next_image<sizep); assert(last_image<next_image);
+    while(last_image>=next_image) next_image=last_image+1;
+    assert(next_image<sizep); 
     copy_vector(size, initial_state+size*n, path+size*next_image);
     // Set initial path as geodesic approximation between given states
     skyrmion_geodesic(random_noise/(next_image-last_image), next_image-last_image+1, path+size*last_image);
     last_image=next_image;
   };
+  assert(last_image==sizep-1);
 
   // minimize initial and final states
   /*

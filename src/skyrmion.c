@@ -401,7 +401,7 @@ void append_skyrmion(const real center[3], real distance, real winding,
 		real q2[4]; q2[0]=cosalpha; cross3(field,vec,q2+1);
 		mult3(sinalpha,q2+1,q2+1);
 		// combined rotation
-		real q[4]; quaternion_product(q1,q2,q);
+		real q[4]; quaternion_product(q2,q1,q);
 		// applying rotation
 		q1[0]=0; copy3(data+i, q1+1);
 		quaternion_product(q,q1,q2);
