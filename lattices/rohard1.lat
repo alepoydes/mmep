@@ -1,7 +1,7 @@
 [size]
 # Grid dimesions <x> x <y> x <z>
 # <x> <y> <z>
-31 31 1
+101 101 1
 [boundary conditions]
 # Boundary conditions along every axis
 # <BC along x> <BC along y> <BC along z>
