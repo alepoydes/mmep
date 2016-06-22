@@ -34,6 +34,8 @@ extern real magnetic_anisotropy_unit[3];
 // Exchange constant J
 //extern real exchange_constant[sizen];
 extern real* exchange_constant;
+// magnetic momentum
+extern real dipole;
 // Dzyaloshinskii Moriya vector for every pair of atoms
 //extern real dzyaloshinskii_moriya_vector[sizen][3];
 extern real* dzyaloshinskii_moriya_vector;
@@ -87,3 +89,5 @@ void append_skyrmion(const real center[3], real distance, real winding,
 #define COORDS(u,x,y,z,vec) { (vec)[0]=atom_positions[3*u+0]+x*translation_vectors[0][0]+y*translation_vectors[1][0]+z*translation_vectors[2][0]; (vec)[1]=atom_positions[3*u+1]+x*translation_vectors[0][1]+y*translation_vectors[1][1]+z*translation_vectors[2][1]; (vec)[2]=atom_positions[3*u+2]+x*translation_vectors[0][2]+y*translation_vectors[1][2]+z*translation_vectors[2][2]; }
 
 void group_generator(const real* restrict spins, int axis, real* restrict gen);
+
+void prepare_dipole_table(real negligible);

@@ -31,6 +31,7 @@ int use_first_order_repar=0;
 int remove_zero_modes=0;
 real random_noise=0;
 int skip_projection=0;
+real dipole_negligible=0;
 
 static int flat_distance=1;
 
@@ -213,7 +214,6 @@ void path_equilize_rec(real* mep, int from, int to) {
   real* loc=(real*)alloca(sizeof(real)*sizep);
   real* dist=(real*)alloca(sizeof(real)*sizep);
   for(int p=0; p<sizep; p++) dist[p]=distance[p];  
-  //for(int p=from; p<=to; p++) fprintf(stderr,"%d:%"RF"g ",p,distance[p]); fprintf(stderr,"\n");
   for(int p=to-1; p>from; p--) {
     real d=distance[from]+(p-from)*(distance[to]-distance[from])/(to-from); // desired position
     int f=to; while(f>from) if(distance[--f]<=d) break; 
@@ -225,20 +225,39 @@ void path_equilize_rec(real* mep, int from, int to) {
     assert(loc[p]>=0); assert(loc[p]<=1);
     dist[p]=d;
   };
-  idx[from]=from; idx[to]=to;
+  idx[from]=from; loc[from]=0;
+  idx[to]=to; loc[to]=0;
 
-  for(int j=to-1; j>to; j++) {
-    int p=j;
-    assert(p>from && p<to);
-    assert(idx[p]>=from && idx[p+1]<=to);
-    if(idx[idx[p]]>=0 && idx[idx[p+1]]>=0) {
-      fprintf(stderr, "Failed to resolve order\n");
-      for(int p=from; p<=to; p++) fprintf(stderr, "%d ", idx[p]-from);
-      fprintf(stderr, "\n");  
-      exit(1);
+  //for(int p=from; p<=to; p++) fprintf(stderr,COLOR_GREEN"%d"COLOR_RESET":%.3"RF"g(%.3"RF"g %d %.3"RF"g) ",p,distance[p],dist[p],idx[p], loc[p]); fprintf(stderr,"\n");      
+  /*for(int p=from; p<=to; p++) {
+     if(abs(idx[p])>p) fprintf(stderr, COLOR_RED); else if(abs(idx[p])<p) fprintf(stderr, COLOR_BLUE);
+     if(idx[p]<0) fprintf(stderr, COLOR_BOLD);
+     fprintf(stderr, "%d "COLOR_RESET, abs(idx[p])-from);
+  }; fprintf(stderr, "\n");  
+  */
+
+  // check if the images can be interpolated from right to left
+  int f; for(f=from+1; f<to; f++) if(idx[f]>=f) break;
+  if(f>=to) { // all idx[f]<f, hence we can proceed interpolate inplace
+    for(int j=to-1; j>from; j--) {
+      int p=j;
+      assert(p>from && p<to);
+      assert(idx[p]>=from && idx[p+1]<=to);
+      assert(idx[idx[p]]>=0 && idx[idx[p]+1]>=0); 
+      linear_comb(size,1-loc[p],mep+idx[p]*size,loc[p],mep+(idx[p]+1)*size,mep+p*size);
+      idx[p]=-idx[p];
     };
-    linear_comb(size,1-loc[p],mep+idx[p]*size,loc[p],mep+(idx[p]+1)*size,mep+p*size);
-    idx[p]=-idx[p];
+  } else {
+    //fprintf(stderr, COLOR_FAINT"Failed to interpolate inplace\n"COLOR_RESET);
+    // copying old images to a buffer
+    real* buf=(real*)malloc(sizeof(real)*size*(to-from+1)); assert(buf);
+    copy_vector(size*(to-from+1), mep+size*from, buf);
+    for(int p=to-1; p>from; p--) {
+      assert(p>from && p<to);
+      assert(idx[p]>=from && idx[p+1]<=to);
+      linear_comb(size,1-loc[p],buf+(idx[p]-from)*size,loc[p],buf+(idx[p]-from+1)*size,mep+p*size);
+    };
+    free(buf);
   };
 
   for(int p=0; p<sizep; p++) distance[p]=dist[p];
@@ -422,6 +441,7 @@ void showUsage(const char* program) {
 \n   -O                     Save result in Octave format\
 \n   -o                     Save result in Octave format but Hessian matrix\
 \n   -e|--epsilon REAL      Desired residual\
+\n   -E           REAL      Neglible value of dipole interaction\
 \n   -n           INT       Minimum number of images on MEP\
 \n   -N           INT       Maximum number of images on MEP\
 \n   -i           INT       Set maximum number of iterations\
@@ -447,7 +467,7 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "zoOhpPe:n:i:r:m:a:R:", long_options, &option_index);
+    c = getopt_long(argc, argv, "zoOhpPE:e:N:n:i:r:m:a:R:", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
@@ -456,6 +476,7 @@ int parseCommandLine(int argc, char** argv) {
       case 'O': save_octave=2; break;      
       case 'h': showUsage(argv[0]); exit(0);
       case 'e': epsilon=atof(optarg); break;
+      case 'E': dipole_negligible=atof(optarg); break;
       case 'n': min_sizep=atoi(optarg); break;
       case 'N': sizep=atoi(optarg); 
         max_sizep=3; while(max_sizep<sizep) max_sizep=2*(max_sizep-1)+1;
@@ -495,6 +516,8 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Zero modes (translations) are removed\n");
   if(random_noise>0) 
     fprintf(stderr, "Initial path noise amplitude: %"RF"g\n", random_noise);
+
+  prepare_dipole_table(dipole_negligible);
 
   srand(time(NULL));
   size=SIZE*3;

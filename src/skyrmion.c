@@ -37,10 +37,49 @@ real magnetic_anisotropy_norm=NAN;
 real magnetic_anisotropy_unit[3]={NAN,NAN,NAN};
 // Exchange constant J
 real* exchange_constant=NULL;
+// dipole interaction constant
+real dipole=0;
 // Dzyaloshinskii Moriya vector for every pair of atoms
 real* dzyaloshinskii_moriya_vector=NULL;
 real* initial_state=NULL;
 int initial_states_count=0;
+
+int dipole_count=0;
+int dipole_allocated=0;
+int* dipole_idx=NULL; // <source atom> <dest atom> <dest x> <dest y> <dest z>
+real* dipole_table=NULL; // <multiplier> <vector x> <vector y> <vector z>
+
+
+void prepare_dipole_table(real negligible) {
+	if(dipole==0) return;
+	real sqrt3=rsqrt(3);
+	for(int v=0; v<sizeu; v++) {
+		real origin[3]; COORDS(v,0,0,0,origin); 
+		forall(u,x,y,z) {	
+			int lx=x-sizex/2; int ly=y-sizey/2; int lz=z-sizez/2; 
+			real dest[3]; COORDS(u,lx,ly,lz,dest);
+			sub3(dest,origin,dest);
+			real dist=rsqrt(normsq3(dest));
+			if(dist==0) continue;
+			real alpha=1/(dist*dist*dist);
+			if(alpha<negligible) continue;
+			if(dipole_count>=dipole_allocated) {
+				dipole_allocated=2*dipole_allocated+1;
+				dipole_table=(real*)realloc(dipole_table,sizeof(real)*4*dipole_allocated);
+				dipole_idx=(int*)realloc(dipole_idx,sizeof(int)*5*dipole_allocated);
+			};
+			mult3(sqrt3/dist, dest, dipole_table+4*dipole_count+1);
+			dipole_table[4*dipole_count]=alpha*dipole;
+			dipole_idx[5*dipole_count]=v;
+			dipole_idx[5*dipole_count+1]=u;
+			dipole_idx[5*dipole_count+2]=lx;
+			dipole_idx[5*dipole_count+3]=ly;
+			dipole_idx[5*dipole_count+4]=lz;
+			dipole_count++;
+		};
+	};
+	fprintf(stderr, "Dipole interaction to be computed on %d neighbours\n", dipole_count);
+};
 
 real skyrmion_minimum_energy() {
 	int size=sizeu*sizex*sizey*sizez;
@@ -94,14 +133,49 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 			mult_minus3(exchange_constant[n],arg+i2,out+i1);
 		};
 	};
+	// Compute dipole interaction
+	for(int n=0;n<dipole_count;n++) {
+		// local cache
+		int s=dipole_idx[5*n+1], d=dipole_idx[5*n+0];
+		int sx=dipole_idx[5*n+2], sy=dipole_idx[5*n+3], sz=dipole_idx[5*n+4];
+		real* U=dipole_table+4*n+1;
+		real alpha=dipole_table[4*n];
+		// Minimum and maximum indices
+		int minx, maxx, miny, maxy, minz, maxz; 
+		if(boundary_conditions[0]==BC_PERIODIC) { minx=0; maxx=sizex; 
+		} else if(sx<0) { minx=-sx; maxx=sizex; 
+		} else { maxx=sizex-sx; minx=0; };
+		if(boundary_conditions[1]==BC_PERIODIC) { miny=0; maxy=sizey; 
+		} else if(sy<0) { miny=-sy; maxy=sizey; 
+		} else { maxy=sizey-sy; miny=0; };
+		if(boundary_conditions[2]==BC_PERIODIC) { minz=0; maxz=sizez; 
+		} else if(sz<0) { minz=-sz; maxz=sizez; 
+		} else { maxz=sizez-sz; minz=0; };
+		// Compute interaction fo the pair neighbours[n]
+		#pragma omp parallel for collapse(3)
+		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
+			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
+			int i2=INDEX(s,x,y,z)*3;
+			mult_minus3(alpha*dot3(arg+i1,U),U,out+i2);
+			mult_minus3(-alpha,arg+i1,out+i2);
+		};
+		/*#pragma omp parallel for collapse(3)
+		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
+			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
+			int i2=INDEX(s,x,y,z)*3;
+			mult_minus3(alpha*dot3(arg+i2,U),U,out+i1);
+			mult_minus3(-alpha,arg+i2,out+i1);
+		};*/
+	};	
 };
 
 // energy[0] - anisotropy part
 // energy[1] - zeeman part (external field)
 // energy[2] - exchange part
 // energy[3] - D-M energy
-void skyrmion_energy(const real* restrict arg, real energy[4]) {
-	for(int j=0;j<4;j++) energy[j]=0;
+// energy[4] - dipole energy
+void skyrmion_energy(const real* restrict arg, real energy[5]) {
+	for(int j=0;j<5;j++) energy[j]=0;
 	// Compute anisotropy part
 	forall(u,x,y,z) {
 		int i=3*INDEX(u,x,y,z);
@@ -146,7 +220,39 @@ void skyrmion_energy(const real* restrict arg, real energy[4]) {
 			energy[2]-=exchange_constant[n]*dot3(arg+i2,arg+i1);
 		};
 	};
-	energy[2]/=2; energy[3]/=2; 
+	// Compute dipole interaction
+	for(int n=0;n<dipole_count;n++) {
+		// local cache
+		int s=dipole_idx[5*n+1], d=dipole_idx[5*n+0];
+		int sx=dipole_idx[5*n+2], sy=dipole_idx[5*n+3], sz=dipole_idx[5*n+4];
+		real* U=dipole_table+4*n+1;
+		real alpha=dipole_table[4*n];
+		// Minimum and maximum indices
+		int minx, maxx, miny, maxy, minz, maxz; 
+		if(boundary_conditions[0]==BC_PERIODIC) { minx=0; maxx=sizex; 
+		} else if(sx<0) { minx=-sx; maxx=sizex; 
+		} else { maxx=sizex-sx; minx=0; };
+		if(boundary_conditions[1]==BC_PERIODIC) { miny=0; maxy=sizey; 
+		} else if(sy<0) { miny=-sy; maxy=sizey; 
+		} else { maxy=sizey-sy; miny=0; };
+		if(boundary_conditions[2]==BC_PERIODIC) { minz=0; maxz=sizez; 
+		} else if(sz<0) { minz=-sz; maxz=sizez; 
+		} else { maxz=sizez-sz; minz=0; };
+		// Compute interaction fo the pair neighbours[n]
+		#pragma omp parallel for collapse(3)
+		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
+			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
+			int i2=INDEX(s,x,y,z)*3;
+			energy[4]-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
+		};
+		/*#pragma omp parallel for collapse(3)
+		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
+			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
+			int i2=INDEX(s,x,y,z)*3;
+			energy[4]-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
+		};*/
+	};		
+	energy[2]/=2; energy[3]/=2; energy[4]/=2; 
 };
 
 void subtract_field(real* restrict inout) {

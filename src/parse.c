@@ -67,6 +67,7 @@ void parse_lattice(FILE* file) {
 	const char sec_ec[]="[exchange constant]";
 	const char sec_dmv[]="[dzyaloshinskii moriya vector]";
 	const char sec_image[]="[image]";
+	const char sec_dipole[]="[dipole]";
 	// Allocated memory size
 	int capacityu=sizeu; int capacityn=sizen; 
 	// Number of lines in sections
@@ -143,6 +144,15 @@ void parse_lattice(FILE* file) {
 				};
 				sizeu++;
 			};
+		} else if(match(buf,sec_dipole)) {
+			if(!READLINE) { 
+				fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
+				exit(1); 
+			};
+			if(sscanf(buf, "%"RF"g",&dipole)!=1) {
+				fprintf(stderr,"Parse error:%d: real number is expected, got '%s'\n",line,buf); 
+				exit(1); 
+			};			
 		} else if(match(buf,sec_n)) {
 			while(1) {
 				if(!READLINE) break;

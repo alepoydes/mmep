@@ -22,7 +22,7 @@ int mode=2;
 int debug_plot=0;
 int debug_every=1;
 int save_octave=0;
-
+real dipole_negligible=0;
 
 void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real constres, real alpha) {
   static real prev_f=NAN; static real prev_res=NAN;
@@ -63,6 +63,7 @@ void showUsage(const char* program) {
 \n   -p|--plot              Show graphics\
 \n   -o                     Save result in Octave format\
 \n   -e|--epsilon REAL      Desired residual\
+\n   -E           REAL      Neglible value of dipole interaction\
 \n   -i           INT       Set maximum number of iterations\
 \n   -r           INT       Progress will be shown every given iteration\
 \n   -m|--mode    INT       Optimization method\
@@ -82,12 +83,13 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "hpe:i:r:m:a:b:o", long_options, &option_index);
+    c = getopt_long(argc, argv, "hpE:e:i:r:m:a:b:o", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
       case 'h': showUsage(argv[0]); exit(0);
       case 'e': epsilon=atof(optarg); break;
+      case 'E': dipole_negligible=atof(optarg); break;      
       case 'i': max_iter=atoi(optarg); break;
       case 'r': debug_every=atoi(optarg); break;
       case 'm': mode=atoi(optarg); break;
@@ -110,6 +112,9 @@ int main(int argc, char** argv) {
   	parse_lattice(file);
   	fclose(file);
   } else parse_lattice(stdin);
+
+  prepare_dipole_table(dipole_negligible);
+
   int size=SIZE*3;
   real* spins=(real*)malloc(sizeof(real)*size); assert(spins);
   if(initial_state) {
@@ -125,12 +130,13 @@ int main(int argc, char** argv) {
   };
   skyrmion_steepest_descent(spins, mode, mode_param, epsilon, max_iter);
   // Saving result
-  real energy[4]; skyrmion_energy(spins, energy);
+  real energy[5]; skyrmion_energy(spins, energy);
   fprintf(stderr,COLOR_YELLOW"Zeeman energy:"COLOR_RESET" %.10"RF"f\n",energy[1]);
   fprintf(stderr,COLOR_YELLOW"Exchange energy:"COLOR_RESET" %.10"RF"f\n",energy[2]);
   fprintf(stderr,COLOR_YELLOW"Anisotropy energy:"COLOR_RESET" %.10"RF"f\n",energy[0]);
   fprintf(stderr,COLOR_YELLOW"Dzyaloshinskii-Moriya energy:"COLOR_RESET" %.10"RF"f\n",energy[3]);
-  fprintf(stderr,COLOR_YELLOW"TOTAL energy:"COLOR_RESET" %.10"RF"f\n",energy[0]+energy[1]+energy[2]+energy[3]);  
+  fprintf(stderr,COLOR_YELLOW"Dipole interaction energy:"COLOR_RESET" %.10"RF"f\n",energy[4]);
+  fprintf(stderr,COLOR_YELLOW"TOTAL energy:"COLOR_RESET" %.10"RF"f\n",energy[0]+energy[1]+energy[2]+energy[3]+energy[4]);  
 
   fprintf(stderr, COLOR_YELLOW"Saving gnuplot\n"COLOR_RESET);
   const char* filename=OUTDIR"/state.gnuplot";
