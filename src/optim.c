@@ -106,6 +106,11 @@ int steepest_descend(
       //if(display) display(-iter,a,grad,f,res,constres,alpha);
       status=0; break; 
     };
+    if(stop_signal>0) {
+      fprintf(stderr, COLOR_YELLOW"Optimization aborted\n"COLOR_RESET);
+      stop_signal=0;
+      break;
+    };
     if(display) display(iter,a,grad,f,res,constres,alpha); 
     //if(last_f==f) { status=2; break; }; // Iterations stop changing
     // Calculation next aproximation

@@ -1,7 +1,13 @@
 #include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
+#include <signal.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 #include "debug.h"
+
+volatile int stop_signal=0;
 
 void watch_number(real next, real prev, int digits) {
 	char bufn[100],bufp[100]; 
@@ -23,4 +29,18 @@ void watch_number(real next, real prev, int digits) {
 		if(d==DIGITS) fprintf(stderr,COLOR_FAINT);
 	};
   	fprintf(stderr,COLOR_RESET);
-}
+};
+
+#define MAX_SIG 3
+
+void signal_handler(int sig) {
+	if(sig==SIGINT) {
+    	fprintf(stderr, COLOR_YELLOW"received SIGINT %d/%d\n"COLOR_RESET, ++stop_signal, MAX_SIG);
+    	if(stop_signal>MAX_SIG) exit(1);
+	};
+};
+
+void init_signal() {
+	if(signal(SIGINT, signal_handler)==SIG_ERR)
+		fprintf(stderr, COLOR_RED COLOR_BOLD"can't catch SIGINT\n"COLOR_RESET);
+};

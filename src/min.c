@@ -105,6 +105,7 @@ int parseCommandLine(int argc, char** argv) {
 
 int main(int argc, char** argv) {
   srand(time(NULL));
+  init_signal();
   int i=parseCommandLine(argc,argv);
   if(i<argc) {
   	FILE* file=fopen(argv[i],"r");

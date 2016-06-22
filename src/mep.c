@@ -496,6 +496,7 @@ int parseCommandLine(int argc, char** argv) {
 };
 
 int main(int argc, char** argv) {
+  init_signal();
   // Read parameters
   int i=parseCommandLine(argc,argv);
   if(i<argc) {

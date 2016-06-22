@@ -14,6 +14,10 @@
 #define CLEAR_SCREEN "\033[2J"
 #define RESET_CURSOR "\033[1;1H"
 
+extern volatile int stop_signal;
+
 void watch_number(real next, real prev, int digits);
+
+void init_signal();
 
 #endif
