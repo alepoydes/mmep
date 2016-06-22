@@ -350,13 +350,13 @@ void displayMouse(int button, int state, int x, int y) {
 	 	drag_mode=1; drag_point[0]=x; drag_point[1]=y; 
 	} else if (button==2 && state==GLUT_UP) { 
 		drag_mode=0;
-	} else if (button==1 && state==GLUT_DOWN) {
+	} else if (button==0 && state==GLUT_DOWN) {
 		copy3(eye,drag_eye); copy3(center,drag_center); copy3(dir,drag_dir); 
 		drag_mode=2; drag_point[0]=x; drag_point[1]=y; 
-	} else if (button==1 && state==GLUT_UP) { 
+	} else if (button==0 && state==GLUT_UP) { 
 		drag_mode=0;
 	} else {
-		if(button==0) drag_mode=state==GLUT_DOWN?3:0;
+		if(button==1) drag_mode=state==GLUT_DOWN?3:0;
 		screen_to_field(x,y,mouse_pointer);
 		mouse_function(button,state,mouse_pointer);
 		displayRedraw();
