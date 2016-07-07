@@ -31,6 +31,7 @@ real damping=0;
 int powered=0;
 real power=-1;
 int integrator=1; // 0 - RK, 1 - simplectic RK
+real dipole_negligible=0.01;
 
 void showUsage(const char* program) {
   fprintf(stderr, "Compute stable states.\
@@ -40,6 +41,7 @@ void showUsage(const char* program) {
 \n   -h|--help              Show this message and exit\
 \n   -p|--plot              Show graphics\
 \n   -e|--epsilon REAL      Desired residual\
+\n   -E           REAL      Neglible value of dipole interaction\
 \n   -i           INT       Set maximum number of iterations\
 \n   -r           INT       Progress will be shown every given iteration\
 \n   -m|--mode    INT       Optimization method\
@@ -59,12 +61,13 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "hpe:i:r:m:a:b:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hpE:e:i:r:m:a:b:", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
       case 'h': showUsage(argv[0]); exit(0);
       case 'e': epsilon=atof(optarg); break;
+      case 'E': dipole_negligible=atof(optarg); break;            
       case 'i': max_iter=atoi(optarg); break;
       case 'r': debug_every=atoi(optarg); break;
       case 'm': mode=atoi(optarg); break;
@@ -131,6 +134,8 @@ void screen() {
   fprintf(stderr,"  "COLOR_YELLOW"middle drag"COLOR_RESET" - translate scene\n");
   fprintf(stderr,"  "COLOR_YELLOW"right drag"COLOR_RESET" - rotate scene\n");
   fprintf(stderr,"  "COLOR_YELLOW"hold left"COLOR_RESET" - emit magnetic field\n");
+
+  fprintf(stderr,"\nDipole int. neigh. %d\n", dipole_count);
 
 };
 
@@ -234,6 +239,9 @@ int main(int argc, char** argv) {
   	parse_lattice(file);
   	fclose(file);
   } else parse_lattice(stdin);
+
+  prepare_dipole_table(dipole_negligible);
+
   // Initialize states
   real* spins=(real*)malloc(sizeof(real)*SIZE*3); assert(spins);
   if(initial_state) {

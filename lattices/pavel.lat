@@ -1,7 +1,7 @@
 [size]
 # Grid dimesions <x> x <y> x <z>
 # <x> <y> <z>
-101 101 1
+100 100 1
 [boundary conditions]
 # Boundary conditions along every axis
 # <BC along x> <BC along y> <BC along z>
@@ -43,31 +43,31 @@
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>
-#0 0 0.1
+# muB = 5.788e-5 eV/T = 5.788e-2 meV/T
+# muS = 3 * muB * T, T=1
+#0 0 0.17364	
+# muS = 3 * muB * 1.5 T = 0.26046 meV
+#0 0 0.26046
+# muS = 3 * muB * 2.97 T = 0.5157108 meV
+#0 0 0.5157108
 0 0 0.00000001
 [magnetic anisotropy]
 # Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)
 # <absolute value> <K_x> <K_y> <K_z>
-0.1 0 0 1
+0.41 0 0 1
 [exchange constant]
 # Echange constants J_{sd} for every pair of atoms stated in [neighborhood]
 # <J>
-1
-1
-1
+5.88
+5.88
+5.88
 [dzyaloshinskii moriya vector]
 # Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
 # <D_x> <D_y> <D_z>
-0.3 0 -1 0
-0.3 0.8660254 -0.5 0
-0.3 0.8660254 0.5 0
-
+1.58 0 -1 0
+1.58 0.8660254 -0.5 0
+1.58 0.8660254 0.5 0
 [image]
-20 15 0 7 0 -1
+40 30 0 20 0 -1
 [image]
 
-# mu_0 = 5.78e-5 ev * T
-# T = kg s^-2 A^-1
-# mu_B = 9.27e-24 J/T
-# A=10^-10m
-# J = kg*m^2/s

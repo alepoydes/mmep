@@ -20,9 +20,9 @@ real mode_param=0.2;
 real param2=1;
 int mode=2;
 int debug_plot=0;
-int debug_every=1;
+int debug_every=1000;
 int save_octave=0;
-real dipole_negligible=0;
+real dipole_negligible=0.001;
 
 void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f, real res, real constres, real alpha) {
   static real prev_f=NAN; static real prev_res=NAN;

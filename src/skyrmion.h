@@ -36,6 +36,7 @@ extern real magnetic_anisotropy_unit[3];
 extern real* exchange_constant;
 // magnetic momentum
 extern real dipole;
+extern int dipole_count;
 // Dzyaloshinskii Moriya vector for every pair of atoms
 //extern real dzyaloshinskii_moriya_vector[sizen][3];
 extern real* dzyaloshinskii_moriya_vector;

@@ -31,7 +31,7 @@ int use_first_order_repar=0;
 int remove_zero_modes=0;
 real random_noise=0;
 int skip_projection=0;
-real dipole_negligible=0;
+real dipole_negligible=0.001;
 
 static int flat_distance=1;
 
@@ -552,12 +552,12 @@ int main(int argc, char** argv) {
   assert(last_image==sizep-1);
 
   // minimize initial and final states
-  /*
+  
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing initial state\n"COLOR_RESET);
   skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing final state\n"COLOR_RESET);
   skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, 0.1*epsilon, max_iter);
-  */
+  
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating MEP\n"COLOR_RESET);
   // MEP calculation
   post_optimization=0;

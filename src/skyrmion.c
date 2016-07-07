@@ -159,13 +159,13 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 			mult_minus3(alpha*dot3(arg+i1,U),U,out+i2);
 			mult_minus3(-alpha,arg+i1,out+i2);
 		};
-		/*#pragma omp parallel for collapse(3)
+		#pragma omp parallel for collapse(3)
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
 			int i2=INDEX(s,x,y,z)*3;
 			mult_minus3(alpha*dot3(arg+i2,U),U,out+i1);
 			mult_minus3(-alpha,arg+i2,out+i1);
-		};*/
+		};
 	};	
 };
 
@@ -175,17 +175,23 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 // energy[3] - D-M energy
 // energy[4] - dipole energy
 void skyrmion_energy(const real* restrict arg, real energy[5]) {
-	for(int j=0;j<5;j++) energy[j]=0;
+	//for(int j=0;j<5;j++) energy[j]=0;
 	// Compute anisotropy part
+	real anisotropy_energy=0;
+	real zeeman_energy=0;
+	#pragma omp parallel for collapse(3) reduction(+:anisotropy_energy,zeeman_energy)
 	forall(u,x,y,z) {
 		int i=3*INDEX(u,x,y,z);
 		real m=dot3(magnetic_anisotropy_unit,arg+i);
-		energy[0]-=m*m;
-		if(nonuniform_field) energy[1]-=dot3(nonuniform_field+i,arg+i);
-		else energy[1]-=dot3(magnetic_field,arg+i);
+		anisotropy_energy-=m*m;
+		if(nonuniform_field) zeeman_energy-=dot3(nonuniform_field+i,arg+i);
+		else zeeman_energy-=dot3(magnetic_field,arg+i);
 	};
-	energy[0]*=magnetic_anisotropy_norm;
+	energy[0]=anisotropy_energy*magnetic_anisotropy_norm;
+	energy[1]=zeeman_energy;
 	// Compute exchange part
+	real dmi_energy=0;
+	real exchange_energy=0;
 	for(int n=0;n<sizen;n++) {
 		// local cache
 		int s=neighbours[5*n+3], d=neighbours[5*n+4];
@@ -202,25 +208,20 @@ void skyrmion_energy(const real* restrict arg, real energy[5]) {
 		} else if(sz<0) { minz=-sz; maxz=sizez; 
 		} else { maxz=sizez-sz; minz=0; };
 		// Compute interaction fo the pair neighbours[n]
+		#pragma omp parallel for collapse(3) reduction(+:dmi_energy,exchange_energy)
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
 			int i2=INDEX(s,x,y,z)*3;
 			real t[3]; 
 			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
-			energy[3]-=dot3(t,arg+i2);
-			energy[2]-=exchange_constant[n]*dot3(arg+i1,arg+i2);
-		};
-
-		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
-			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
-			int i2=INDEX(s,x,y,z)*3;
-			real t[3]; 
-			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i2,t);
-			energy[3]+=dot3(t,arg+i1);
-			energy[2]-=exchange_constant[n]*dot3(arg+i2,arg+i1);
+			dmi_energy-=dot3(t,arg+i2);
+			exchange_energy-=exchange_constant[n]*dot3(arg+i1,arg+i2);
 		};
 	};
+	energy[3]=dmi_energy;
+	energy[2]=exchange_energy;
 	// Compute dipole interaction
+	real dipole_energy=0;	
 	for(int n=0;n<dipole_count;n++) {
 		// local cache
 		int s=dipole_idx[5*n+1], d=dipole_idx[5*n+0];
@@ -239,20 +240,14 @@ void skyrmion_energy(const real* restrict arg, real energy[5]) {
 		} else if(sz<0) { minz=-sz; maxz=sizez; 
 		} else { maxz=sizez-sz; minz=0; };
 		// Compute interaction fo the pair neighbours[n]
-		#pragma omp parallel for collapse(3)
+		#pragma omp parallel for collapse(3) reduction(+:dipole_energy)
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
 			int i2=INDEX(s,x,y,z)*3;
-			energy[4]-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
+			dipole_energy-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
 		};
-		/*#pragma omp parallel for collapse(3)
-		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
-			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez)*3;
-			int i2=INDEX(s,x,y,z)*3;
-			energy[4]-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
-		};*/
+		energy[4]=dipole_energy;
 	};		
-	energy[2]/=2; energy[3]/=2; energy[4]/=2; 
 };
 
 void subtract_field(real* restrict inout) {
