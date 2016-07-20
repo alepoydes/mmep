@@ -645,6 +645,7 @@ int main(int argc, char** argv) {
       oct_save_matrix(file,"CELL",(real*)atom_positions,sizeu,3);
       oct_save_matrix_int(file,"BONDS",(int*)neighbours,sizen,5);
       oct_save_real(file,"K",magnetic_anisotropy_norm);
+      oct_save_real(file,"mu",dipole);
       oct_save_vector(file,"K0",magnetic_anisotropy_unit,3);
       oct_save_vector(file,"J",exchange_constant,sizen);
       oct_save_matrix(file,"D",dzyaloshinskii_moriya_vector,sizen,3);

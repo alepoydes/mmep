@@ -61,7 +61,8 @@ void showUsage(const char* program) {
 \nOptions:\
 \n   -h|--help              Show this message and exit\
 \n   -p|--plot              Show graphics\
-\n   -o                     Save result in Octave format\
+\n   -O                     Save result in Octave format\
+\n   -o                     Save result in Octave format but Hessian matrix\
 \n   -e|--epsilon REAL      Desired residual\
 \n   -E           REAL      Neglible value of dipole interaction\
 \n   -i           INT       Set maximum number of iterations\
@@ -83,7 +84,7 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "hpE:e:i:r:m:a:b:o", long_options, &option_index);
+    c = getopt_long(argc, argv, "hpE:e:i:r:m:a:b:oO", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
@@ -95,7 +96,8 @@ int parseCommandLine(int argc, char** argv) {
       case 'm': mode=atoi(optarg); break;
       case 'a': mode_param=atof(optarg); break;
       case 'b': param2=atof(optarg); break;
-      case 'o': save_octave=1; break;
+      case 'o': save_octave=1; break;      
+      case 'O': save_octave=2; break;      
       case '?': break;
       default: fprintf(stderr,"Unprocessed option '%c'\n", c); exit(1);
     };
@@ -137,7 +139,8 @@ int main(int argc, char** argv) {
   fprintf(stderr,COLOR_YELLOW"Anisotropy energy:"COLOR_RESET" %.10"RF"f\n",energy[0]);
   fprintf(stderr,COLOR_YELLOW"Dzyaloshinskii-Moriya energy:"COLOR_RESET" %.10"RF"f\n",energy[3]);
   fprintf(stderr,COLOR_YELLOW"Dipole interaction energy:"COLOR_RESET" %.10"RF"f\n",energy[4]);
-  fprintf(stderr,COLOR_YELLOW"TOTAL energy:"COLOR_RESET" %.10"RF"f\n",energy[0]+energy[1]+energy[2]+energy[3]+energy[4]);  
+  real ergy=energy[0]+energy[1]+energy[2]+energy[3]+energy[4];
+  fprintf(stderr,COLOR_YELLOW"TOTAL energy:"COLOR_RESET" %.10"RF"f\n",ergy);  
 
   fprintf(stderr, COLOR_YELLOW"Saving gnuplot\n"COLOR_RESET);
   const char* filename=OUTDIR"/state.gnuplot";
@@ -157,10 +160,28 @@ int main(int argc, char** argv) {
     file=fopen(octfile,"w");
     if(file) {
       oct_save_init(file);
-      oct_save_hessian(file);
-      oct_save_linear(file);
-      oct_save_state(file,"initial",spins);
-      oct_save_vertices(file);
+      /*oct_save_linear(file);
+      oct_save_state(file,"initial",path);
+      oct_save_state(file,"final",path+3*SIZE*(sizep-1));
+      real mx=energy[0]; int mi=0; for(int p=1; p<sizep; p++) if(energy[p]>mx) { mx=energy[p]; mi=p; }; 
+      if(mi>0 && mi<sizep-1) oct_save_state(file,"saddle",path+3*SIZE*mi);
+      oct_save_vertices(file);*/
+      if(nonuniform_field) oct_save_field(file,"H",nonuniform_field);
+      else oct_save_vector(file,"H",magnetic_field,3);
+      int size[3]={sizex,sizey,sizez};
+      oct_save_vector_int(file,"SZ",size,3);
+      oct_save_vector_int(file,"BC",boundary_conditions,3);
+      oct_save_matrix(file,"TRANSLATIONS",(real*)translation_vectors,3,3);
+      oct_save_matrix(file,"CELL",(real*)atom_positions,sizeu,3);
+      oct_save_matrix_int(file,"BONDS",(int*)neighbours,sizen,5);
+      oct_save_real(file,"K",magnetic_anisotropy_norm);
+      oct_save_real(file,"mu",dipole);
+      oct_save_vector(file,"K0",magnetic_anisotropy_unit,3);
+      oct_save_vector(file,"J",exchange_constant,sizen);
+      oct_save_matrix(file,"D",dzyaloshinskii_moriya_vector,sizen,3);
+      oct_save_path(file,"PATH",spins,1);
+      oct_save_vector(file,"ENERGY",&ergy,1);
+      if(save_octave>1) oct_save_hessian(file);
       oct_save_finish(file);
       fclose(file);
     } else 

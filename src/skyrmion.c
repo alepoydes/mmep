@@ -265,8 +265,9 @@ void subtract_field(real* restrict inout) {
 };
 
 void set_to_field(real* restrict out) {
+	real field[3]={0,0,1};
 	#pragma omp parallel for collapse(4)
-	forall(u,x,y,z) for3(j) out[INDEX(u,x,y,z)*3+j]=magnetic_field[j];
+	forall(u,x,y,z) for3(j) out[INDEX(u,x,y,z)*3+j]=field[j];
 };
 
 
@@ -476,7 +477,7 @@ void three_point_equalizer(const real* restrict a, const real* restrict c, const
 void append_skyrmion(const real center[3], real distance, real winding, 
 	real rotation, real* restrict data) 
 {
-	real field[3]; copy3(magnetic_field, field); normalize3(field);
+	real field[3]={0,0,1}; 
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z)*3;
