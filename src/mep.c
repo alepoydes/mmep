@@ -625,6 +625,9 @@ int main(int argc, char** argv) {
   };
   // Octave output
   if(save_octave>0) {
+    fprintf(stderr, COLOR_YELLOW"Computing energy contributions\n"COLOR_RESET);
+    real* contr=(real*)malloc(sizeof(real)*sizep*5);
+    for(int p=0; p<sizep; p++) skyrmion_energy(path+p*SIZE*3, contr+5*p);
     const char* octfile=OUTDIR"/mep.oct";
     fprintf(stderr, COLOR_YELLOW"Saving %s\n"COLOR_RESET,octfile);
     file=fopen(octfile,"w");
@@ -654,6 +657,7 @@ int main(int argc, char** argv) {
       oct_save_vector(file,"DISTANCE",distance,sizep);
       oct_save_vector(file,"DIFF",diff,sizep);
       oct_save_vector(file,"TDIFF",tdiff,sizep);
+      oct_save_matrix(file,"CONTRIBUTIONS",contr,sizep,5);
       if(save_octave>1) oct_save_hessian(file);
       oct_save_finish(file);
       fclose(file);
