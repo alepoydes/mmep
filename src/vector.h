@@ -60,7 +60,8 @@
 #define dot3(x,y) ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
 //#define normalize3(x) { real t=(3-normsq3(x))*0.5; (x)[0]*=t; (x)[1]*=t; (x)[2]*=t; }
 //#define normalize3(x) { real t=(1+normsq3(x))/2; (x)[0]/=t; (x)[1]/=t; (x)[2]/=t; }
-#define normalize3(x) { real t=normsq3(x); if(t>0) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
+//#define normalize3(x) { real t=normsq3(x); if(t>0) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
+#define normalize3(x) { real t=normsq3(x); if(t>0 && rabs(t-1)>1e-16) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
 #define seminormalize3(factor,x) ({ real t=rsqrt(normsq3(x)); if(t>0) { real f=1-factor+factor/t; (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; t>0?rabs((1-t)*(1-factor)):1; })
 #define middle3(x,y,z) { (z)[0]=((x)[0]+(y)[0])/2; (z)[1]=((x)[1]+(y)[1])/2; (z)[2]=((x)[2]+(y)[2])/2; normalize3(z); }
 // z=a*l_-1.5(0)+b*l_-0.5(0)+c*l_0.5(0)+d*l_1.5(0)
