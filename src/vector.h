@@ -93,7 +93,10 @@
 // calculate great-circle distance  on the sphere between points a and b given by decard coordinates.
 // a and b assumed to have unit length.
 #define dist_sphere_sq3(a,b) (racos(dot3(a,b)))
+#define for3(j) for(int j=0;j<3;j++)
 
+void matrixmult3(const real* a, const real* b, real* prod);
+void invertmatrix3(const real* mat, real* inv);
 real distsq(int n, const real* a, const real* b);
 real dist_sphere_sq(int n, const real* a, const real* b);
 real normsq(int n, const real* a);

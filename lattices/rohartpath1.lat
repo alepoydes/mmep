@@ -82,7 +82,9 @@
 -1.5  0.8660254  0.5       -0.
 -1.5 -0.8660254 -0.5        0.
 -1.5  0.8660254 -0.5        0.  
-[image]
-100 100 0 10 0 -1
-#15 15 0 10 0 -1
-[image]
+[positions]
+/data/Activity/magskyr/rohart/Atom_position.dat
+[load image]
+/data/Activity/magskyr/rohart/Path1/EndConfig_00.dat
+[load image]
+/data/Activity/magskyr/rohart/Path1/EndConfig_20.dat

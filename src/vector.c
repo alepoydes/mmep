@@ -1,7 +1,23 @@
 #include "vector.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
+void invertmatrix3(const real* mat, real* inv) {
+	real comp[3][3];
+	for3(j) for3(k) 
+		comp[j][k]=mat[3*((j+1)%3)+(k+1)%3]*mat[3*((j+2)%3)+(k+2)%3]-mat[3*((j+1)%3)+(k+2)%3]*mat[3*((j+2)%3)+(k+1)%3];
+	real det=0; for3(j) det+=mat[j]*comp[0][j];
+	for3(j) for3(k) inv[3*j+k]=comp[k][j]/det;
+};
+
+void matrixmult3(const real* a, const real* b, real* prod) {
+	for3(j) for3(k) {
+		real sum=0; for3(n) sum+=a[3*j+n]*b[3*n+k];
+		prod[3*j+k]=sum;
+	};
+};
 
 real normsq(int n, const real* a) {
 	real nrm=0;

@@ -92,8 +92,11 @@ void oct_save_state(FILE* file, char* name, real* data) {
 	fprintf(file,"# type: matrix\n");
 	fprintf(file,"# rows: %d\n",3*SIZE);
 	fprintf(file,"# columns: %d\n",1);
-	for3(j) forlla(u,x,y,z)
-		fprintf(file,"%.*"RF"g\n",DIGITS,data[j+3*INDEX(u,x,y,z)]);	
+	for3(j) forlla(u,x,y,z) {
+		int id=INDEX(u,x,y,z);
+		if(ISACTIVE(id)) fprintf(file,"%.*"RF"g\n",DIGITS,data[j+3*id]);	
+		else fprintf(file,"%.*"RF"g\n",DIGITS,(real)0.);	
+	};
 	fprintf(file,"\n\n");	
 };
 

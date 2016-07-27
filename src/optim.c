@@ -83,7 +83,7 @@ int steepest_descend(
   	// f value of f(a)
     //ill conditioned quadratic optimiation
     //fprintf(stderr,"res: %g\n",rsqrt(normsq(n,grad)));
-    assert(!isnan(normsq(n,grad)));
+    //assert(!isnan(normsq(n,grad)));
     if(T) T(a,grad);
     real res2=normsq(n,grad); 
     res=rsqrt(res2/n);

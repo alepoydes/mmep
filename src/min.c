@@ -115,6 +115,8 @@ int main(int argc, char** argv) {
   	parse_lattice(file);
   	fclose(file);
   } else parse_lattice(stdin);
+  if(active) fprintf(stderr, "Active spins: %d / %d\n", number_of_active, SIZE);
+    else fprintf(stderr, "Active spins: all / %d\n", SIZE);
 
   prepare_dipole_table(dipole_negligible);
 

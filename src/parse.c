@@ -5,6 +5,7 @@
 
 #include "skyrmion.h"
 #include "vector.h"
+#include "debug.h"
 
 // match prefix of 'string' with 'pattern'
 int match(const char* string, const char* pattern) {
@@ -48,6 +49,95 @@ int readline(char* buf, int maxlen, FILE* file, int* line) {
 	return 1;
 };
 
+real get_nearest(const real* invtrans, const real* pos, int* u, int* x, int* y, int* z) {
+	real best=INFINITY;
+	for(int lu=0; lu<sizeu; lu++) {
+		real p[3]; for3(j) p[j]=pos[j]-atom_positions[lu*3+j];
+		real loc[3];
+		for3(j) { loc[j]=0; for3(k) loc[j]+=invtrans[3*j+k]*p[k]; };
+		int coord[3]; for3(j) coord[j]=round(loc[j]);
+		if(coord[0]<0 || coord[0]>=sizex || coord[1]<0 || coord[1]>=sizey || coord[2]<0 || coord[2]>=sizez) continue;
+		COORDS(lu,coord[0],coord[1],coord[2],loc);
+		sub3(pos, loc, loc);
+		real dist=normsq3(loc);
+		if(dist<best) {
+			best=dist; *u=lu; *x=coord[0]; *y=coord[1]; *z=coord[2];
+		};
+	};
+	return best;
+};
+
+void load_positions(const char* posfilename) {
+	fprintf(stderr, "Loading positions from '%s'\n", posfilename);
+	positions=(int*)malloc(sizeof(int)*SIZE); assert(positions);
+	FILE* posfile=fopen(posfilename, "r");
+	if(!posfile) { fprintf(stderr, "Can not open "COLOR_RED"%s"COLOR_RESET"\n", posfilename); exit(1); };
+	int count; 
+   	char buf[256];
+   	if(!fgets(buf, sizeof(buf), posfile)) { fprintf(stderr, "There is no header in '"COLOR_RED"%s"COLOR_RESET"'\n", posfilename); exit(1); };
+	if(sscanf(buf, "%d", &count)!=1) { fprintf(stderr, "Wrong header of '"COLOR_RED"%s"COLOR_RESET"'\n", posfilename); exit(1); };
+	if(count!=SIZE) { fprintf(stderr, "Wrong number of spins in '"COLOR_RED"%s"COLOR_RESET"'\n", posfilename); exit(1); };
+	// invert translations matrix
+	real invtrans[3][3]; invertmatrix3((real*)translation_vectors, (real*)invtrans);
+	real tmp[3][3];	matrixmult3((real*)translation_vectors, (real*)invtrans, (real*)tmp); 
+	for3(j) for3(k) if(j==k) assert(rabs(tmp[j][k]-1)<1e-6); else assert(rabs(tmp[j][k])<1e-6);
+	for(int line=0; line<SIZE; line++) {
+       	if(!fgets(buf, sizeof(buf), posfile)) { fprintf(stderr, "Not enough data in '"COLOR_RED"%s"COLOR_RESET"'\n", posfilename); exit(1); };
+		real pos[3]; 
+		int l=sscanf(buf, "%"RF"g %"RF"g %"RF"g", pos, pos+1, pos+2);
+		if(l<2 || l>3) { fprintf(stderr, "Position has wrong number of coordinates at '"COLOR_RED"%s line %d"COLOR_RESET"'\n", posfilename, line+2); exit(1); };
+		if(l<3) pos[2]=0;
+		//fprintf(stderr, "%d: %"RF"g %"RF"g %"RF"g : %s", l, pos[0], pos[1], pos[2], buf);
+		int x,y,z,u;
+		if(get_nearest((real*)invtrans, pos, &u, &x, &y, &z)>0.01) {
+			fprintf(stderr, "Position %"RF"g %"RF"g %"RF"g at '"COLOR_RED"%s line %d"COLOR_RESET"' is too far from lattice\n", pos[0], pos[1], pos[2], posfilename, line+2); 
+			exit(1);	
+		};
+		positions[line]=INDEX(u,x,y,z);
+	};
+	if(!feof(posfile)) fprintf(stderr, COLOR_YELLOW"Warning:"COLOR_RESET"Extra data in '%s'\n",posfilename);
+	fclose(posfile); 
+};
+
+void load_skyrmion(const char* spinsfilename, real* image) {
+	fprintf(stderr, "Loading image from '%s'\n", spinsfilename);
+	// Open files
+	FILE* spinsfile=fopen(spinsfilename, "r");
+	if(!spinsfile) { fprintf(stderr, "Can not open "COLOR_RED"%s"COLOR_RESET"\n", spinsfilename); exit(1); };
+	// Read header
+   	char buf[256];
+   	if(!fgets(buf, sizeof(buf), spinsfile)) { fprintf(stderr, "There is no header in '"COLOR_RED"%s"COLOR_RESET"'\n", spinsfilename); exit(1); };	
+	int count; 
+	if(sscanf(buf, "%d", &count)!=1) { fprintf(stderr, "Wrong header of '"COLOR_RED"%s"COLOR_RESET"'\n", spinsfilename); exit(1); };
+	if(count!=SIZE) { fprintf(stderr, "Wrong number of spins in '"COLOR_RED"%s"COLOR_RESET"'\n", spinsfilename); exit(1); };	
+	// Empty buffer for image
+	for(int i=0; i<SIZE*3; i++) image[i]=0.;
+	// Read line by line
+	int empty_mask=active==NULL;
+	count=0;
+	for(int line=0; line<SIZE; line++) {
+       	if(!fgets(buf, sizeof(buf), spinsfile)) { fprintf(stderr, "Not enough data in '"COLOR_RED"%s"COLOR_RESET"'\n", spinsfilename); exit(1); };
+		real spin[3];
+		int l=sscanf(buf, "%"RF"g %"RF"g %"RF"g", spin, spin+1, spin+2);
+		if(l!=3) { fprintf(stderr, "Spin has wrong number of coordinates at '"COLOR_RED"%s line %d"COLOR_RESET"'\n", spinsfilename, line+2); exit(1); };
+		if(normsq3(spin)<=0.5) continue;
+		count++;
+		normalize3(spin);
+		int id=positions[line];
+		if(empty_mask) SETACTIVE(id)
+		else if(!ISACTIVE(id)) { fprintf(stderr, "An attempt to set not active spin at '"COLOR_RED"%s line %d"COLOR_RESET"'\n", spinsfilename, line+2); exit(1); };
+		id*=3;
+		for3(j) image[id+j]=spin[j];
+	};
+	// check if files are consistent
+	if(!feof(spinsfile)) fprintf(stderr, COLOR_YELLOW"Warning:"COLOR_RESET"Extra data in '%s'\n",spinsfilename); 
+	// Check/set total number of spins
+	if(empty_mask) number_of_active=count;
+	else if(number_of_active!=count) { fprintf(stderr, "Number of spins %d in image '"COLOR_RED"%s"COLOR_RESET"' does not match number of actvie spins %d\n", count, spinsfilename, number_of_active); exit(1); };
+	// finalizing
+	fclose(spinsfile);
+};
+
 // Parse magnetic crystall description.
 // Result: variables defined in skyrmion.h are set.
 // Fail: if file structure is wrong
@@ -67,6 +157,8 @@ void parse_lattice(FILE* file) {
 	const char sec_ec[]="[exchange constant]";
 	const char sec_dmv[]="[dzyaloshinskii moriya vector]";
 	const char sec_image[]="[image]";
+	const char sec_load_image[]="[load image]";
+	const char sec_positions[]="[positions]";
 	const char sec_dipole[]="[dipole]";
 	// Allocated memory size
 	int capacityu=sizeu; int capacityn=sizen; 
@@ -217,6 +309,42 @@ void parse_lattice(FILE* file) {
 				};
 				append_skyrmion(center, radius, winding, rotation, image);
 			};
+		} else if(match(buf,sec_load_image)) {
+			if(!initial_state) {
+				initial_state=(real*)malloc(sizeof(real)*SIZE*3);				
+				initial_states_count=1;
+			} else {
+				initial_states_count++;
+				initial_state=(real*)realloc(initial_state, sizeof(real)*SIZE*3*initial_states_count);			
+			};
+			assert(initial_state);
+			real* image=initial_state+SIZE*3*(initial_states_count-1);
+			if(!READLINE || buf[0]=='[') {
+				fprintf(stderr,"Parse error:%d: file name is expected\n",line); 
+				exit(1); 
+			};
+			char spinsfile[256];
+			if(sscanf(buf, "%s",spinsfile)!=1) {
+				fprintf(stderr,"Parse error:%d: there should be <filename for spins>\n",line); 
+				exit(1); 
+			};
+			if(!positions) {
+				fprintf(stderr,"Parse error:%d: section %s is before %s\n",line,sec_load_image,sec_positions); 
+				exit(1); 
+			};
+			load_skyrmion(spinsfile, image);
+		} else if(match(buf,sec_positions)) {
+			if(positions) fprintf(stderr, "Parse error:%d: Not unique %s section\n",line, sec_positions); 
+			if(!READLINE || buf[0]=='[') {
+				fprintf(stderr,"Parse error:%d: file name is expected\n",line); 
+				exit(1); 
+			};
+			char posfile[256];
+			if(sscanf(buf, "%s",posfile)!=1) {
+				fprintf(stderr,"Parse error:%d: there should be <filename for positions>\n",line); 
+				exit(1); 
+			};
+			load_positions(posfile);
 		} else if(buf[0]=='[') {
 			fprintf(stderr,"Parse error:%d: Unknown section %s\n",line,buf);
 			exit(1);	

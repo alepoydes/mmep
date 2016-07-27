@@ -517,6 +517,8 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Zero modes (translations) are removed\n");
   if(random_noise>0) 
     fprintf(stderr, "Initial path noise amplitude: %"RF"g\n", random_noise);
+  if(active) fprintf(stderr, "Active spins: %d / %d\n", number_of_active, SIZE);
+    else fprintf(stderr, "Active spins: all / %d\n", SIZE);
 
   prepare_dipole_table(dipole_negligible);
 

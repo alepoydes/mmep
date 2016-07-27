@@ -49,11 +49,19 @@ extern real* initial_state;
 
 #define forall(u,x,y,z) for(int u=0;u<sizeu;u++) for(int x=0;x<sizex;x++)for(int y=0;y<sizey;y++)for(int z=0;z<sizez;z++)
 #define forlla(u,x,y,z) for(int z=0;z<sizez;z++)for(int y=0;y<sizey;y++)for(int x=0;x<sizex;x++)for(int u=0;u<sizeu;u++)
-#define for3(j) for(int j=0;j<3;j++)
 #define INDEX(u,x,y,z) ((((u)*sizex+(x))*sizey+(y))*sizez+(z))
 #define UNPACK(id,u,x,y,z) { z=id%sizez; y=(id/sizez)%sizey; x=(id/sizey/sizez)%sizex; u=id/sizex/sizey/sizez; }
 
 #define SIZE (sizex*sizey*sizez*sizeu)
+
+// Spins in the domain may be in use or not.
+// If a spin is not active then boundary conditions on the atom is free.
+extern char* active;
+#define ISACTIVE(id) (!(active) || ((active)[(id)>>3] & (1<<((id) & 7))))
+#define SETACTIVE(id) { if(!(active)) (active)=(char*)calloc(SIZE>>3, sizeof(char)); assert(active); (active)[(id)>>3]|=1<<((id) & 7); }
+extern int number_of_active;
+
+extern int* positions;
 
 void skyrmion_energy(const real* restrict arg, real energy[4]);
 
@@ -92,3 +100,8 @@ void append_skyrmion(const real center[3], real distance, real winding,
 void group_generator(const real* restrict spins, int axis, real* restrict gen);
 
 void prepare_dipole_table(real negligible);
+
+// given coordinates in the space, returns atom in the unit cell and index of the cell having the coordinates
+// with gven tolerance.
+// If there is no atom with these coordinates, return negative value.
+//int coordinates_to_index(const real coord[3], real tol, int cell[3]);
