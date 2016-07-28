@@ -32,6 +32,7 @@ int remove_zero_modes=0;
 real random_noise=0;
 int skip_projection=0;
 real dipole_negligible=0.001;
+int do_not_relax_ends=0;
 
 static int flat_distance=1;
 
@@ -451,6 +452,7 @@ void showUsage(const char* program) {
 \n   --ftt                  Use FTT instead of NEB method\
 \n   -z|--zero              Disable translations preserving energy\
 \n   -R           REAL      Noise amplitude for initial path\
+\n   -q                     Skip ends relaxation\
 \n", program);
 };
 
@@ -467,7 +469,7 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "zoOhpPE:e:N:n:i:r:m:a:R:", long_options, &option_index);
+    c = getopt_long(argc, argv, "zoOhpPE:e:N:n:i:r:m:a:R:q", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
@@ -478,8 +480,8 @@ int parseCommandLine(int argc, char** argv) {
       case 'e': epsilon=atof(optarg); break;
       case 'E': dipole_negligible=atof(optarg); break;
       case 'n': min_sizep=atoi(optarg); break;
-      case 'N': sizep=atoi(optarg); 
-        max_sizep=3; while(max_sizep<sizep) max_sizep=2*(max_sizep-1)+1;
+      case 'N': max_sizep=atoi(optarg); 
+        //max_sizep=3; while(max_sizep<sizep) max_sizep=2*(max_sizep-1)+1;
         break;
       case 'i': max_iter=atoi(optarg); break;
       case 'r': debug_every=atoi(optarg); break;
@@ -487,6 +489,7 @@ int parseCommandLine(int argc, char** argv) {
       case 'a': mode_param=atof(optarg); break;
       case 'z': remove_zero_modes=1; break;
       case 'R': random_noise=atof(optarg); break;
+      case 'q': do_not_relax_ends=1; break;
       case '?': break;
       case 1000: use_ftt=1; break;
       default: fprintf(stderr,"Unprocessed option '%c'\n", c); exit(1);
@@ -505,13 +508,8 @@ int main(int argc, char** argv) {
   	parse_lattice(file);
   	fclose(file);
   } else parse_lattice(stdin);
-  if(max_sizep<2) {
-    fprintf(stderr, "Number of nodes is too small: %d < 2\n", sizep);
-    exit(1);
-  };
   // Initializaton
   fprintf(stderr, "Size of real: %zd\n", sizeof(real));
-  fprintf(stderr, "Nodes on path: %d\n", max_sizep);
   fprintf(stderr, "%s method in use\n", use_ftt?"FTT":"NEB");
   if(remove_zero_modes)
     fprintf(stderr, "Zero modes (translations) are removed\n");
@@ -534,6 +532,8 @@ int main(int argc, char** argv) {
   sizep=min_sizep; 
   if(sizep<initial_states_count) sizep=initial_states_count;
   if(max_sizep<sizep) sizep=max_sizep;
+
+  fprintf(stderr, "Images on path: %d in [%d, %d]\n", sizep, min_sizep, max_sizep);  
   // find two minima
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Initializing path\n"COLOR_RESET);
   if(initial_states_count<2) {
@@ -555,11 +555,13 @@ int main(int argc, char** argv) {
 
   // minimize initial and final states
   
-  fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing initial state\n"COLOR_RESET);
-  skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter);
-  fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing final state\n"COLOR_RESET);
-  skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, 0.1*epsilon, max_iter);
-  
+  if(!do_not_relax_ends) {
+    fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing initial state\n"COLOR_RESET);
+    skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter);
+    fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing final state\n"COLOR_RESET);
+    skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, 0.1*epsilon, max_iter);
+  };
+
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating MEP\n"COLOR_RESET);
   // MEP calculation
   post_optimization=0;
@@ -574,7 +576,7 @@ int main(int argc, char** argv) {
       //skyrmion_middle(path+2*size*(p-1), path+2*size*p, path+size*(2*p-1));
     };
     sizep=2*(sizep-1)+1;
-    fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Increasing number of nodes: %d\n"COLOR_RESET, sizep);
+    fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Increasing number of images to %d\n"COLOR_RESET, sizep);
     post_optimization=0;    
     path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   };
@@ -628,8 +630,8 @@ int main(int argc, char** argv) {
   // Octave output
   if(save_octave>0) {
     fprintf(stderr, COLOR_YELLOW"Computing energy contributions\n"COLOR_RESET);
-    real* contr=(real*)malloc(sizeof(real)*sizep*5);
-    for(int p=0; p<sizep; p++) skyrmion_energy(path+p*SIZE*3, contr+5*p);
+    real* contr=(real*)malloc(sizeof(real)*sizep*6);
+    for(int p=0; p<sizep; p++) skyrmion_energy(path+p*SIZE*3, contr+6*p);
     const char* octfile=OUTDIR"/mep.oct";
     fprintf(stderr, COLOR_YELLOW"Saving %s\n"COLOR_RESET,octfile);
     file=fopen(octfile,"w");
@@ -659,7 +661,7 @@ int main(int argc, char** argv) {
       oct_save_vector(file,"DISTANCE",distance,sizep);
       oct_save_vector(file,"DIFF",diff,sizep);
       oct_save_vector(file,"TDIFF",tdiff,sizep);
-      oct_save_matrix(file,"CONTRIBUTIONS",contr,sizep,5);
+      oct_save_matrix(file,"CONTRIBUTIONS",contr,sizep,6);
       if(save_octave>1) oct_save_hessian(file);
       oct_save_finish(file);
       fclose(file);

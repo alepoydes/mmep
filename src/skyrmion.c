@@ -191,7 +191,8 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 // energy[2] - exchange part
 // energy[3] - D-M energy
 // energy[4] - dipole energy
-void skyrmion_energy(const real* restrict arg, real energy[5]) {
+// energy[5] - total energy
+void skyrmion_energy(const real* restrict arg, real energy[6]) {
 	//for(int j=0;j<5;j++) energy[j]=0;
 	// Compute anisotropy part
 	real anisotropy_energy=0;
@@ -271,6 +272,7 @@ void skyrmion_energy(const real* restrict arg, real energy[5]) {
 		};
 	};	
 	energy[4]=dipole_energy;	
+	energy[5]=energy[0]+energy[1]+energy[2]+energy[3]+energy[4];
 };
 
 void subtract_field(real* restrict inout) {

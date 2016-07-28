@@ -135,13 +135,13 @@ int main(int argc, char** argv) {
   };
   skyrmion_steepest_descent(spins, mode, mode_param, epsilon, max_iter);
   // Saving result
-  real energy[5]; skyrmion_energy(spins, energy);
+  real energy[6]; skyrmion_energy(spins, energy);
   fprintf(stderr,COLOR_YELLOW"Zeeman energy:"COLOR_RESET" %.10"RF"f\n",energy[1]);
   fprintf(stderr,COLOR_YELLOW"Exchange energy:"COLOR_RESET" %.10"RF"f\n",energy[2]);
   fprintf(stderr,COLOR_YELLOW"Anisotropy energy:"COLOR_RESET" %.10"RF"f\n",energy[0]);
   fprintf(stderr,COLOR_YELLOW"Dzyaloshinskii-Moriya energy:"COLOR_RESET" %.10"RF"f\n",energy[3]);
   fprintf(stderr,COLOR_YELLOW"Dipole interaction energy:"COLOR_RESET" %.10"RF"f\n",energy[4]);
-  real ergy=energy[0]+energy[1]+energy[2]+energy[3]+energy[4];
+  real ergy=energy[5];
   fprintf(stderr,COLOR_YELLOW"TOTAL energy:"COLOR_RESET" %.10"RF"f\n",ergy);  
 
   fprintf(stderr, COLOR_YELLOW"Saving gnuplot\n"COLOR_RESET);
