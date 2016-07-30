@@ -20,9 +20,11 @@ Result X(T) is stored in X.
 */
 void runge_kutta(
 	int N, 
-	void (*F)(real* x, real* g),
+	void (*F)(const real* x, real* g, real* E),
 	real T,
-	real* X
+	real* X, 
+	real* E,
+	int* iter
 	)
 {
 	// Allocate buffers
@@ -32,28 +34,49 @@ void runge_kutta(
 	// Prepare data
 	copy_vector(N,X,y);
 	// first
-	F(X,g);
+	F(X,g,E);
 	mult_add(N,T/6,g,y);
 	// second
 	copy_vector(N,X,k); 
 	mult_add(N,T/2,g,k);
-	F(k,g);
+	F(k,g,NULL);
 	mult_add(N,T/3,g,y);
 	// third
 	copy_vector(N,X,k); 
 	mult_add(N,T/2,g,k);
-	F(k,g);
+	F(k,g,NULL);
 	mult_add(N,T/3,g,y);
 	// forth
 	copy_vector(N,X,k); 
 	mult_add(N,T,g,k);
-	F(k,g);
+	F(k,g,NULL);
 	mult_add(N,T/6,g,y);
 	// Copy result
 	copy_vector(N,y,X);
+	if(iter) *iter=4;
 	// Deallocate buffers
 	free(k); free(y); free(g);
 };
+
+void euler(
+	int N, 
+	void (*F)(const real* x, real* g, real* E),
+	real T,
+	real* X, 
+	real* E,
+	int* iter
+	)
+{
+	// Allocate buffers
+	real* g=malloc(sizeof(real)*N); assert(g);
+	// first
+	F(X,g,E);
+	mult_add(N,T,g,X);
+	if(iter) *iter=1;
+	// Deallocate buffers
+	free(g); 
+};
+
 
 /* 
 Do single step of implicit Runge-Kutta
@@ -76,14 +99,16 @@ Arguments:
 
 real runge_kutta_implicit(
 	int N, 
-	void (*F)(real* x, real* g),
+	void (*F)(const real* x, real* g, real* E),
 	real T,
 	int D,
 	const real* restrict A,
 	const real* restrict B,
 	real* X,
 	int tol,
-	int max_iter
+	int max_iter,
+	real* E,
+	int* iter
 	)
 {
 	// check arguments
@@ -94,7 +119,8 @@ real runge_kutta_implicit(
 	real* g=malloc(sizeof(real)*N); assert(g);
 	// Initial approximation
 	real err=NAN;
-	F(X, mu);
+	F(X, mu, E);
+	if(iter) *iter=1;
 	for(int d=1; d<D; d++) copy_vector(N,mu,mu+d*N);
 	// Repeat until converge
 	for(int i=0; i<max_iter; i++) {
@@ -103,7 +129,8 @@ real runge_kutta_implicit(
 			copy_vector(N,X,g);
 			for(int j=0; j<D; j++)
 				mult_add(N,T*A[d*D+j],mu+j*N,g);
-			F(g,mu1+d*N);
+			F(g,mu1+d*N,NULL);
+			if(iter) (*iter)++;
 		};
 		// swap buffers
 		real* tmp=mu1; mu1=mu; mu=tmp;
@@ -122,11 +149,13 @@ real runge_kutta_implicit(
 
 real radau_integrator(
 	int N, 
-	void (*F)(real* x, real* g),
+	void (*F)(const real* x, real* g, real* E),
 	real T,
 	real* X,
 	int tol,
-	int max_iter
+	int max_iter, 
+	real* E,
+	int* iter
 	)
 {
 	real r=rsqrt(6);
@@ -134,20 +163,22 @@ real radau_integrator(
 	real A[9]={(16.-r)/72, (328-167*r)/1800,(-2+3*r)/450,
 		(328+167*r)/1800,(16+r)/72,(-2-3*r)/450,
 		(85-10*r)/180,(85+10*r)/180,1./18};
-	return runge_kutta_implicit(N, F, T, 3, A, B, X, tol, max_iter);
+	return runge_kutta_implicit(N, F, T, 3, A, B, X, tol, max_iter, E, iter);
 };
 
 real gauss_integrator(
 	int N, 
-	void (*F)(real* x, real* g),
+	void (*F)(const real* x, real* g, real* E),
 	real T,
 	real* X,
 	int tol,
-	int max_iter
+	int max_iter, 
+	real* E,
+	int* iter
 	)
 {
 	real r=rsqrt(3);
 	real B[2]={0.5,0.5};
 	real A[4]={1./4, 1./4-r/6, 1./4+r/6, 1./4};
-	return runge_kutta_implicit(N, F, T, 2, A, B, X, tol, max_iter);
+	return runge_kutta_implicit(N, F, T, 2, A, B, X, tol, max_iter, E, iter);
 };

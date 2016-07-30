@@ -9,8 +9,8 @@ BINDIR:=bin
 SRCDIR:=src
 vpath %.c  $(SRCDIR)
 vpath %.h  $(SRCDIR)
-SRC:=parse.c vector.c skyrmion.c plot.c optim.c debug.c octave.c
-SRCGL:=display.c integra.c bitmap.c
+SRC:=parse.c vector.c skyrmion.c plot.c optim.c debug.c octave.c integra.c
+SRCGL:=display.c bitmap.c
 
 all:
 

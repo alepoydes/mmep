@@ -95,6 +95,14 @@ real skyrmion_minimum_energy() {
 	return min;
 };
 
+void skyrmion_gradient(const real* restrict arg, real* restrict grad, real* restrict energy) {
+	assert(arg); 
+  	hamiltonian_hessian(arg, grad);
+  	if(energy) *energy=-dot(3*SIZE, arg, grad)/2;
+  	subtract_field(grad);
+  	if(energy) (*energy)+=dot(3*SIZE, arg, grad);
+};
+
 void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 	// Compute anisotropy part
 	real K2[3]; for3(j) K2[j]=-2*magnetic_anisotropy_norm*magnetic_anisotropy_unit[j];

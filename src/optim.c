@@ -10,14 +10,11 @@
 // Compute minimum doing gradient descend.
 // Minimizing function f(x) is of special form:
 //   f(x)=<x|Hx>/2+<x|B>.
-// Hessian part H is given by operator Q:x->H(x) with signature
-//   void Q(const real* x, real* y)
-// Linear part is given as an operator L:y->y+B
-//   void L(real* y)
+// Gradient of grad f=Hx+B is given by operator F:x->F(x) with signature
+//   void F(const real* x, real* y, real* E)
+// If E is not null, the value of f is stored in E.
 // The minimum is obtained as the limit of the sequence
-// x(k+1)=x(k)-alpha(k)*grad_f(x(k))
-// where grad_f(x) is the gradient of the minimizing function f(x):
-//   grad_f(x)=Hx+B.
+// x(k+1)=x(k)-alpha(k)*grad_f(x(k)).
 // Sequence alpha(k) is determined by mode:
 //   SDM_CONSTANT : alpha(k)=mode_param
 //   SDM_INERTIAL : alpha(k)=alpha(k-1)+mode_param*|grad_f(x(k-1))| if f(x(k))<f(x(k-1))
@@ -35,7 +32,7 @@
 //   f : value of f(x(k)),
 //   res : residual = |grad_f|.
 //   alpha : last multiplier
-// The method can be used for optimization with constrains,in the case
+// The method can be used for optimization with constrains, in the case
 // routine 'P' must project approximation 'a' to manifold of solutions
 // satisfying constrains, and 'T' must project vector field 't'
 // to tangent space at the point 'a':
@@ -47,8 +44,7 @@
 //        2 if machine precision is reached for 'f' evaluation
 int steepest_descend(
 	int n, real* a, 
-	void (*Q)(const real* x, real* y),
-	void (*L)(real* y),
+	void (*F)(const real* x, real* y, real* E),
 	int mode, real mode_param, real epsilon, int max_iter,
 	void (*display)(int iter, real* a, real* grad_f, real f, real res, real constres, real alpha),
   real (*P)(real* a),
@@ -57,16 +53,14 @@ int steepest_descend(
 {
   int iter;
   real alpha;
-  assert(Q && L); assert((P && T) || (!P && !T));
+  assert(F); assert((P && T) || (!P && !T));
   switch(mode) {
   	case SDM_CONSTANT: alpha=mode_param; break;
 	  case SDM_INERTIAL: alpha=NAN; break;
     case SDM_PROGR: alpha=mode_param; break;
-    case SDM_CAUCHY: alpha=0; break;
 	  default: assert(1);
   };
   real* grad=(real*)malloc(sizeof(real)*n); assert(grad);
-  real* hess=(real*)malloc(sizeof(real)*n); assert(hess);
   int status=1;
   real last_res=0;
   real last_f=-INFINITY;
@@ -74,11 +68,7 @@ int steepest_descend(
   if(P) constres=P(a); else constres=0;
   real f=NAN; real res=NAN;
   for(iter=0; iter<max_iter; iter++) {
-    real next_alpha;
-  	Q(a,grad);
-  	f=-dot(n,a,grad)/2;
-  	L(grad);
-  	f+=dot(n,a,grad);
+  	F(a,grad,&f);
   	// grad contains Hx+B
   	// f value of f(a)
     //ill conditioned quadratic optimiation
@@ -89,6 +79,7 @@ int steepest_descend(
     res=rsqrt(res2/n);
     assert(!isnan(res));
     switch(mode) {
+      case SDM_CONSTANT: break;
       case SDM_INERTIAL: 
         if(f<=last_f) alpha+=mode_param*last_res; else alpha=mode_param*res;
         break;
@@ -96,11 +87,7 @@ int steepest_descend(
         //if(f<=last_f) alpha*=1.01; else alpha=mode_param;
         if(res<=last_res) alpha*=1.1; else alpha=mode_param;
         break;
-      case SDM_CAUCHY: 
-        Q(grad, hess); 
-        next_alpha=rabs(res2/dot(n,grad,hess));
-        if(next_alpha>mode_param) next_alpha=mode_param;
-        break; 
+      default: assert(0);
     };
     if(res+constres<epsilon) { // If solution is found
       //if(display) display(-iter,a,grad,f,res,constres,alpha);
@@ -118,12 +105,64 @@ int steepest_descend(
     if(P) constres=P(a);
     last_res=res;
     last_f=f;
-    if(mode==SDM_CAUCHY) alpha=next_alpha;
   };
   if(display) display(-iter,a,grad,f,res,constres,alpha);
-  free(grad); free(hess);
+  free(grad); 
   return status;
 };
+
+// I is integrator
+int flow_descend(
+  int n, real* a, 
+  void (*TF)(const real* x, real* y, real* E),
+  int mode, real mode_param, real epsilon, int max_iter,
+  void (*display)(int iter, real* a, real* grad_f, real f, real res, real constres, real alpha),
+  real (*P)(real* a),
+  void (*I)(int N, void (*F)(const real* x, real* g, real* E), real T, real* X, real* E, int* iter)
+  )
+{
+  int iter=0; real alpha; real res=NAN;
+  assert(TF); 
+  switch(mode) {
+    case SDM_CONSTANT: alpha=mode_param; break;
+    case SDM_INERTIAL: alpha=NAN; break;
+    case SDM_PROGR: alpha=mode_param; break;
+    default: assert(1);
+  };
+  int status=1;
+  real last_f=-INFINITY; real f=NAN;
+  P(a);
+  while(iter<max_iter) {
+    int iter_plus; I(n, TF, -alpha, a, &f, &iter_plus); iter+=iter_plus;
+    assert(!isnan(f));
+    P(a);
+    res=fabs((last_f-f)/alpha);
+    switch(mode) {
+      case SDM_CONSTANT: break;
+      case SDM_INERTIAL: 
+        if(f<=last_f) alpha+=mode_param*res; else alpha=mode_param*res;
+        break;
+      case SDM_PROGR: 
+        if(f<=last_f) alpha*=1.1; else alpha=mode_param;
+        break;
+      default: assert(0);
+    };
+    if(res<epsilon) { // If solution is found
+      status=0; break; 
+    };
+    if(stop_signal>0) {
+      fprintf(stderr, COLOR_YELLOW"Optimization aborted\n"COLOR_RESET);
+      stop_signal=0;
+      break;
+    };
+    if(display) display(iter,a,NULL,f,res,NAN,alpha); 
+    //if(last_f==f) { status=2; break; }; // Iterations stop changing
+    last_f=f;
+  };
+  if(display) display(-iter,a,NULL,f,res,NAN,alpha);
+  return status;
+};
+
 
 // Solve minimization problem
 //   argmin <x|Hx>/2+<x|B> 
@@ -153,8 +192,6 @@ int steepest_descend(
 //   C:x->(<x|P_j x>/2-1/2)_j
 //   D:x,u,r->r+sum_l u_l P_j x
 //   P:x,y->(<x|P_j y>)_l
-
-
 int lagrange_conjugate_quad(
   int N, int M, real* x0, 
   void (*Q)(const real* x, real* y),

@@ -16,7 +16,7 @@
 #include "integra.h"
 #include "bitmap.h"
 
-#define OUTDIR "fields"
+#define OUTDIR "fields" 
 
 real epsilon=1e-6;
 int max_iter=1000;
@@ -139,9 +139,8 @@ void screen() {
 
 };
 
-void dspins(real* X, real* G) {
-  hamiltonian_hessian(X, G);
-  subtract_field(G);
+void dspins(const real* X, real* G, real* E) {
+  skyrmion_gradient(X, G, E);
   forall(u,x,y,z) {
     int i=INDEX(u,x,y,z)*3;
     real vec[3]; cross3(X+i,G+i,vec);
@@ -156,25 +155,25 @@ void doStep(real* spins) {
     real delta=time_step;
     switch(integrator) {
       case 0:
-        runge_kutta(SIZE*3, dspins, delta, spins);
+        runge_kutta(SIZE*3, dspins, delta, spins, &E, NULL);
         normalize(spins);
         break;
       case 1:
-        gauss_integrator(SIZE*3, dspins, delta, spins, 1e-7, 10);
+        gauss_integrator(SIZE*3, dspins, delta, spins, 1e-7, 10, &E, NULL);
         break;
       case 2: 
-        radau_integrator(SIZE*3, dspins, delta, spins, 1e-7, 10);
+        radau_integrator(SIZE*3, dspins, delta, spins, 1e-7, 10, &E, NULL);
         break;
     };
     sim_time+=delta;
     iter++;
   // check if energy conserves
-    real* g=malloc(sizeof(real)*SIZE*3); assert(g);
+    /*real* g=malloc(sizeof(real)*SIZE*3); assert(g);
     hamiltonian_hessian(spins, g);
     E=-dot(3*SIZE,spins,g)/2;
     subtract_field(g);
     E+=dot(3*SIZE,spins,g);
-    free(g);
+    free(g);*/
     L=dot(3*SIZE,spins,spins);
   };
 };

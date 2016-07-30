@@ -5,6 +5,7 @@
 #include "parse.h"
 #include "debug.h"
 #include "octave.h"
+#include "integra.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,8 +18,9 @@
 real epsilon=1e-6;
 int max_iter=1000;
 real mode_param=0.2;
-real param2=1;
+real param2=NAN;
 int mode=2;
+int integrator=0;
 int debug_plot=0;
 int debug_every=1000;
 int save_octave=0;
@@ -39,19 +41,46 @@ void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, real f,
 };
 
 real quasynorm(real* restrict x) {
-  return rsqrt(seminormalize(param2, x)/sizeu/sizex/sizey/sizez);
+  normalize(x);
+  return 0;
 }
 
-int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param, 
-	real epsilon, int max_iter) 
-{
+void integrate(int N, void (*F)(const real* x, real* g, real* E), real T, real* X, real* E, int* iter) {
+  real err=0;
+  switch(integrator) {
+    case 0: euler(N, F, T, X, E, iter); break;
+    case 1: runge_kutta(N, F, T, X, E, iter); break;
+    case 2: err=gauss_integrator(N, F, T, X, 1e-7, 10, E, iter); break;
+    case 3: err=radau_integrator(N, F, T, X, 1e-7, 10, E, iter); break;
+    default: fprintf(stderr, COLOR_RED"Unknown integrator:"COLOR_RESET" %d\n", integrator); exit(1);
+  };
+  if(err>1e-5) 
+    fprintf(stderr, COLOR_RED"Warning:"COLOR_RESET" Runge-Kutta convergence error: %"RF"g\n", err);
+}
+
+void projected_gradient(const real* restrict arg, real* restrict grad, real* restrict energy) {
+    skyrmion_gradient(arg, grad, energy);
+    project_to_tangent(arg, grad);
+};
+
+int skyrmion_steepest_descent(real* restrict x) {
+  return flow_descend(
+    SIZE*3, (real*)x, 
+    projected_gradient,
+    mode, mode_param, epsilon, max_iter,
+    skyrmion_display, 
+    quasynorm,
+    integrate
+  );
+/*
 	return steepest_descend(
 		SIZE*3, (real*)x, 
-		hamiltonian_hessian,	subtract_field,
+		skyrmion_gradient,
 		mode, mode_param, epsilon, max_iter,
 		skyrmion_display, 
 		quasynorm,project_to_tangent
 	);
+*/
 };
 
 void showUsage(const char* program) {
@@ -68,6 +97,7 @@ void showUsage(const char* program) {
 \n   -i           INT       Set maximum number of iterations\
 \n   -r           INT       Progress will be shown every given iteration\
 \n   -m|--mode    INT       Optimization method\
+\n   -I           INT       Integrator\
 \n   -a           REAL      First parameter for optimization methods\
 \n   -b           REAL      Second parameter for optimization methods\
 \n", program);
@@ -84,7 +114,7 @@ int parseCommandLine(int argc, char** argv) {
       {0, 0, 0, 0}
     };
     int option_index = 0;
-    c = getopt_long(argc, argv, "hpE:e:i:r:m:a:b:oO", long_options, &option_index);
+    c = getopt_long(argc, argv, "hpE:e:i:I:r:m:a:b:oO", long_options, &option_index);
     if (c==-1) break;
     switch(c) {
       case 'p': debug_plot=1; break;
@@ -92,6 +122,7 @@ int parseCommandLine(int argc, char** argv) {
       case 'e': epsilon=atof(optarg); break;
       case 'E': dipole_negligible=atof(optarg); break;      
       case 'i': max_iter=atoi(optarg); break;
+      case 'I': integrator=atoi(optarg); break;
       case 'r': debug_every=atoi(optarg); break;
       case 'm': mode=atoi(optarg); break;
       case 'a': mode_param=atof(optarg); break;
@@ -127,13 +158,8 @@ int main(int argc, char** argv) {
     free(initial_state);
   } else {
     random_vector(size, spins); 
-    /*forall(u,x,y,z) {
-      int i=3*INDEX(u,x,y,z);
-      real s,c; rsincos(2*M_PI*(x-y)/(real)sizex,&s,&c);
-      spins[i]=-s; spins[i+1]=s; spins[i+2]=c;
-    };*/
   };
-  skyrmion_steepest_descent(spins, mode, mode_param, epsilon, max_iter);
+  skyrmion_steepest_descent(spins);
   // Saving result
   real energy[6]; skyrmion_energy(spins, energy);
   fprintf(stderr,COLOR_YELLOW"Zeeman energy:"COLOR_RESET" %.10"RF"f\n",energy[1]);
@@ -143,6 +169,13 @@ int main(int argc, char** argv) {
   fprintf(stderr,COLOR_YELLOW"Dipole interaction energy:"COLOR_RESET" %.10"RF"f\n",energy[4]);
   real ergy=energy[5];
   fprintf(stderr,COLOR_YELLOW"TOTAL energy:"COLOR_RESET" %.10"RF"f\n",ergy);  
+
+  // Checking gradient
+  real* grad=(real*)malloc(sizeof(real)*size); assert(grad);
+  projected_gradient(spins, grad, NULL);
+  real nrm=rsqrt(normsq(size, grad));
+  fprintf(stderr,COLOR_YELLOW"Gradient norm:"COLOR_RESET" %.10"RF"f\n",nrm/size);    
+  free(grad);
 
   fprintf(stderr, COLOR_YELLOW"Saving gnuplot\n"COLOR_RESET);
   const char* filename=OUTDIR"/state.gnuplot";

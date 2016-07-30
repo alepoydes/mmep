@@ -3,7 +3,6 @@
 #define SDM_CONSTANT 0
 #define SDM_INERTIAL 1
 #define SDM_PROGR 2
-#define SDM_CAUCHY 3
 // Compute minimum doing gradient descend.
 // Minimizing function f(x) is of special form:
 //   f(x)=<x|Hx>/2+<x|B>.
@@ -35,12 +34,20 @@
 //        1 if maximum number of iteration max_iter is reached
 int steepest_descend(
   int n, real* a, 
-  void (*Q)(const real* x, real* y),
-  void (*L)(real* y),
+  void (*F)(const real* x, real* y, real* E),
   int mode, real mode_param, real epsilon, int max_iter,
   void (*display)(int iter, real* a, real* grad_f, real f, real res, real constres, real alpha),
   real (*P)(real* a),
   void (*T)(const real* a, real* t)
+);
+
+int flow_descend(
+  int n, real* a, 
+  void (*TF)(const real* x, real* y, real* E),
+  int mode, real mode_param, real epsilon, int max_iter,
+  void (*display)(int iter, real* a, real* grad_f, real f, real res, real constres, real alpha),
+  real (*P)(real* a),
+  void (*I)(int N, void (*F)(const real* x, real* g, real* E), real T, real* X, real* E, int* iter)
 );
 
 int lagrange_conjugate_quad(

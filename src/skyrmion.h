@@ -65,6 +65,7 @@ extern int* positions;
 
 void skyrmion_energy(const real* restrict arg, real energy[4]);
 
+void skyrmion_gradient(const real* restrict arg, real* restrict grad, real* restrict energy);
 void hamiltonian_hessian(const real* restrict arg, real* restrict out);
 void subtract_field(real* restrict inout);
 void set_to_field(real* restrict out);

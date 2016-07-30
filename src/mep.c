@@ -21,7 +21,7 @@ int max_sizep=25; // Number of nodes on path
 real epsilon=1e-5;
 int max_iter=5000;
 real mode_param=0.05;
-int mode=3;
+int mode=2;
 int debug_plot=0;
 int debug_plot_path=0;
 int debug_every=100;
@@ -149,23 +149,19 @@ int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param,
 {
 	return steepest_descend(
 		size, (real*)x, 
-		hamiltonian_hessian,	subtract_field,
+		skyrmion_gradient,
 		mode, mode_param, epsilon, max_iter,
 		skyrmion_display, 
 		quasynorm, project_to_tangent
 	);
 };
 
-void path_hessian(const real* restrict arg, real* restrict out) {
-  for(int p=0; p<sizep; p++) {
-    hamiltonian_hessian(arg+size*p, out+size*p);
-  };
-};
-
-void path_subtract_field(real* restrict inout) {
-  for(int p=0; p<sizep; p++) {
-    subtract_field(inout+size*p);
-  };
+void path_gradient(const real* restrict arg, real* restrict out, real* restrict E) {
+  if(E) *E=0;
+  for(int p=0; p<sizep; p++) 
+    if(E) {
+      real locE; skyrmion_gradient(arg+size*p, out+size*p, &locE); (*E)+=locE;
+    } else skyrmion_gradient(arg+size*p, out+size*p, NULL);
 };
 
 void energy_display(FILE* file) {
@@ -424,7 +420,7 @@ int path_steepest_descent(real* restrict path, int mode,
   if(mode==2 || mode==0) updated_param=mode_param/sizep;
   return steepest_descend(
     size*sizep, (real*)path, 
-    path_hessian, path_subtract_field,
+    path_gradient,
     mode, updated_param, epsilon, max_iter,
     path_display, 
     path_normalize, path_tangent
