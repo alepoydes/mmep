@@ -85,7 +85,7 @@ int steepest_descend(
         break;
       case SDM_PROGR: 
         //if(f<=last_f) alpha*=1.01; else alpha=mode_param;
-        if(res<=last_res) alpha*=1.1; else alpha=mode_param;
+        if(res<=last_res) alpha+=mode_param; else alpha=mode_param;
         break;
       default: assert(0);
     };
@@ -143,7 +143,7 @@ int flow_descend(
         if(f<=last_f) alpha+=mode_param*res; else alpha=mode_param*res;
         break;
       case SDM_PROGR: 
-        if(f<=last_f) alpha*=1.1; else alpha=mode_param;
+        if(f<=last_f) alpha+=mode_param; else alpha=mode_param;
         break;
       default: assert(0);
     };

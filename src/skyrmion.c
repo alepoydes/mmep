@@ -194,6 +194,91 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 	};	
 };
 
+void node_energy(int u, int x, int y, int z, const real* restrict arg, real energy[6]) {
+	real anisotropy_energy=0;
+	real zeeman_energy=0;
+	int i=INDEX(u,x,y,z);
+	if(!ISACTIVE(i)) {
+		for(int k=0; k<6; k++) energy[k]=0.;
+		return;
+	};
+	i*=3;
+	{
+		real m=dot3(magnetic_anisotropy_unit,arg+i);
+		anisotropy_energy-=m*m;
+		if(nonuniform_field) zeeman_energy-=dot3(nonuniform_field+i,arg+i);
+		else zeeman_energy-=dot3(magnetic_field,arg+i);
+	};
+	energy[0]=anisotropy_energy*magnetic_anisotropy_norm;
+	energy[1]=zeeman_energy;
+	// Compute exchange part
+	real dmi_energy=0;
+	real exchange_energy=0;
+	for(int n=0;n<sizen;n++) {
+		// local cache
+		int s=neighbours[5*n+3], d=neighbours[5*n+4];
+		int sx=neighbours[5*n+0], sy=neighbours[5*n+1], sz=neighbours[5*n+2];		
+		// Compute interaction fo the pair neighbours[n]
+		if(s==u && (boundary_conditions[0]==BC_PERIODIC || (x+sx<sizex && x+sx>=0))
+				&& (boundary_conditions[1]==BC_PERIODIC || (y+sy<sizey && y+sy>=0))
+				&& (boundary_conditions[2]==BC_PERIODIC || (z+sz<sizez && z+sz>=0)) ) {
+			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
+			int i2=i; // INDEX(s,x,y,z);
+			if(!ISACTIVE(i1)) continue;
+			i1*=3; 
+			real t[3]; 
+			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
+			dmi_energy-=dot3(t,arg+i2);
+			exchange_energy-=exchange_constant[n]*dot3(arg+i1,arg+i2);
+		};
+		if(d==u && (boundary_conditions[0]==BC_PERIODIC || (x-sx<sizex && x-sx>=0))
+				&& (boundary_conditions[1]==BC_PERIODIC || (y-sy<sizey && y-sy>=0))
+				&& (boundary_conditions[2]==BC_PERIODIC || (z-sz<sizez && z-sz>=0)) ) {
+			int i1=i; // INDEX(d,x,y,z);
+			int i2=INDEX(s,(x-sx+sizex)%sizex,(y-sy+sizey)%sizey,(z-sz+sizez)%sizez);
+			if(!ISACTIVE(i2)) continue;
+			i2*=3; 
+			real t[3]; 
+			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
+			dmi_energy-=dot3(t,arg+i2);
+			exchange_energy-=exchange_constant[n]*dot3(arg+i1,arg+i2);
+		};		
+	};
+	energy[3]=dmi_energy;
+	energy[2]=exchange_energy;
+	// Compute dipole interaction
+	real dipole_energy=0;	
+	for(int n=0;n<dipole_count;n++) {
+		// local cache
+		int s=dipole_idx[5*n+1], d=dipole_idx[5*n+0];
+		int sx=dipole_idx[5*n+2], sy=dipole_idx[5*n+3], sz=dipole_idx[5*n+4];
+		real* U=dipole_table+4*n+1;
+		real alpha=dipole_table[4*n];
+		
+		// Compute interaction fo the pair neighbours[n]
+		if(s==u && (boundary_conditions[0]==BC_PERIODIC || (x+sx<sizex && x+sx>=0))
+				&& (boundary_conditions[1]==BC_PERIODIC || (y+sy<sizey && y+sy>=0))
+				&& (boundary_conditions[2]==BC_PERIODIC || (z+sz<sizez && z+sz>=0)) ) {
+			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
+			int i2=i;
+			if(!ISACTIVE(i1)) continue;
+			i1*=3; 
+			dipole_energy-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
+		};
+		if(d==u && (boundary_conditions[0]==BC_PERIODIC || (x-sx<sizex && x-sx>=0))
+				&& (boundary_conditions[1]==BC_PERIODIC || (y-sy<sizey && y-sy>=0))
+				&& (boundary_conditions[2]==BC_PERIODIC || (z-sz<sizez && z-sz>=0)) ) {
+			int i1=i; //INDEX(d,x,y,z);
+			int i2=INDEX(s,(x-sx+sizex)%sizex,(y-sy+sizey)%sizey,(z-sz+sizez)%sizez);
+			if(!ISACTIVE(i2)) continue;
+			i2*=3;
+			dipole_energy-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
+		};
+	};	
+	energy[4]=dipole_energy;
+	energy[5]=energy[0]+energy[1]+energy[2]+energy[3]+energy[4];
+};
+
 // energy[0] - anisotropy part
 // energy[1] - zeeman part (external field)
 // energy[2] - exchange part
@@ -407,7 +492,7 @@ void skyrmion_geodesic_rec(real noise, real* p, int n, int m) {
 	// Находим середину на прямой между n и m и проецируем на сферы
 	skyrmion_middle(p+n*size,p+m*size,p+k*size);
 	if(noise!=0) {
-		add_random_vector(noise*(m-n),size,p+k*size);
+		add_random_vector(noise*(m-n),size,p+k*size,p+k*size);
 		normalize(p+k*size);
 	};
 	// Заполняем пробелы

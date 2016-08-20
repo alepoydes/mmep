@@ -63,7 +63,8 @@ extern int number_of_active;
 
 extern int* positions;
 
-void skyrmion_energy(const real* restrict arg, real energy[4]);
+void skyrmion_energy(const real* restrict arg, real energy[6]);
+void node_energy(int u, int x, int y, int z, const real* restrict arg, real energy[6]);
 
 void skyrmion_gradient(const real* restrict arg, real* restrict grad, real* restrict energy);
 void hamiltonian_hessian(const real* restrict arg, real* restrict out);

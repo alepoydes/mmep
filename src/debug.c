@@ -9,6 +9,18 @@
 
 volatile int stop_signal=0;
 
+void fprint_timediff(FILE* file, double timediff) {
+	int f=0;
+	int sec=timediff;
+	int min=sec/60; sec%=60;
+	int hour=min/60; min%=60;
+	int day=hour/24; hour%=24;
+	if(day!=0) { fprintf(file, "%dd", day); f=3; };
+	if(f>0 || hour!=0) { fprintf(file, "%dh", hour); f=2; };
+	if(f>0 || min!=0) { fprintf(file, "%dm", min); f=1; };
+	if(f<2) fprintf(file, "%ds", sec); 
+};
+
 void watch_number(real next, real prev, int digits) {
 	char bufn[100],bufp[100]; 
 	int nn=sprintf(bufn,"%.*"RF"f",digits,next); assert(nn<sizeof(bufn));

@@ -17,6 +17,7 @@
 extern volatile int stop_signal;
 
 void watch_number(real next, real prev, int digits);
+void fprint_timediff(FILE* file, double timediff);
 
 void init_signal();
 

@@ -39,6 +39,7 @@ $(OBJDIR)/%.d.o: %.c $(SRCDIR)/*.h
 $(OBJDIR)/%.q.o: %.c $(SRCDIR)/*.h
 	$(CC) $< $(OPT) -I $(SRCDIR) -c -DQUAD -o $@	
 
+$(eval $(call binary,mc,$(SRC),$(LIB)))
 $(eval $(call binary,min,$(SRC),$(LIB)))
 $(eval $(call binary,min2,$(SRC),$(LIB)))
 $(eval $(call binary,mep,$(SRC),$(LIB)))

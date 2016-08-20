@@ -363,6 +363,27 @@ void path_tangent_ftt(const real* restrict mep, real* restrict grad) {
   } else path_tangent_rec(mep, grad, 0, sizep-1);  
 };
 
+// INVALID
+void path_tangent_rohart(const real* restrict mep, real* restrict grad) {
+  real* u=malloc(sizeof(real)*size); assert(u);
+  for(int p=0; p<sizep; p++) {
+    //real l1=normsq(size, grad+size*p);
+    project_to_tangent(mep+size*p,grad+size*p);
+    //real l2=normsq(size, grad+size*p);
+    //real l3=0, l4=0;
+    if(p>0 && p<sizep-1) {
+      three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+size*(p-1), mep+p*size, mep+size*(p+1), u);
+      normalize(u);
+      project_to_tangent(u,grad+size*p);
+      //l3=normsq(size, grad+size*p);
+      //project_to_tangent(mep+size*p,grad+size*p);
+      //l4=normsq(size, grad+size*p);
+    };
+    //fprintf(stderr, "  %"RF"g  %"RF"g  %"RF"g  %"RF"g\n", l1, l2, l3, l4);
+  };
+  free(u); 
+}
+
 void path_tangent_neb(const real* restrict mep, real* restrict grad) {
   real* u=malloc(sizeof(real)*size); assert(u);
   real *g1=NULL, *g2=NULL, *g3=NULL; 
@@ -409,6 +430,8 @@ void path_tangent_neb(const real* restrict mep, real* restrict grad) {
 }
 
 void path_tangent(const real* restrict mep, real* restrict grad) {
+  // Rohart way
+  //path_tangent_rohart(mep, grad); return;
   if(use_ftt) path_tangent_ftt(mep, grad);
   else path_tangent_neb(mep, grad);
 }  
@@ -553,9 +576,9 @@ int main(int argc, char** argv) {
   
   if(!do_not_relax_ends) {
     fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing initial state\n"COLOR_RESET);
-    skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter);
+    skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter*max_sizep);
     fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing final state\n"COLOR_RESET);
-    skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, 0.1*epsilon, max_iter);
+    skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, epsilon, max_iter*max_sizep);
   };
 
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating MEP\n"COLOR_RESET);

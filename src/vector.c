@@ -59,13 +59,29 @@ void mult_add(int n, real a, const real* restrict b, real* restrict c) {
 
 void random_vector(int n, real* a) {
 	#pragma omp parallel for 
-	for(int k=0; k<n; k++) a[k]=(real)rand()/(real)(RAND_MAX)-0.5;
+	for(int k=0; k<n; k++) a[k]=random_real()-0.5;
 };
 
-void add_random_vector(real alpha, int n, real* a) {
+void add_random_vector(real alpha, int n, const real* a, real* b) {
 	#pragma omp parallel for 
-	for(int k=0; k<n; k++) a[k]+=alpha*((real)rand()/(real)(RAND_MAX)-0.5);	
+	for(int k=0; k<n; k++) b[k]=a[k]+alpha*(random_real()-0.5);	
 };
+
+// a and b are matrices [n x 3]
+void add_random_cone(real alpha, int n, const real* a, real* b) {
+	#pragma omp parallel for 
+	for(int k=0; k<n; k++) {
+		const real* A=a+3*k; real* B=b+3*k;
+		real phi=random_real()*2*M_PI;
+		real z=random_real()*2-1;
+		real zc=rsqrt(1-z*z);
+		real cphi, sphi; rsincos(phi, &cphi, &sphi);
+		B[0]=A[0]+alpha*cphi*zc;
+		B[1]=A[1]+alpha*sphi*zc;
+		B[2]=A[2]+alpha*z;
+	};
+};
+
 
 void zero_vector(int n, real* a) {
 	#pragma omp parallel for 

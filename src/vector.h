@@ -10,6 +10,7 @@
 	#define rsqrt(x) sqrt(x)
 	#define rabs(x) fabs(x)
 	#define racos(x) acos(x)
+	#define rexp(x) exp(x)
 #if defined(__clang__)
 	#define rsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
 #elif defined(__GNUC__) || defined(__GNUG__)
@@ -26,6 +27,7 @@
 	#define rsqrt(x) sqrtl(x)
 	#define rabs(x) fabsl(x)
 	#define racos(x) acosl(x)
+	#define rexp(x) expl(x)
 #if defined(__clang__)
 	#define rsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
 #elif defined(__GNUC__) || defined(__GNUG__)
@@ -41,6 +43,7 @@
 	#define rsqrt(x) sqrtf(x)
 	#define rabs(x) fabsf(x)
 	#define racos(x) acosf(x)
+	#define rexp(x) expf(x)
 #if defined(__clang__)
 	#define rsincos(x,y,z) { *(y)=sinf(x); *(z)=cosf(x); }
 #elif defined(__GNUC__) || defined(__GNUG__)
@@ -61,7 +64,7 @@
 //#define normalize3(x) { real t=(3-normsq3(x))*0.5; (x)[0]*=t; (x)[1]*=t; (x)[2]*=t; }
 //#define normalize3(x) { real t=(1+normsq3(x))/2; (x)[0]/=t; (x)[1]/=t; (x)[2]/=t; }
 //#define normalize3(x) { real t=normsq3(x); if(t>0) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
-#define normalize3(x) { real t=normsq3(x); if(t>0 && rabs(t-1)>1e-16) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
+#define normalize3(x) { real t=normsq3(x); if(t>0 && rabs(t-1)>1e-14) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
 #define seminormalize3(factor,x) ({ real t=rsqrt(normsq3(x)); if(t>0) { real f=1-factor+factor/t; (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; t>0?rabs((1-t)*(1-factor)):1; })
 #define middle3(x,y,z) { (z)[0]=((x)[0]+(y)[0])/2; (z)[1]=((x)[1]+(y)[1])/2; (z)[2]=((x)[2]+(y)[2])/2; normalize3(z); }
 // z=a*l_-1.5(0)+b*l_-0.5(0)+c*l_0.5(0)+d*l_1.5(0)
@@ -94,6 +97,8 @@
 // a and b assumed to have unit length.
 #define dist_sphere_sq3(a,b) (racos(dot3(a,b)))
 #define for3(j) for(int j=0;j<3;j++)
+#define random_real() ((real)rand()/(real)(RAND_MAX))
+#define add_random_vector3(alpha, a, b) { (b)[0]=(a)[0]+(alpha)*(random_real()-0.5); (b)[1]=(a)[1]+(alpha)*(random_real()-0.5); (b)[2]=(a)[2]+(alpha)*(random_real()-0.5);  }
 
 void matrixmult3(const real* a, const real* b, real* prod);
 void invertmatrix3(const real* mat, real* inv);
@@ -106,7 +111,8 @@ void mult_add(int n, real a, const real* b, real* c);
 void add_mult(int n, const real* a, real b, real* c); 
 void sub_const(int n, real a, real* c);
 void random_vector(int n, real* a);
-void add_random_vector(real alpha, int n, real* a);
+void add_random_vector(real alpha, int n, const real* a, real* b);
+void add_random_cone(real alpha, int n, const real* a, real* b);
 void zero_vector(int n, real* a);
 void copy_vector(int n, const real* a, real* b);
 void sub_inplace(int n, const real* restrict a, real* restrict c);
