@@ -53,6 +53,7 @@ int dipole_allocated=0;
 int* dipole_idx=NULL; // <source atom> <dest atom> <dest x> <dest y> <dest z>
 real* dipole_table=NULL; // <multiplier> <vector x> <vector y> <vector z>
 
+real temperature=0;
 
 void prepare_dipole_table(real negligible) {
 	if(dipole==0) return;

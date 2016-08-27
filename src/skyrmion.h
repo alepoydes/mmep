@@ -44,6 +44,8 @@ extern real* dzyaloshinskii_moriya_vector;
 extern int initial_states_count;
 extern real* initial_state;
 
+extern real temperature;
+
 // typedef real field[sizeu][sizex][sizey][sizez][3];
 // Fields are stored as if defined by 'field' type.
 

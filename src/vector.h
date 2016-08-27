@@ -100,6 +100,7 @@
 #define random_real() ((real)rand()/(real)(RAND_MAX))
 #define add_random_vector3(alpha, a, b) { (b)[0]=(a)[0]+(alpha)*(random_real()-0.5); (b)[1]=(a)[1]+(alpha)*(random_real()-0.5); (b)[2]=(a)[2]+(alpha)*(random_real()-0.5);  }
 
+void add_random_cone3(real alpha, const real* A, real* B);
 void matrixmult3(const real* a, const real* b, real* prod);
 void invertmatrix3(const real* mat, real* inv);
 real distsq(int n, const real* a, const real* b);

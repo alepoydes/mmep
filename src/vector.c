@@ -82,6 +82,15 @@ void add_random_cone(real alpha, int n, const real* a, real* b) {
 	};
 };
 
+void add_random_cone3(real alpha, const real* A, real* B) {
+	real phi=random_real()*2*M_PI;
+	real z=random_real()*2-1;
+	real zc=rsqrt(1-z*z);
+	real cphi, sphi; rsincos(phi, &cphi, &sphi);
+	B[0]=A[0]+alpha*cphi*zc;
+	B[1]=A[1]+alpha*sphi*zc;
+	B[2]=A[2]+alpha*z;
+};
 
 void zero_vector(int n, real* a) {
 	#pragma omp parallel for 

@@ -160,6 +160,7 @@ void parse_lattice(FILE* file) {
 	const char sec_load_image[]="[load image]";
 	const char sec_positions[]="[positions]";
 	const char sec_dipole[]="[dipole]";
+	const char sec_temperature[]="[temperature]";
 	// Allocated memory size
 	int capacityu=sizeu; int capacityn=sizen; 
 	// Number of lines in sections
@@ -189,6 +190,19 @@ void parse_lattice(FILE* file) {
 				fprintf(stderr,"Parse error:%d: real vector is expected\n",line); 
 				exit(1); 
 			};
+		} else if(match(buf,sec_temperature)) {
+			if(temperature!=0) {
+				fprintf(stderr, "Parse error:%d: temperature is set twice. Prev. value %"RF"g\n",line,temperature);
+				exit(1);
+			};
+			if(!READLINE) { 
+				fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
+				exit(1); 
+			};
+			if(sscanf(buf, "%"RF"g",&temperature)!=1) {
+				fprintf(stderr,"Parse error:%d: real value is expected\n",line); 
+				exit(1); 
+			};	
 		} else if(match(buf,sec_ma)) {
 			if(!READLINE) { 
 				fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
