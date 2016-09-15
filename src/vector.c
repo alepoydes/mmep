@@ -3,6 +3,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <assert.h>
+
+real* ralloc(int n) {
+	real* buf=(real*)malloc(sizeof(real)*n); 
+	assert(buf);
+	return buf;
+};
+
+real normalize3(real* x) { 
+	real t=normsq3(x); 
+	real e=rabs(t-1);
+	if (t>0 && e>NORMEPS2) { 
+		real f=rsqrt(t); 
+		(x)[0]/=f; (x)[1]/=f; (x)[2]/=f; 
+		return 0;
+	}; 
+	return e; 
+};
+
+real dot3(const real* restrict x, const real* restrict y) {
+	return x[0]*y[0]+x[1]*y[1]+x[2]*y[2];
+}; 
+
+void cross3(const real* restrict a,const real* restrict b,real* restrict c) { 
+	(c)[0]=(a)[1]*(b)[2]-(a)[2]*(b)[1]; 
+	(c)[1]=(a)[2]*(b)[0]-(a)[0]*(b)[2]; 
+	(c)[2]=(a)[0]*(b)[1]-(a)[1]*(b)[0]; 
+};
 
 void invertmatrix3(const real* mat, real* inv) {
 	real comp[3][3];
@@ -19,30 +47,30 @@ void matrixmult3(const real* a, const real* b, real* prod) {
 	};
 };
 
-real normsq(int n, const real* a) {
-	real nrm=0;
+realp normsq(int n, const real* a) {
+	realp nrm=0;
 	#pragma omp parallel for reduction(+:nrm)
 	for(int k=0; k<n; k++) nrm+=a[k]*a[k];
 	return nrm;
 };
 
-real distsq(int n, const real* a, const real* b) {
-	real nrm=0;
+realp distsq(int n, const real* a, const real* b) {
+	realp nrm=0;
 	#pragma omp parallel for reduction(+:nrm)
 	for(int k=0; k<n; k++) nrm+=(a[k]-b[k])*(a[k]-b[k]);
 	return nrm;
 };
 
 // n is three times smaller than for distsq
-real dist_sphere_sq(int n, const real* a, const real* b) {
-	real nrm=0;
+realp dist_sphere_sq(int n, const real* a, const real* b) {
+	realp nrm=0;
 	#pragma omp parallel for reduction(+:nrm)
 	for(int k=0; k<n; k++) nrm+=dist_sphere_sq3(a+3*k,b+3*k);
 	return nrm;	
 };
 
-real dot(int n, const real* a, const real* b) {
-	real nrm=0;
+realp dot(int n, const real* a, const real* b) {
+	realp nrm=0;
 	#pragma omp parallel for reduction(+:nrm)
 	for(int k=0; k<n; k++) nrm+=a[k]*b[k];
 	return nrm;	
@@ -52,6 +80,12 @@ void mult_sub(int n, real a, const real* restrict b, real* restrict c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]-=a*b[k];
 };
+
+void mult_sub_ext(int n, real a, const real* b, const real* c, real* d) {
+	#pragma omp parallel for 
+	for(int k=0; k<n; k++) d[k]=c[k]-a*b[k];
+};
+
 void mult_add(int n, real a, const real* restrict b, real* restrict c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]+=a*b[k];

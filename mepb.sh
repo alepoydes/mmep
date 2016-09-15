@@ -3,7 +3,7 @@ OUTPUT=tmp/batch.gnuplot
 TMP=/tmp/$$
 ENERGYFILE=tmp/energy.txt
 DISTANCEFILE=tmp/distance.txt
-OPTIMIZE="bin/mepq -o"
+OPTIMIZE="bin/mepf -o"
 echo "# $@" > ${OUTPUT}
 DESC=$1
 SUFF=$2

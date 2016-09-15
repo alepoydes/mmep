@@ -34,20 +34,19 @@
 //        1 if maximum number of iteration max_iter is reached
 int steepest_descend(
   int n, real* a, 
-  void (*F)(const real* x, real* y, real* E),
+  void (*TF)(const real* x, real* y, realp* E),
   int mode, real mode_param, real epsilon, int max_iter,
-  void (*display)(int iter, real* a, real* grad_f, real f, real res, real constres, real alpha),
-  real (*P)(real* a),
-  void (*T)(const real* a, real* t)
+  void (*display)(int iter, real* a, real* grad_f, realp f, real res, real constres, real alpha, realp last_f, real last_grad),
+  real (*P)(real* a)
 );
 
 int flow_descend(
   int n, real* a, 
-  void (*TF)(const real* x, real* y, real* E),
+  void (*TF)(const real* x, real* y, realp* E),
   int mode, real mode_param, real epsilon, int max_iter,
-  void (*display)(int iter, real* a, real* grad_f, real f, real res, real constres, real alpha),
+  void (*display)(int iter, real* a, real* grad_f, realp f, real res, real constres, real alpha),
   real (*P)(real* a),
-  void (*I)(int N, void (*F)(const real* x, real* g, real* E), real T, real* X, real* E, int* iter)
+  void (*I)(int N, void (*F)(const real* x, real* g, realp* E), real T, real* X, realp* E, int* iter)
 );
 
 int lagrange_conjugate_quad(
@@ -55,7 +54,7 @@ int lagrange_conjugate_quad(
   void (*Q)(const real* x, real* y),
   void (*L)(real* y),
   int mode, real mode_param, real epsilon, int max_iter,
-  void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
+  void (*display)(int iter, real* a, real* grad_f, realp f, real res, real alpha),
   void (*C)(const real* x, real* r),
   void (*D)(const real* x, const real* u, real* r),
   void (*P)(const real* x, const real* y, real* r),
@@ -67,7 +66,7 @@ int lagrange_conjugate(
   void (*Q)(const real* x, real* y),
   void (*L)(real* y),
   int mode, real mode_param, real epsilon, int max_iter,
-  void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
+  void (*display)(int iter, real* a, real* grad_f, realp f, real res, real alpha),
   void (*C)(const real* x, real* r),
   void (*D)(const real* x, const real* u, real* r),
   void (*P)(const real* x, const real* y, real* r),

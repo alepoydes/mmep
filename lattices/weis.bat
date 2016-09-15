@@ -1,7 +1,7 @@
 [size]
 # Grid dimesions <x> x <y> x <z>
 # <x> <y> <z>
-29 29 1
+${SZ} ${SZ} 1
 [boundary conditions]
 # Boundary conditions along every axis
 # <BC along x> <BC along y> <BC along z>
@@ -60,8 +60,7 @@
 0.32 0.8660254 -0.5 0
 0.32 0.8660254 0.5 0
 [temperature]
-0.61
-
+${kT}
 [image]
 15 12 0 7 0 -1
 [image]

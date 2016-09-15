@@ -25,11 +25,13 @@ push(_r,_c+1*SIZE,-(_sign)*(_a)[2]); push(_r+1*SIZE,_c+1*SIZE,_diag); push(_r+2*
 push(_r+1*SIZE,_c+2*SIZE,-(_sign)*(_a)[0]); push(_r+2*SIZE,_c+2*SIZE,_diag); };
 
 	// diagonal
-	if(magnetic_anisotropy_norm!=0) forall(u,x,y,z) {
+	forall(u,x,y,z) {
 		int i=XEDNI(u,x,y,z);
 		for3(a) for3(b) {
-			real d=-2*magnetic_anisotropy_norm*magnetic_anisotropy_unit[a]*magnetic_anisotropy_unit[b];
-			push(i+SIZE*a,i+SIZE*b,d);
+			real d=0;
+			for(int n=0; n<magnetic_anisotropy_count; n++)
+				d-=2*magnetic_anisotropy[n].norm*magnetic_anisotropy[n].unit[a]*magnetic_anisotropy[n].unit[b];
+			if(d!=0) push(i+SIZE*a,i+SIZE*b,d);
 		};
 	};
 	// off diagonal
@@ -131,6 +133,13 @@ void oct_save_real(FILE* file, char* name, real value) {
 	fprintf(file,"\n\n");	
 };
 
+void oct_save_realp(FILE* file, char* name, realp value) {
+	fprintf(file,"# name: %s\n",name);
+	fprintf(file,"# type: scalar\n");
+	fprintf(file,"%.*"RPF"g\n",PDIGITS,value);
+	fprintf(file,"\n\n");	
+};
+
 void oct_save_field(FILE* file, char* name, real* data) {
 	fprintf(file,"# name: %s\n",name);
 	fprintf(file,"# type: matrix\n");
@@ -158,6 +167,15 @@ void oct_save_vector(FILE* file, char* name, real* data, int length) {
 	fprintf(file,"\n\n");	
 };
 
+void oct_save_vectorp(FILE* file, char* name, realp* data, int length) {
+	fprintf(file,"# name: %s\n",name);
+	fprintf(file,"# type: matrix\n");
+	fprintf(file,"# ndims: 2\n1 %d\n", length);
+	for(int l=0; l<length; l++) 
+		fprintf(file,"%.*"RPF"g\n",PDIGITS,data[l]);
+	fprintf(file,"\n\n");	
+};
+
 void oct_save_vector_int(FILE* file, char* name, int* data, int length) {
 	fprintf(file,"# name: %s\n",name);
 	fprintf(file,"# type: matrix\n");
@@ -174,6 +192,16 @@ void oct_save_matrix(FILE* file, char* name, real* data, int height, int width) 
 	for(int c=0; c<width; c++) 
 	for(int r=0; r<height; r++) 
 		fprintf(file,"%.*"RF"g\n",DIGITS,data[r*width+c]);
+	fprintf(file,"\n\n");	
+};
+
+void oct_save_matrixp(FILE* file, char* name, realp* data, int height, int width) {
+	fprintf(file,"# name: %s\n",name);
+	fprintf(file,"# type: matrix\n");
+	fprintf(file,"# ndims: 2\n%d %d\n", height, width);
+	for(int c=0; c<width; c++) 
+	for(int r=0; r<height; r++) 
+		fprintf(file,"%.*"RPF"g\n",PDIGITS,data[r*width+c]);
 	fprintf(file,"\n\n");	
 };
 

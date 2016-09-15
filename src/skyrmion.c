@@ -33,8 +33,8 @@ int sizen=0;
 // are uqual to (<x-shift>,<y-shift>,<z-shift>)
 int* neighbours=NULL;
 // Magnetic uniaxial anisotopy K = norm*unit
-real magnetic_anisotropy_norm=NAN;
-real magnetic_anisotropy_unit[3]={NAN,NAN,NAN};
+magnetic_anisotropy_type* magnetic_anisotropy=NULL;
+int magnetic_anisotropy_count=0;
 // Exchange constant J
 real* exchange_constant=NULL;
 // dipole interaction constant
@@ -54,6 +54,10 @@ int* dipole_idx=NULL; // <source atom> <dest atom> <dest x> <dest y> <dest z>
 real* dipole_table=NULL; // <multiplier> <vector x> <vector y> <vector z>
 
 real temperature=0;
+
+int INDEX(int u, int x, int y, int z) {
+	return ((u*sizex+x)*sizey+y)*sizez+z;
+};
 
 void prepare_dipole_table(real negligible) {
 	if(dipole==0) return;
@@ -86,17 +90,19 @@ void prepare_dipole_table(real negligible) {
 	fprintf(stderr, "Dipole interaction to be computed on %d neighbours\n", dipole_count);
 };
 
-real skyrmion_minimum_energy() {
+realp skyrmion_minimum_energy() {
 	int size=sizeu*sizex*sizey*sizez;
-	real min=-2*rabs(magnetic_anisotropy_norm)*size;
-	for(int n=0; n<sizen;n++) {
+	realp min=0;
+	for(int n=0; n<magnetic_anisotropy_count; n++) 
+		min-=2*rabs(magnetic_anisotropy[n].norm)*size;
+	for(int n=0; n<sizen; n++) {
 		min-=2*rsqrt(normsq3(dzyaloshinskii_moriya_vector+3*n))*size;
 		min-=2*rabs(exchange_constant[n])*size;
 	};
 	return min;
 };
 
-void skyrmion_gradient(const real* restrict arg, real* restrict grad, real* restrict energy) {
+void skyrmion_gradient(const real* restrict arg, real* restrict grad, realp* restrict energy) {
 	assert(arg); 
   	hamiltonian_hessian(arg, grad);
   	if(energy) *energy=-dot(3*SIZE, arg, grad)/2;
@@ -104,19 +110,28 @@ void skyrmion_gradient(const real* restrict arg, real* restrict grad, real* rest
   	if(energy) (*energy)+=dot(3*SIZE, arg, grad);
 };
 
+void projected_gradient(const real* restrict arg, real* restrict grad, realp* restrict energy) {
+    skyrmion_gradient(arg, grad, energy);
+    project_to_tangent(arg, grad);
+};
+
 void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 	// Compute anisotropy part
-	real K2[3]; for3(j) K2[j]=-2*magnetic_anisotropy_norm*magnetic_anisotropy_unit[j];
+	real K2[magnetic_anisotropy_count][3]; 
+	for(int n=0; n<magnetic_anisotropy_count; n++) for3(j) 
+		K2[n][j]=-2*magnetic_anisotropy[n].norm*magnetic_anisotropy[n].unit[j];
 	#pragma omp parallel for collapse(4)
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
+		for3(j) out[3*i+j]=0.;
 		if(!ISACTIVE(i)) {
-			for3(j) out[3*i+j]=0.;
 			continue;
 		};
 		i*=3;
-		real m=dot3(magnetic_anisotropy_unit,arg+i);
-		for3(j) out[i+j]=m*K2[j];
+		for(int n=0; n<magnetic_anisotropy_count; n++) {
+			real m=dot3(magnetic_anisotropy[n].unit,arg+i);
+			for3(j) out[i+j]+=m*K2[n][j];
+		};
 	};
 	// Compute exchange part
 	for(int n=0;n<sizen;n++) {
@@ -204,13 +219,13 @@ void node_energy(int u, int x, int y, int z, const real* restrict arg, real ener
 		return;
 	};
 	i*=3;
-	{
-		real m=dot3(magnetic_anisotropy_unit,arg+i);
-		anisotropy_energy-=m*m;
-		if(nonuniform_field) zeeman_energy-=dot3(nonuniform_field+i,arg+i);
-		else zeeman_energy-=dot3(magnetic_field,arg+i);
+	if(nonuniform_field) zeeman_energy-=dot3(nonuniform_field+i,arg+i);
+	else zeeman_energy-=dot3(magnetic_field,arg+i);
+	for(int n=0; n<magnetic_anisotropy_count; n++) {
+		real m=dot3(magnetic_anisotropy[n].unit,arg+i);
+		anisotropy_energy-=m*m*magnetic_anisotropy[n].norm;
 	};
-	energy[0]=anisotropy_energy*magnetic_anisotropy_norm;
+	energy[0]=anisotropy_energy;
 	energy[1]=zeeman_energy;
 	// Compute exchange part
 	real dmi_energy=0;
@@ -286,26 +301,28 @@ void node_energy(int u, int x, int y, int z, const real* restrict arg, real ener
 // energy[3] - D-M energy
 // energy[4] - dipole energy
 // energy[5] - total energy
-void skyrmion_energy(const real* restrict arg, real energy[6]) {
+void skyrmion_energy(const real* restrict arg, realp energy[6]) {
 	//for(int j=0;j<5;j++) energy[j]=0;
 	// Compute anisotropy part
-	real anisotropy_energy=0;
-	real zeeman_energy=0;
+	realp anisotropy_energy=0;
+	realp zeeman_energy=0;
 	#pragma omp parallel for collapse(3) reduction(+:anisotropy_energy,zeeman_energy)
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
 		if(!ISACTIVE(i)) continue;
 		i*=3;
-		real m=dot3(magnetic_anisotropy_unit,arg+i);
-		anisotropy_energy-=m*m;
+		for(int n=0; n<magnetic_anisotropy_count; n++) {
+			real m=dot3(magnetic_anisotropy[n].unit,arg+i);
+			anisotropy_energy-=m*m*magnetic_anisotropy[n].norm;
+		};
 		if(nonuniform_field) zeeman_energy-=dot3(nonuniform_field+i,arg+i);
 		else zeeman_energy-=dot3(magnetic_field,arg+i);
 	};
-	energy[0]=anisotropy_energy*magnetic_anisotropy_norm;
+	energy[0]=anisotropy_energy;
 	energy[1]=zeeman_energy;
 	// Compute exchange part
-	real dmi_energy=0;
-	real exchange_energy=0;
+	realp dmi_energy=0;
+	realp exchange_energy=0;
 	for(int n=0;n<sizen;n++) {
 		// local cache
 		int s=neighbours[5*n+3], d=neighbours[5*n+4];
@@ -337,7 +354,7 @@ void skyrmion_energy(const real* restrict arg, real energy[6]) {
 	energy[3]=dmi_energy;
 	energy[2]=exchange_energy;
 	// Compute dipole interaction
-	real dipole_energy=0;	
+	realp dipole_energy=0;	
 	for(int n=0;n<dipole_count;n++) {
 		// local cache
 		int s=dipole_idx[5*n+1], d=dipole_idx[5*n+0];
@@ -399,17 +416,19 @@ void set_to_field(real* restrict out) {
 };
 
 // Normalize vector field so every vector has unit length 
-void normalize(real* restrict a) {
-	#pragma omp parallel for collapse(4)
+real normalize(real* restrict a) {
+	real sum=0;
+	#pragma omp parallel for collapse(4) reduction(+:sum)
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
 		if(!ISACTIVE(i)) continue;
-		normalize3(a+i*3);
+		sum+=normalize3(a+i*3);
 	};
+	return sum;
 };
 
-real seminormalize(real factor, real* restrict a) {
-	real sum=0;
+realp seminormalize(real factor, real* restrict a) {
+	realp sum=0;
 	#pragma omp parallel for collapse(4) reduction(+:sum)
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
@@ -720,42 +739,16 @@ int axis, real* restrict gen) {
 	free(kernel);
 };
 
-
-
-void fourier_table(const real* restrict angles, real* restrict table) {
-	#pragma omp parallel for collapse(4)	
+void skyrmion_random(real* restrict a) {
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
-		rsincos(angles[2*i+0],table+4*i+0,table+4*i+1);
-		rsincos(angles[2*i+1],table+4*i+2,table+4*i+3);
-	};
+		if(ISACTIVE(i)) {
+			i*=3;
+			for3(j) a[i+j]=random_real()*2-1;
+		} else {
+			i*=3;
+			for3(j) a[i+j]=0;
+		};
+	}
+	normalize(a);
 };
-
-// transform angles to vector on sphere
-// (x,y,z)=R(phi,theta)
-void angles_to_vector(const real* restrict table, const real* restrict angles, real* restrict vectors) {
-	#pragma omp parallel for collapse(4)	
-	forall(u,x,y,z) {
-		int i=INDEX(u,x,y,z);
-		real sphi=table[4*i+0];
-		real cphi=table[4*i+1];
-		real stheta=table[4*i+2];
-		real ctheta=table[4*i+3];
-		vectors[3*i+0]=stheta*cphi;
-		vectors[3*i+1]=stheta*sphi;
-		vectors[3*i+2]=ctheta;
-	};
-};
-
-// project vectors to tangent space on sphere
-// (x,y,z)*grad_{x,y,z} R(phi,theta)
-/*void tangent_vector_to_angles(const field table[4], const field vector[3], field angles[2]) {
-	forall(u,x,y,z) {
-		real sphi=table[u][x][y][z][0];
-		real cphi=table[u][x][y][z][1];
-		real stheta=table[u][x][y][z][2];
-		real ctheta=table[u][x][y][z][3];
-		angles[u][x][y][z][0]=;
-		angles[u][x][y][z][1]=;
-	};	
-};*/	

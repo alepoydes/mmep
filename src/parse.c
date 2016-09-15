@@ -138,6 +138,34 @@ void load_skyrmion(const char* spinsfilename, real* image) {
 	fclose(spinsfile);
 };
 
+void set_uniform(real* dir, real* spin) {
+	forall(u,x,y,z) {
+		int i=INDEX(u,x,y,z);
+		if(ISACTIVE(i)) {
+			i*=3; for3(j) spin[i+j]=dir[j];
+		} else {
+			i*=3; for3(j) spin[i+j]=0;
+		};
+	};
+};
+
+void cut_by_plane(real* o, real* n) {
+	int first=active==NULL;
+	real d=dot3(o,n);
+	forall(u,x,y,z) {
+		real vec[3];
+		COORDS(u,x,y,z,vec);
+		real a=dot3(vec,n)-d;
+		int i=INDEX(u,x,y,z);	
+		if(first) {
+			if(a>=0) { SETACTIVE(i); }
+			else { SETPASSIVE(i); };
+		} else {
+			if(a<0) { SETPASSIVE(i); };
+		};
+	};
+};
+
 // Parse magnetic crystall description.
 // Result: variables defined in skyrmion.h are set.
 // Fail: if file structure is wrong
@@ -161,8 +189,9 @@ void parse_lattice(FILE* file) {
 	const char sec_positions[]="[positions]";
 	const char sec_dipole[]="[dipole]";
 	const char sec_temperature[]="[temperature]";
+	const char sec_cut_by_plane[]="[cut by plane]";
 	// Allocated memory size
-	int capacityu=sizeu; int capacityn=sizen; 
+	int capacityu=0; int capacityn=0;
 	// Number of lines in sections
 	sizen=0; sizeu=0; int dmv_size=0, ec_size=0; 
 	// Read file line by line
@@ -204,20 +233,30 @@ void parse_lattice(FILE* file) {
 				exit(1); 
 			};	
 		} else if(match(buf,sec_ma)) {
-			if(!READLINE) { 
-				fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
-				exit(1); 
-			};
-			if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g",&magnetic_anisotropy_norm,&magnetic_anisotropy_unit[0],&magnetic_anisotropy_unit[1],&magnetic_anisotropy_unit[2])!=4) {
-				fprintf(stderr,"Parse error:%d: expected <abs. value <K_x> <K_y> <K_z>>\n",line); 
-				exit(1); 
-			};
-			real t=normsq3(magnetic_anisotropy_unit);
-			magnetic_anisotropy_norm*=t;
-			if(magnetic_anisotropy_norm>0) {
-				magnetic_anisotropy_unit[0]/=t;
-				magnetic_anisotropy_unit[1]/=t;
-				magnetic_anisotropy_unit[2]/=t;
+			int capacity_anisotropy=0;
+			while(1) {
+				if(!READLINE) break;
+				if(buf[0]=='[') { ready=1; break; };
+				if(magnetic_anisotropy_count>=capacity_anisotropy) { 
+					capacity_anisotropy=capacity_anisotropy*2+1; 
+					magnetic_anisotropy=realloc(magnetic_anisotropy, sizeof(magnetic_anisotropy_type)*capacity_anisotropy); 
+				};
+				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g",
+					&magnetic_anisotropy[magnetic_anisotropy_count].norm,
+					&magnetic_anisotropy[magnetic_anisotropy_count].unit[0],
+					&magnetic_anisotropy[magnetic_anisotropy_count].unit[1],
+					&magnetic_anisotropy[magnetic_anisotropy_count].unit[2])!=4) {
+					fprintf(stderr,"Parse error:%d: expected <abs. value <K_x> <K_y> <K_z>>\n",line); 
+					exit(1); 
+				};
+				real t=normsq3(magnetic_anisotropy[magnetic_anisotropy_count].unit);
+				magnetic_anisotropy[magnetic_anisotropy_count].norm*=t;
+				if(magnetic_anisotropy[magnetic_anisotropy_count].norm>0) {
+					magnetic_anisotropy[magnetic_anisotropy_count].unit[0]/=t;
+					magnetic_anisotropy[magnetic_anisotropy_count].unit[1]/=t;
+					magnetic_anisotropy[magnetic_anisotropy_count].unit[2]/=t;
+				};
+				magnetic_anisotropy_count++;
 			};
 		} else if(match(buf,sec_bc)) {
 			if(!READLINE) { 
@@ -302,6 +341,17 @@ void parse_lattice(FILE* file) {
 				for3(c) dzyaloshinskii_moriya_vector[3*dmv_size+c]*=leng;
 				dmv_size++;
 			};
+		} else if(match(buf,sec_cut_by_plane)) {
+			while(1) {
+				if(!READLINE) break;
+				if(buf[0]=='[') { ready=1; break; };
+				real o[3], n[3];
+				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g",&o[0],&o[1],&o[2],&n[0],&n[1],&n[2])!=6) {
+					fprintf(stderr,"Parse error:%d: not of the form: <x> <y> <z> <nx> <ny> <nz>\n",line); 
+					exit(1); 
+				};
+				cut_by_plane(o,n);
+			};			
 		} else if(match(buf,sec_image)) {
 			if(!initial_state) {
 				initial_state=(real*)malloc(sizeof(real)*SIZE*3);				
@@ -316,12 +366,27 @@ void parse_lattice(FILE* file) {
 			while(1) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
-				real center[3]; real radius; real winding, rotation;
-				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g",center+0,center+1,center+2,&radius,&winding,&rotation)!=6) {
-					fprintf(stderr,"Parse error:%d: wrong format\n",line); 
-					exit(1); 
+				if(match(buf,"vertex ")) {
+					real center[3]; real radius; real winding, rotation;
+					if(sscanf(buf, "vertex %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g",center+0,center+1,center+2,&radius,&winding,&rotation)!=6) {
+						fprintf(stderr,"Parse error:%d: wrong format\n",line); 
+						exit(1); 
+					};
+					append_skyrmion(center, radius, winding, rotation, image);
+				} else if(match(buf,"uniform ")) {
+					real dir[3]; 
+					if(sscanf(buf, "uniform %"RF"g %"RF"g %"RF"g",dir+0,dir+1,dir+2)!=3) {
+						fprintf(stderr,"Parse error:%d: wrong format\n",line); 
+						exit(1); 
+					};
+					normalize3(dir);
+					set_uniform(dir, image);
+				} else if(match(buf,"random")) {
+					skyrmion_random(image);
+				} else {
+					fprintf(stderr, "Parse error:%d: wrong primitive, should be 'vertex' or 'uniform'\n", line);
+					exit(1);
 				};
-				append_skyrmion(center, radius, winding, rotation, image);
 			};
 		} else if(match(buf,sec_load_image)) {
 			if(!initial_state) {
@@ -376,9 +441,9 @@ void parse_lattice(FILE* file) {
 		fprintf(stderr,"Parse error: Lattice is empty: %dx%dx%dx%d\n",sizeu,sizex,sizey,sizez);
 		exit(1);
 	};
-	assert(neighbours); 
-	assert(exchange_constant); 
-	assert(dzyaloshinskii_moriya_vector);
+	//assert(neighbours); 
+	//assert(exchange_constant); 
+	//assert(dzyaloshinskii_moriya_vector);
 	if(dmv_size!=sizen) {
 		fprintf(stderr,"Parse error: Section %s has length %d, expected %d\n",sec_dmv,dmv_size,sizen);
 		exit(1);	
@@ -389,10 +454,6 @@ void parse_lattice(FILE* file) {
 	};
 	if(isnan(magnetic_field[0]+magnetic_field[1]+magnetic_field[2])) {
 		fprintf(stderr,"Parse error: Magnetic field is not set: %"RF"g,%"RF"g,%"RF"g\n",magnetic_field[0],magnetic_field[1],magnetic_field[2]);
-		exit(1);	
-	};
-	if(isnan(magnetic_anisotropy_norm)) {
-		fprintf(stderr,"Parse error: Anisotropy is not set: %"RF"g,%"RF"g,%"RF"g\n",magnetic_anisotropy_unit[0],magnetic_anisotropy_unit[1],magnetic_anisotropy_unit[2]);
 		exit(1);	
 	};
 	for(int j=0; j<3; j++) if(boundary_conditions[j]<0 || boundary_conditions[j]>1) {

@@ -15,74 +15,17 @@
 #include "display.h"
 #include "integra.h"
 #include "bitmap.h"
+#include "cmd.h"
 
-#define OUTDIR "fields" 
-
-real epsilon=1e-6;
-int max_iter=1000;
-real mode_param=0.2;
-real param2=1;
-int mode=2;
-int debug_plot=0;
-int debug_every=1;
 real time_step=0;
 real sim_time=0.0;
 real damping=0;
 int powered=0;
 real power=-1;
-int integrator=1; // 0 - RK, 1 - simplectic RK
-real dipole_negligible=0.01;
-
-void showUsage(const char* program) {
-  fprintf(stderr, "Compute stable states.\
-\nUsage:\
-\n    %s [options] [lattice description file]\
-\nOptions:\
-\n   -h|--help              Show this message and exit\
-\n   -p|--plot              Show graphics\
-\n   -e|--epsilon REAL      Desired residual\
-\n   -E           REAL      Neglible value of dipole interaction\
-\n   -i           INT       Set maximum number of iterations\
-\n   -r           INT       Progress will be shown every given iteration\
-\n   -m|--mode    INT       Optimization method\
-\n   -a           REAL      First parameter for optimization methods\
-\n   -b           REAL      Second parameter for optimization methods\
-\n", program);
-};
-
-int parseCommandLine(int argc, char** argv) {
-  int c;
-  while(1) {
-    static struct option long_options[] = {      
-      {"help", no_argument, 0, 'h'},
-      {"plot", no_argument, 0, 'p'},
-      {"epsilon", required_argument, 0, 'e'},
-      {"mode", required_argument, 0, 'm'},
-      {0, 0, 0, 0}
-    };
-    int option_index = 0;
-    c = getopt_long(argc, argv, "hpE:e:i:r:m:a:b:", long_options, &option_index);
-    if (c==-1) break;
-    switch(c) {
-      case 'p': debug_plot=1; break;
-      case 'h': showUsage(argv[0]); exit(0);
-      case 'e': epsilon=atof(optarg); break;
-      case 'E': dipole_negligible=atof(optarg); break;            
-      case 'i': max_iter=atoi(optarg); break;
-      case 'r': debug_every=atoi(optarg); break;
-      case 'm': mode=atoi(optarg); break;
-      case 'a': mode_param=atof(optarg); break;
-      case 'b': param2=atof(optarg); break;
-      case '?': break;
-      default: fprintf(stderr,"Unprocessed option '%c'\n", c); exit(1);
-    };
-  };
-  return optind;
-};
 
 // state
 int iter=0;
-real E=NAN;
+realp E=NAN;
 real L=NAN;
 
 void screen() {
@@ -139,7 +82,7 @@ void screen() {
 
 };
 
-void dspins(const real* X, real* G, real* E) {
+void dspins(const real* X, real* G, realp* E) {
   skyrmion_gradient(X, G, E);
   forall(u,x,y,z) {
     int i=INDEX(u,x,y,z)*3;
@@ -181,10 +124,12 @@ void doStep(real* spins) {
 void do_print(int width, int height, void* buffer) {
   print_screen=NULL;
   fprintf(stderr, "Saving screenshot\n");
-  FILE* file=fopen(OUTDIR"/screen.png","wb");
-  write_png(file, width, height, (unsigned char*) buffer);
-  fclose(file);
-  fprintf(stderr, "Saved\n");
+  FILE* file=open_file(outdir, "/screen.png", TRUE);
+  if(file) {
+    write_png(file, width, height, (unsigned char*) buffer);
+    fclose(file);
+    fprintf(stderr, "Saved\n");
+  };
 };
 
 void keyboard_function(unsigned char key) {
@@ -228,18 +173,27 @@ void motion_function(real p[3]) {
   };
 };
 
-int main(int argc, char** argv) {
-  srand(time(NULL));
-  // Initialize lattice
-  int i=parseCommandLine(argc,argv);
-  if(i<argc) {
-  	FILE* file=fopen(argv[i],"r");
-  	if(!file) { fprintf(stderr, "Can not open file '%s'\n", argv[i]); exit(1); };
-  	parse_lattice(file);
-  	fclose(file);
-  } else parse_lattice(stdin);
+const char options_desc[]="\
+\n";
 
-  prepare_dipole_table(dipole_negligible);
+char handle_option(char opt, const char* arg) {
+  switch(opt) {
+    default: return FALSE;
+  };
+  return TRUE;
+};
+
+int main(int argc, char** argv) {
+  epsilon=1e-6;
+  integrator=1; // 0 - RK, 1 - simplectic RK
+
+  int i=init_program(argc,argv,
+    "Integrate LLG equation and visializate dynamics.", options_desc,
+    "", handle_option);
+  if(i<argc) {
+    fprintf(stderr, COLOR_RED"There are unused parameters:"COLOR_RESET"\n");
+    while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
+  };
 
   // Initialize states
   real* spins=(real*)malloc(sizeof(real)*SIZE*3); assert(spins);

@@ -1,4 +1,4 @@
 #!/bin/sh
 bin/mepd $@ 
-gnuplot fields/mep.gnuplot
-gnuplot fields/energy.gnuplot
+gnuplot tmp/mep.gnuplot
+gnuplot tmp/energy.gnuplot

@@ -1,0 +1,33 @@
+[size]
+# <x> <y> <z>
+1 1 1
+[boundary conditions]
+# <BC along x> <BC along y> <BC along z>
+0 0 0
+[translation vectors]
+# <X_x> <X_y> <X_z>
+# <Y_x> <Y_y> <Y_z>
+# <Z_x> <Z_y> <Z_z>
+1 0 0
+0 1 0
+0 0 1
+[unit cell]
+# <x_u> <y_u> <z_u>
+0.5 0.5 0
+[neigborood]
+# <x> <y> <z> <s> <d>
+[dipole]
+0
+[external field]
+# <H_x> <H_y> <H_z>
+0 0 0
+[magnetic anisotropy]
+# <absolute value> <K_x> <K_y> <K_z> (in meV)
+1.2 0 1 0
+-3.0 0 0 1
+[exchange constant]
+# <J>
+[dzyaloshinskii moriya vector]
+# <D_x> <D_y> <D_z>
+[image]
+random

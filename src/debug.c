@@ -4,10 +4,21 @@
 #include <signal.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "debug.h"
 
 volatile int stop_signal=0;
+
+FILE* open_file(const char* dir, const char* filename, char to_write) {
+	char buf[1024]="";
+	if(dir) strncat(buf, dir, sizeof(buf)-strlen(buf));
+	if(filename) strncat(buf, filename, sizeof(buf)-strlen(buf));
+    fprintf(stderr, COLOR_YELLOW"%s"COLOR_RESET " '%s'\n",to_write?"Saving":"Reading",buf);
+	FILE* file=fopen(buf,to_write?"wb":"rb");
+	if(!file) fprintf(stderr, COLOR_RED"Can not open '%s' for %s\n"COLOR_RESET,buf,to_write?"writing":"reading");
+	return file;
+};
 
 void fprint_timediff(FILE* file, double timediff) {
 	int f=0;
@@ -21,10 +32,10 @@ void fprint_timediff(FILE* file, double timediff) {
 	if(f<2) fprintf(file, "%ds", sec); 
 };
 
-void watch_number(real next, real prev, int digits) {
-	char bufn[100],bufp[100]; 
-	int nn=sprintf(bufn,"%.*"RF"f",digits,next); assert(nn<sizeof(bufn));
-	int np=sprintf(bufp,"%.*"RF"f",digits,prev); assert(np<sizeof(bufp));
+void watch_number(realp next, realp prev, int digits) {
+	char bufn[100], bufp[100]; 
+	int nn=sprintf(bufn,"%.*"RPF"f",digits,next); assert(nn<sizeof(bufn));
+	int np=sprintf(bufp,"%.*"RPF"f",digits,prev); assert(np<sizeof(bufp));
 	//int ap=0; 
 	int d=0;
 	int c; for(c=0; c<nn && nn==np && bufn[c]==bufp[c]; c++) {
@@ -55,4 +66,11 @@ void signal_handler(int sig) {
 void init_signal() {
 	if(signal(SIGINT, signal_handler)==SIG_ERR)
 		fprintf(stderr, COLOR_RED COLOR_BOLD"can't catch SIGINT\n"COLOR_RESET);
+};
+
+void print_vector(int N, real* data) {
+	printf("[");
+	for(int n=0; n<N; n++) 
+		printf("%s%"RF"g", n>0?COLOR_FAINT","COLOR_RESET:"", data[n]);
+	printf("]\n");
 };

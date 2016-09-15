@@ -29,8 +29,12 @@ extern int sizen;
 //extern int neighbours[sizen][5];
 extern int* neighbours;
 // Magnetic uniaxial anisotopy K = norm*unit
-extern real magnetic_anisotropy_norm;
-extern real magnetic_anisotropy_unit[3];
+typedef struct {
+	real norm;
+	real unit[3];
+} magnetic_anisotropy_type;
+extern magnetic_anisotropy_type* magnetic_anisotropy;
+extern int magnetic_anisotropy_count;
 // Exchange constant J
 //extern real exchange_constant[sizen];
 extern real* exchange_constant;
@@ -51,7 +55,8 @@ extern real temperature;
 
 #define forall(u,x,y,z) for(int u=0;u<sizeu;u++) for(int x=0;x<sizex;x++)for(int y=0;y<sizey;y++)for(int z=0;z<sizez;z++)
 #define forlla(u,x,y,z) for(int z=0;z<sizez;z++)for(int y=0;y<sizey;y++)for(int x=0;x<sizex;x++)for(int u=0;u<sizeu;u++)
-#define INDEX(u,x,y,z) ((((u)*sizex+(x))*sizey+(y))*sizez+(z))
+//#define INDEX(u,x,y,z) ((((u)*sizex+(x))*sizey+(y))*sizez+(z))
+int INDEX(int u, int x, int y, int z);
 #define UNPACK(id,u,x,y,z) { z=id%sizez; y=(id/sizez)%sizey; x=(id/sizey/sizez)%sizex; u=id/sizex/sizey/sizez; }
 
 #define SIZE (sizex*sizey*sizez*sizeu)
@@ -60,24 +65,27 @@ extern real temperature;
 // If a spin is not active then boundary conditions on the atom is free.
 extern char* active;
 #define ISACTIVE(id) (!(active) || ((active)[(id)>>3] & (1<<((id) & 7))))
-#define SETACTIVE(id) { if(!(active)) (active)=(char*)calloc(SIZE>>3, sizeof(char)); assert(active); (active)[(id)>>3]|=1<<((id) & 7); }
+#define SETACTIVE(id) { if(!(active)) (active)=(char*)calloc(1+(SIZE>>3), sizeof(char)); assert(active); (active)[(id)>>3]|=1<<((id) & 7); }
+#define SETPASSIVE(id) { if(!(active)) (active)=(char*)calloc(1+(SIZE>>3), sizeof(char)); assert(active); (active)[(id)>>3]&=~(1<<((id) & 7)); }
 extern int number_of_active;
 
 extern int* positions;
 
-void skyrmion_energy(const real* restrict arg, real energy[6]);
+void skyrmion_energy(const real* restrict arg, realp energy[6]);
 void node_energy(int u, int x, int y, int z, const real* restrict arg, real energy[6]);
 
-void skyrmion_gradient(const real* restrict arg, real* restrict grad, real* restrict energy);
+void skyrmion_gradient(const real* restrict arg, real* restrict grad, realp* restrict energy);
+void projected_gradient(const real* restrict arg, real* restrict grad, realp* restrict energy);
 void hamiltonian_hessian(const real* restrict arg, real* restrict out);
 void subtract_field(real* restrict inout);
 void set_to_field(real* restrict out);
 
-void normalize(real* restrict a);
-real seminormalize(real factor, real* restrict a);
+real normalize(real* restrict a);
+realp seminormalize(real factor, real* restrict a);
 // Project vector field 'b' to tangent space of unit length vector field 'a'
 void project_to_tangent(const real* restrict a, real* restrict b);
 
+void skyrmion_random(real* restrict a);
 void skyrmion_constrain(const real* restrict a, real* restrict r);
 void skyrmion_constrain_gradient(const real* restrict a, const real* restrict u, real* restrict r);
 void skyrmion_constrain_adjucent(const real* restrict a, const real* restrict b, real* restrict r);
@@ -94,7 +102,7 @@ void three_point_tangent_stable(real ea, real eb, real ec, const real* restrict 
 //void three_point_equalize(const real* restrict a, const real* restrict b, real* restrict r);
 //void three_point_equalizer(const real* restrict a, const real* restrict c, const real* restrict b, real* restrict r);
 
-real skyrmion_minimum_energy();
+realp skyrmion_minimum_energy();
 
 void append_skyrmion(const real center[3], real distance, real winding, 
 	real rotation, real* restrict data);

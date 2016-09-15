@@ -1,6 +1,7 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
+#include "stdio.h"
 #include "vector.h"
 
 #define COLOR_RESET "\033[m"
@@ -16,7 +17,13 @@
 
 extern volatile int stop_signal;
 
-void watch_number(real next, real prev, int digits);
+#define TRUE 1
+#define FALSE 0
+
+FILE* open_file(const char* dir, const char* filename, char to_write);
+
+void print_vector(int N, real* data);
+void watch_number(realp next, realp prev, int digits);
 void fprint_timediff(FILE* file, double timediff);
 
 void init_signal();

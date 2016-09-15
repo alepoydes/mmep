@@ -6,6 +6,7 @@
 #include <float.h>
 
 #ifdef DOUBLE
+
 	#define real double
 	#define rsqrt(x) sqrt(x)
 	#define rabs(x) fabs(x)
@@ -21,8 +22,25 @@
 	#define RF "l"
 	#define EPSILON DBL_EPSILON
 	#define DIGITS DBL_DIG
-#else
-#ifdef QUAD
+
+	#define realp long double
+	#define rpsqrt(x) sqrtl(x)
+	#define rpabs(x) fabsl(x)
+	#define rpacos(x) acosl(x)
+	#define rpexp(x) expl(x)
+#if defined(__clang__)
+	#define rpsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
+#elif defined(__GNUC__) || defined(__GNUG__)
+	#define rpsincos(x,y,z) sincosl(x,y,z)
+#elif defined(_MSC_VER)
+	#define rpsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
+#endif
+	#define RPF "L"
+	#define PEPSILON LDBL_EPSILON
+	#define PDIGITS LDBL_DIG
+
+#elif defined QUAD
+
 	#define real long double
 	#define rsqrt(x) sqrtl(x)
 	#define rabs(x) fabsl(x)
@@ -38,7 +56,19 @@
 	#define RF "L"
 	#define EPSILON LDBL_EPSILON
 	#define DIGITS LDBL_DIG
+
+	#define realp real
+	#define rpsqrt(x) rsqrt(x)
+	#define rpabs(x) rabs(x)
+	#define rpacos(x) acosl(x)
+	#define rpexp(x) expl(x)
+	#define rpsincos(x,y,z) rsincos(x,y,z)
+	#define RPF RF
+	#define PEPSILON EPSILON
+	#define PDIGITS DIGITS
+
 #else 
+
 	#define real float
 	#define rsqrt(x) sqrtf(x)
 	#define rabs(x) fabsf(x)
@@ -54,17 +84,36 @@
 	#define RF ""
 	#define EPSILON FLT_EPSILON
 	#define DIGITS FLT_DIG
+
+	#define realp double
+	#define rpsqrt(x) sqrt(x)
+	#define rpabs(x) fabs(x)
+	#define rpacos(x) acos(x)
+	#define rpexp(x) exp(x)
+#if defined(__clang__)
+	#define rpsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
+#elif defined(__GNUC__) || defined(__GNUG__)
+	#define rpsincos(x,y,z) sincos(x,y,z)
+#elif defined(_MSC_VER)
+	#define rpsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
 #endif
+	#define RPF "l"
+	#define PEPSILON DBL_EPSILON
+	#define PDIGITS DBL_DIG
+
 #endif  
 
+real* ralloc(int n);
 // считает длину вектора
 #define normsq3(x) ((x)[0]*(x)[0]+(x)[1]*(x)[1]+(x)[2]*(x)[2])
 // считает скалярное произведение векторов
-#define dot3(x,y) ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
+//#define dot3(x,y) ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
+real dot3(const real* x, const real* y);
 //#define normalize3(x) { real t=(3-normsq3(x))*0.5; (x)[0]*=t; (x)[1]*=t; (x)[2]*=t; }
 //#define normalize3(x) { real t=(1+normsq3(x))/2; (x)[0]/=t; (x)[1]/=t; (x)[2]/=t; }
 //#define normalize3(x) { real t=normsq3(x); if(t>0) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
-#define normalize3(x) { real t=normsq3(x); if(t>0 && rabs(t-1)>1e-14) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
+#define NORMEPS2 (1E-14)
+real normalize3(real* x);
 #define seminormalize3(factor,x) ({ real t=rsqrt(normsq3(x)); if(t>0) { real f=1-factor+factor/t; (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; t>0?rabs((1-t)*(1-factor)):1; })
 #define middle3(x,y,z) { (z)[0]=((x)[0]+(y)[0])/2; (z)[1]=((x)[1]+(y)[1])/2; (z)[2]=((x)[2]+(y)[2])/2; normalize3(z); }
 // z=a*l_-1.5(0)+b*l_-0.5(0)+c*l_0.5(0)+d*l_1.5(0)
@@ -83,7 +132,8 @@
 // проецирует y на касательное подпространство к x
 #define tangent3(x,y) {	real t=dot3(x,y); (y)[0]-=t*(x)[0]; (y)[1]-=t*(x)[1]; (y)[2]-=t*(x)[2]; }
 #define reverse3(x,y) {	real t=1.5*dot3(x,y); (y)[0]-=t*(x)[0]; (y)[1]-=t*(x)[1]; (y)[2]-=t*(x)[2]; }
-#define cross3(a,b,c) { (c)[0]=(a)[1]*(b)[2]-(a)[2]*(b)[1]; (c)[1]=(a)[2]*(b)[0]-(a)[0]*(b)[2]; (c)[2]=(a)[0]*(b)[1]-(a)[1]*(b)[0]; }
+//#define cross3(a,b,c) { (c)[0]=(a)[1]*(b)[2]-(a)[2]*(b)[1]; (c)[1]=(a)[2]*(b)[0]-(a)[0]*(b)[2]; (c)[2]=(a)[0]*(b)[1]-(a)[1]*(b)[0]; }
+void cross3(const real* a,const real* b,real* c);
 #define cross_minus3(a,b,c) { (c)[0]-=(a)[1]*(b)[2]-(a)[2]*(b)[1]; (c)[1]-=(a)[2]*(b)[0]-(a)[0]*(b)[2]; (c)[2]-=(a)[0]*(b)[1]-(a)[1]*(b)[0]; }
 #define cross_plus3(a,b,c) { (c)[0]+=(a)[1]*(b)[2]-(a)[2]*(b)[1]; (c)[1]+=(a)[2]*(b)[0]-(a)[0]*(b)[2]; (c)[2]+=(a)[0]*(b)[1]-(a)[1]*(b)[0]; }
 #define mult_minus3(a,b,c) { (c)[0]-=(a)*(b)[0]; (c)[1]-=(a)*(b)[1]; (c)[2]-=(a)*(b)[2]; }
@@ -103,11 +153,12 @@
 void add_random_cone3(real alpha, const real* A, real* B);
 void matrixmult3(const real* a, const real* b, real* prod);
 void invertmatrix3(const real* mat, real* inv);
-real distsq(int n, const real* a, const real* b);
-real dist_sphere_sq(int n, const real* a, const real* b);
-real normsq(int n, const real* a);
-real dot(int n, const real* a, const real* b);
+realp distsq(int n, const real* a, const real* b);
+realp dist_sphere_sq(int n, const real* a, const real* b);
+realp normsq(int n, const real* a);
+realp dot(int n, const real* a, const real* b);
 void mult_sub(int n, real a, const real* b, real* c);
+void mult_sub_ext(int n, real a, const real* b, const real* c, real* d);
 void mult_add(int n, real a, const real* b, real* c);
 void add_mult(int n, const real* a, real b, real* c); 
 void sub_const(int n, real a, real* c);

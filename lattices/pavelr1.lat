@@ -1,22 +1,14 @@
 [size]
 # Grid dimesions <x> x <y> x <z>
 # <x> <y> <z>
-10 10 10
-[external field]
-# Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
-# <H_x> <H_y> <H_z>
-0 0 0.1
-[magnetic anisotropy]
-# Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)
-# <Absolute value> <K_x> <K_y> <K_z>
-0.00000 0 0 1
+100 50 1
 [boundary conditions]
 # Boundary conditions along every axis
 # <BC along x> <BC along y> <BC along z>
 # Every BC can be one of
 #   0 : free
 #   1 : periodic
-1 1 1
+0 1 0
 [translation vectors]
 # Lattice generators
 # <X_x> <X_y> <X_z>
@@ -24,9 +16,9 @@
 # <Z_x> <Z_y> <Z_z>
 # Cell with indices (a,b,c) has origin at
 # (a*<X_x>+b*<Y_x>+c*<Z_x>, a*<X_y>+b*<Y_y>+c*<Z_y>, a*<X_z>+b*<Y_z>+c*<Z_z>)
-2 0 0
-0 2 0
-0 0 2
+1 0 0
+0. 1.73205080756887729352744634150587 0
+0 0 1
 [unit cell]
 # Position of every atom in the unit cell
 # <x_1> <y_1> <z_1>
@@ -34,8 +26,8 @@
 # <x_u> <y_u> <z_u>
 # All coordinates age given in the basis of translation vectors,
 # hence <x_i>,<y_i>,<z_i> belongs to [0,1].
-0 0 0
-1 1 1
+0. 0. 0
+0.5 0.866025403784438646763723170752936 0
 [neigborood]
 # All nearest neighbours of every atom in the unit cell
 # <x> <y> <z> <s> <d>
@@ -45,41 +37,51 @@
 # <x>,<y>,<z> refer to a cell, hence are integer.
 # <s> and <d> are integer from 0 to u, where enumeration
 # corresponds to the order of atoms in section [unit cell]
+-1 0 0 0 0
+-1 0 0 1 1
 0 0 0 0 1
--1 0 0 0 1
 0 -1 0 0 1
-0 0 -1 0 1
+-1 0 0 0 1
 -1 -1 0 0 1
-0 -1 -1 0 1
--1 0 -1 0 1
--1 -1 -1 0 1
+[external field]
+# Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
+# <H_x> <H_y> <H_z>
+# muB = 5.788e-5 eV/T = 5.788e-2 meV/T
+# muS = 3 * muB * T, T=1
+#0 0 0.17364	
+
+# muS = 3 * muB * 1.5 T = 0.26046 meV
+#0 0 0.26046
+
+# muS = 3 * muB * 2.97 T = 0.5157108 meV
+#0 0 0.5157108
+
+# muS = 3 * muB * 0.9341171 T = 0.1622 meV
+0 0 0.1622107928
+
+#0 0 0
+[magnetic anisotropy]
+# Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)
+# <absolute value> <K_x> <K_y> <K_z> (meV)
+0.4064060 0 0 1
 [exchange constant]
 # Echange constants J_{sd} for every pair of atoms stated in [neighborhood]
 # <J>
-1
-1
-1
-1
-1
-1
-1
-1
+5.8809717
+5.8809717
+5.8809717
+5.8809717
+5.8809717
+5.8809717
 [dzyaloshinskii moriya vector]
 # Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
 # <D_x> <D_y> <D_z>
-1 1 1 1
-1 -1 1 1
-1 1 -1 1
-1 1 1 -1
-1 -1 -1 1
-1 1 -1 -1
-1 -1 1 -1
-1 -1 -1 -1
-[initial state]
-# Initial state for MEP and stable state calculation.
-# Empty section means that all momentum are along the external field.
-# <x> <y> <z> <radius> <winding number> <rotation>
-5 5 5 0 1 0
-[final state]
-# Final state for MEP.
-# The same format as for [initial state]
+-1.5567671  0.        -1.         0.
+-1.5567671  0.        -1.         0.
+-1.5567671 -0.866025403784438646763723170752936  0.5        0.
+-1.5567671  0.866025403784438646763723170752936  0.5       -0.
+-1.5567671 -0.866025403784438646763723170752936 -0.5        0.
+-1.5567671  0.866025403784438646763723170752936 -0.5        0. 
+[image]
+vertex 50 40 0 20 0 -1
+[image]

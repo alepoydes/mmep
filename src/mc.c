@@ -12,13 +12,9 @@
 #include "parse.h"
 #include "debug.h"
 #include "integra.h"
+#include "cmd.h"
 
-#define OUTDIR "fields"
-
-long int max_iter=5000000;
 real step=0;
-real dipole_negligible=0.001;
-real debug_every_sec=10;
 int update_by_one=1;
 int rejection_rule=0;
 int random_number_generator=1;
@@ -32,50 +28,26 @@ char filename[1024]="";
 #define WRITE_TOTAL 32
 int what_to_write=WRITE_TOTAL | WRITE_DMI;
 
-void showUsage(const char* program) {
-  fprintf(stderr, "Compute stable states.\
-\nUsage:\
-\n    %s [options] [lattice description file]\
-\nOptions:\
-\n   -h|--help              Show this message and exit\
-\n   -s           REAL      Monte-Carlo step size\
-\n   -T           REAL      kT=Temperature by Bolzman factor\
-\n   -E           REAL      Neglible value of dipole interaction\
-\n   -R           0..1      Rejection rule\
-\n   -N           0..1      Noise type\
-\n   -i           INT       Set maximum number of steps\
-\n   -r           INT       Delay between reports\
-\n   -u                     Switch simulaneous/one by one updates\
-\n   -o           FILE      Where to write result\
-\n", program);
-};
+char options_desc[]="\
+\n   -s REAL Monte-Carlo step size\
+\n   -T REAL kT=Temperature by Bolzman factor\
+\n   -R 0..1 Rejection rule\
+\n   -N 0..1 Noise type\
+\n   -u      Switch simulaneous/one by one updates\
+\n   -F FILE Where to write result\
+\n";
 
-int parseCommandLine(int argc, char** argv) {
-  int c;
-  while(1) {
-    static struct option long_options[] = {      
-      {"help", no_argument, 0, 'h'},
-      {0, 0, 0, 0}
-    };
-    int option_index = 0;
-    c = getopt_long(argc, argv, "uhs:i:E:T:r:R:N:o:", long_options, &option_index);
-    if (c==-1) break;
-    switch(c) {
-      case 'u': update_by_one=!update_by_one; break;
-      case 'h': showUsage(argv[0]); exit(0);
-      case 's': step=atof(optarg); break;
-      case 'T': temperature=atof(optarg); break;            
-      case 'E': dipole_negligible=atof(optarg); break;
-      case 'N': random_number_generator=atoi(optarg); break;
-      case 'i': max_iter=atof(optarg); break;
-      case 'r': debug_every_sec=atof(optarg); break;
-      case 'R': rejection_rule=atoi(optarg); break;
-      case 'o': strncpy(filename,optarg,sizeof(filename)); break;
-      case '?': break;
-      default: fprintf(stderr,"Unprocessed option '%c'\n", c); exit(1);
-    };
+char handle_option(char opt, const char* arg) {
+  switch(opt) {
+    case 'u': update_by_one=!update_by_one; break;
+    case 's': step=atof(arg); break;
+    case 'T': temperature=atof(arg); break;            
+    case 'N': random_number_generator=atoi(arg); break;
+    case 'R': rejection_rule=atoi(arg); break;
+    case 'F': strncpy(filename,arg,sizeof(filename)); break;
+    default: return FALSE;
   };
-  return optind;
+  return TRUE;
 };
 
 int is_to_reject(real denergy) {
@@ -96,28 +68,31 @@ int is_to_reject(real denergy) {
 };
 
 int main(int argc, char** argv) {
-  init_signal();
-  int i=parseCommandLine(argc,argv);
+  max_iter=5000000;
+
+  int i=init_program(argc,argv,
+    "Run Metropolis-Hastings algorithm.", options_desc,
+    "us:T:R:N:F:", handle_option);
   if(i<argc) {
-  	FILE* file=fopen(argv[i],"r");
-  	if(!file) { fprintf(stderr, "Can not open file '%s'\n", argv[i]); exit(1); };
-  	parse_lattice(file);
-  	fclose(file);
-  } else parse_lattice(stdin);
-  if(active) fprintf(stderr, COLOR_YELLOW"Active spins:"COLOR_RESET" %d / %d\n", number_of_active, SIZE);
-    else fprintf(stderr, COLOR_YELLOW"Active spins:"COLOR_RESET" all / %d\n", SIZE);
+    fprintf(stderr, COLOR_RED"There are unused parameters:"COLOR_RESET"\n");
+    while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
+  };
+
+  real debug_every_sec=debug_every;
+
   if(temperature==0) {
     fprintf(stderr, COLOR_RED"Temperature is not set or zero\n");
     exit(1);
   };
+
+  print_settings();
   fprintf(stderr, COLOR_YELLOW"Temperature:"COLOR_RESET" %"RF"g\n", temperature); 
   fprintf(stderr, COLOR_YELLOW"Step size:"COLOR_RESET" %"RF"g\n", step); 
   fprintf(stderr, COLOR_YELLOW"Number of steps:"COLOR_RESET" %ld\n", max_iter); 
   fprintf(stderr, COLOR_YELLOW"Update type:"COLOR_RESET" %s\n", update_by_one?"one by one":"simultaneous"); 
   fprintf(stderr, COLOR_YELLOW"Rejection rule:"COLOR_RESET" %s\n", rejection_rule==0?"Metropolis-Hastings":"Nowak");   
   fprintf(stderr, COLOR_YELLOW"Noise type:"COLOR_RESET" %s\n", random_number_generator==0?"fast noise":"symmetric noise"); 
-  // precompute some data
-  prepare_dipole_table(dipole_negligible);
+
   // Initialize timer
   time_t last_time_reported;
   srand(time(&last_time_reported));
@@ -127,14 +102,11 @@ int main(int argc, char** argv) {
     struct tm* timeinfo=localtime(&start_time);
     char buf[100]; strftime(buf, sizeof(buf), "%H:%M:%S", timeinfo);
     pid_t pid=getpid();
-    sprintf(filename, "fields/mc.%s.%d.bin", buf, pid);
+    sprintf(filename, "mc.%s.%d.bin", buf, pid);
   };
-  FILE* file=fopen(filename,"wb");
-  if(!file) {
-    fprintf(stderr, COLOR_RED"Can not open '%s' for writing\n"COLOR_RESET,filename);
-    exit(1);
-  };
-  fprintf(stderr, "Writing to file '"COLOR_BLUE"%s"COLOR_RESET"'\n", filename);
+  FILE* file=open_file(outdir, filename, TRUE);
+  if(!file) exit(1);
+
   // compute parameters
   if(step<=0) step=0.1;
   // initialize MC state
@@ -146,20 +118,19 @@ int main(int argc, char** argv) {
     free(initial_state);
   } else random_vector(size, spins); 
   normalize(spins);
-  real energy[6]; skyrmion_energy(spins, energy);
-  long int mcs=1; long int iter=0;
+  realp energy[6]; skyrmion_energy(spins, energy);
+  long int mcs=0;
   // start timer
   int per_iter=(update_by_one)?SIZE:1; // updates per MCS
   max_iter*=per_iter;
   const int initial_iter_rate=per_iter;
   long int iter_rate=initial_iter_rate;
   long int iter_last=0;
-  while(mcs<max_iter) {
+  for(long int iter=0; iter<max_iter; iter++) {
     if(stop_signal) { 
       fprintf(stderr, COLOR_RED"Aborting\n"COLOR_RESET); 
       break; 
     };
-    iter++;
     // show progress
     if(iter>iter_rate+iter_last) {
       time_t now; time(&now); 
@@ -176,12 +147,13 @@ int main(int argc, char** argv) {
         char buf[100]; strftime(buf, sizeof(buf), "%H:%M:%S", timeinfo);
         fprintf(stderr,COLOR_BLUE"%s"COLOR_RESET" ",buf);
         fprintf(stderr,COLOR_YELLOW"#"COLOR_RESET"%ld ", mcs/per_iter);
-        fprintf(stderr,COLOR_YELLOW"Energy"COLOR_RESET" %.1"RF"g(%.1"RF"g) ",energy[5], energy[3]);
+        fprintf(stderr,COLOR_YELLOW"Energy"COLOR_RESET" %.1"RPF"g(%.1"RPF"g) ",energy[5], energy[3]);
         fprintf(stderr,COLOR_YELLOW"Acc."COLOR_RESET" %ld%% ",acceptence);
         fprintf(stderr,COLOR_YELLOW"Iter./sec"COLOR_RESET" %ld ",iter_per_sec/per_iter);
         fprintf(stderr,COLOR_YELLOW"ETA"COLOR_RESET" ");
-        fprint_timediff(stderr, (max_iter-mcs)*ltime/mcs);
+        fprint_timediff(stderr, (max_iter-iter)*ltime/iter);
         fprintf(stderr,"\n");
+        fflush(stderr);
 
         skyrmion_energy(spins, energy);
         //fprintf(stderr,COLOR_YELLOW"Energy"COLOR_RESET" %"RF"g(%"RF"g)\n",energy[5], energy[3]);
@@ -206,9 +178,11 @@ int main(int argc, char** argv) {
       real denergy=-newenergy[5];
       if(is_to_reject(denergy)) {
         spins[idx]=old[0]; spins[idx+1]=old[1]; spins[idx+2]=old[2]; 
-        continue;
+        //continue;
+      } else {
+        mcs++;
+        for(int k=0; k<6; k++) energy[k]+=newenergy[k];
       };
-      for(int k=0; k<6; k++) energy[k]+=newenergy[k];
  
       //real e0[6]; skyrmion_energy(spins, e0);
       //fprintf(stderr, "dT %d %d %d %d %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g\n", u,x,y,z,e0[0]-energy[0], e0[1]-energy[1], e0[2]-energy[2], e0[3]-energy[3], e0[4]-energy[4], e0[5]-energy[5]);
@@ -223,15 +197,18 @@ int main(int argc, char** argv) {
       };
       normalize(spins2);
       // compute energy
-      real last_energy=energy[5];
-      skyrmion_energy(spins2, energy);
-
-      real denergy=(last_energy-energy[5]);
-      if(is_to_reject(denergy)) continue;
-      real* tmp; tmp=spins; spins=spins2; spins2=tmp;
+      realp newenergy[6]; 
+      skyrmion_energy(spins2, newenergy);
+      realp denergy=(energy[5]-newenergy[5]);
+      if(is_to_reject(denergy)) {
+        //continue;
+      } else {
+        real* tmp; tmp=spins; spins=spins2; spins2=tmp;
+        for(int k=0; k<6; k++) energy[k]=newenergy[k];
+        mcs++;
+      };
     };
-    mcs++;
-    if(mcs%per_iter==0) {
+    if(iter%per_iter==0) {
       // save result
       int ne=0; float ergy[6];
       if(what_to_write & WRITE_ANISOTROPY) ergy[ne++]=energy[0];
@@ -242,8 +219,8 @@ int main(int argc, char** argv) {
       if(what_to_write & WRITE_TOTAL) ergy[ne++]=energy[5];
       fwrite(ergy, sizeof(float), ne, file);
     };
-  }
-  fprintf(stderr, "Finished after %ld iterations %ld steps\n", iter/SIZE, mcs/SIZE);
+  };
+  fprintf(stderr, COLOR_YELLOW"Done\n"COLOR_RESET);
   // deinitialization
   fclose(file);
   free(spins); free(spins2);

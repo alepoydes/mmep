@@ -9,7 +9,8 @@
 # Every BC can be one of
 #   0 : free
 #   1 : periodic
-1 1 0
+#1 1 0
+0 0 0
 [translation vectors]
 # Lattice generators
 # <X_x> <X_y> <X_z>
@@ -53,17 +54,20 @@
 # μ_B = 5.7883818066(38)×10^{−5} eV·T^{−1}
 # site-to-site distance a = 2.51 Å = 2.51 * 10^{-10} m
 # 2.1 * 5.7883818066×10^{−5} / ()^3
-0.007483327
-#0
+#0.007483327
+0
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>
-#0 0 0.25
-0 0 0
+# muB = 5.788e-5 eV/T = 5.788e-2 meV/T
+# muS = 2.1 * muB * T, T=0.25
+0 0 -0.0303890044815
+#0 0 0
 [magnetic anisotropy]
 # Magnetic anisotropy vector K=(<K_x>, <K_y>, <_z>)
 # <absolute value> <K_x> <K_y> <K_z>
-0.4 0 0 1
+#0.4 0 0 1
+0.293 0 0 1
 [exchange constant]
 # Echange constants J_{sd} for every pair of atoms stated in [neighborhood]
 # <J>

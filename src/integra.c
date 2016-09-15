@@ -20,10 +20,10 @@ Result X(T) is stored in X.
 */
 void runge_kutta(
 	int N, 
-	void (*F)(const real* x, real* g, real* E),
+	void (*F)(const real* x, real* g, realp* E),
 	real T,
 	real* X, 
-	real* E,
+	realp* E,
 	int* iter
 	)
 {
@@ -60,10 +60,10 @@ void runge_kutta(
 
 void euler(
 	int N, 
-	void (*F)(const real* x, real* g, real* E),
+	void (*F)(const real* x, real* g, realp* E),
 	real T,
 	real* X, 
-	real* E,
+	realp* E,
 	int* iter
 	)
 {
@@ -99,15 +99,15 @@ Arguments:
 
 real runge_kutta_implicit(
 	int N, 
-	void (*F)(const real* x, real* g, real* E),
+	void (*F)(const real* x, real* g, realp* E),
 	real T,
 	int D,
 	const real* restrict A,
 	const real* restrict B,
 	real* X,
-	int tol,
+	real tol,
 	int max_iter,
-	real* E,
+	realp* E,
 	int* iter
 	)
 {
@@ -135,7 +135,7 @@ real runge_kutta_implicit(
 		// swap buffers
 		real* tmp=mu1; mu1=mu; mu=tmp;
 		// check if converged
-		err=rsqrt(distsq(N*D, mu, mu1));
+		err=rpsqrt(distsq(N*D, mu, mu1));
 		//fprintf(stderr, "RK: iter %d err %"RF"g\n",i,err);
 		if(err<tol) break;
 	}; // intermediate steps are in mu
@@ -149,12 +149,12 @@ real runge_kutta_implicit(
 
 real radau_integrator(
 	int N, 
-	void (*F)(const real* x, real* g, real* E),
+	void (*F)(const real* x, real* g, realp* E),
 	real T,
 	real* X,
 	int tol,
 	int max_iter, 
-	real* E,
+	realp* E,
 	int* iter
 	)
 {
@@ -168,12 +168,12 @@ real radau_integrator(
 
 real gauss_integrator(
 	int N, 
-	void (*F)(const real* x, real* g, real* E),
+	void (*F)(const real* x, real* g, realp* E),
 	real T,
 	real* X,
 	int tol,
 	int max_iter, 
-	real* E,
+	realp* E,
 	int* iter
 	)
 {

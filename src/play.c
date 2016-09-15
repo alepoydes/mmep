@@ -6,6 +6,7 @@
 #include "debug.h"
 #include "display.h"
 #include "bitmap.h"
+#include "cmd.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -16,8 +17,6 @@
 
 #include <GL/freeglut.h>
 
-#define OUTDIR "fields"
-
 int frame=0; // current frame
 int sizef=0; // Number of loaded frames
 int sizea=0; // Number of frames allocated in memory
@@ -27,35 +26,6 @@ real* energy=NULL;
 int play_mode=0;
 int speed=1;
 int step=0;
-
-void showUsage(const char* program) {
-  fprintf(stderr, "Render MEP interactively.\
-\nUsage:\
-\n    %s [options] <lattice description file> <MEP file>\
-\nMEP file is normally saved by mepx to "OUTDIR"/mep.hnuplot\
-\nOptions:\
-\n   -h|--help              Show this message and exit\
-\n", program);
-};
-
-int parseCommandLine(int argc, char** argv) {
-  int c;
-  while(1) {
-    static struct option long_options[] = {      
-      {"help", no_argument, 0, 'h'},
-      {0, 0, 0, 0}
-    };
-    int option_index = 0;
-    c = getopt_long(argc, argv, "h", long_options, &option_index);
-    if (c==-1) break;
-    switch(c) {
-      case 'h': showUsage(argv[0]); exit(0);
-      case '?': break;
-      default: fprintf(stderr,"Unprocessed option '%c'\n", c); exit(1);
-    };
-  };
-  return optind;
-};
 
 void parseMEP(FILE* file) {
   int pos=0; int line=0;
@@ -120,20 +90,17 @@ void switchFrame() {
 void do_print(int width, int height, void* buffer) {
   print_screen=NULL;
   fprintf(stderr, "Saving screenshot                 \r");
-  FILE* file=fopen(OUTDIR"/screen.png","wb");
+  FILE* file=open_file(outdir,"/screen.png",TRUE);
+  if(!file) exit(1); 
   write_png(file, width, height, (unsigned char*) buffer);
   fclose(file);
   fprintf(stderr, "Saved\r");
 };
 
 void do_animation(int width, int height, void* buffer) {
-  char name[128]; sprintf(name,OUTDIR"/%04d.png",frame);
-  fprintf(stderr, "Saving %s              \r",name);
-  FILE* file=fopen(name,"wb");
-  if(!file) {
-    fprintf(stderr, "Failed to open '%s' to write\n", name);
-    exit(1);
-  };
+  char name[128]; sprintf(name,"/%04d.png",frame);
+  FILE* file=open_file(outdir,name,TRUE);
+  if(!file) exit(1);
   write_png(file, width, height, (unsigned char*) buffer);
   fclose(file);
   frame++; 
@@ -169,24 +136,26 @@ void motion_function(real p[3]) {
 
 
 int main(int argc, char** argv) {
-  srand(time(NULL));
-  // Initialize lattice
-  int i=parseCommandLine(argc,argv);
-  if(i<argc) {
-  	FILE* file=fopen(argv[i],"r");
-  	if(!file) { fprintf(stderr, "Can not open file '%s'\n", argv[i]); exit(1); };
-  	parse_lattice(file);
-  	fclose(file);
-  } else { fprintf(stderr, "No lattice file is provided\n"); exit(1); };
-  i++;
+  int i=init_program(argc,argv,
+    "Render MEP interactively.", "",
+    NULL, NULL);
   // Read MEP
   if(i<argc) {
-    FILE* file=fopen(argv[i],"r");
-    if(!file) { fprintf(stderr, "Can not open file '%s'\n", argv[i]); exit(1); };
+    FILE* file=open_file(NULL,argv[i],FALSE);
+    if(!file) exit(1);
     parseMEP(file);
-    fclose(file);
-  } else { fprintf(stderr, "No MEP file is provided\n"); exit(1); };
+    fclose(file); 
+    i++;
+  } else { 
+    fprintf(stderr, "No MEP file is provided\n"); 
+    exit(1); 
+  };
   assert(mep);
+  if(i<argc) {
+    fprintf(stderr, COLOR_RED"There are unused parameters:"COLOR_RESET"\n");
+    while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
+  };
+
   energy=malloc(sizeof(real)*sizef);
   evaluateEnergy();
   // Initialize graphics

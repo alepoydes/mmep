@@ -44,53 +44,60 @@
 //        2 if machine precision is reached for 'f' evaluation
 int steepest_descend(
 	int n, real* a, 
-	void (*F)(const real* x, real* y, real* E),
+  void (*TF)(const real* x, real* y, realp* E),
 	int mode, real mode_param, real epsilon, int max_iter,
-	void (*display)(int iter, real* a, real* grad_f, real f, real res, real constres, real alpha),
-  real (*P)(real* a),
-  void (*T)(const real* a, real* t)
+	void (*display)(int iter, real* a, real* grad_f, realp f, real res, real constres, real alpha, realp last_f, real last_grad),
+  real (*P)(real* a)
 	)
 {
-  int iter;
   real alpha;
-  assert(F); assert((P && T) || (!P && !T));
-  switch(mode) {
-  	case SDM_CONSTANT: alpha=mode_param; break;
-	  case SDM_INERTIAL: alpha=NAN; break;
-    case SDM_PROGR: alpha=mode_param; break;
-	  default: assert(1);
-  };
-  real* grad=(real*)malloc(sizeof(real)*n); assert(grad);
-  int status=1;
-  real last_res=0;
-  real last_f=-INFINITY;
-  real constres;
-  if(P) constres=P(a); else constres=0;
-  real f=NAN; real res=NAN;
-  for(iter=0; iter<max_iter; iter++) {
-  	F(a,grad,&f);
-  	// grad contains Hx+B
-  	// f value of f(a)
-    //ill conditioned quadratic optimiation
-    //fprintf(stderr,"res: %g\n",rsqrt(normsq(n,grad)));
-    //assert(!isnan(normsq(n,grad)));
-    if(T) T(a,grad);
-    real res2=normsq(n,grad); 
-    res=rsqrt(res2/n);
-    assert(!isnan(res));
+  assert(TF);
+  realp last_f=-INFINITY, f=NAN;
+  real constres=NAN, res=NAN, last_res=0;
+
+  real init_alpha() {
     switch(mode) {
-      case SDM_CONSTANT: break;
-      case SDM_INERTIAL: 
-        if(f<=last_f) alpha+=mode_param*last_res; else alpha=mode_param*res;
-        break;
-      case SDM_PROGR: 
-        //if(f<=last_f) alpha*=1.01; else alpha=mode_param;
-        if(res<=last_res) alpha+=mode_param; else alpha=mode_param;
-        break;
-      default: assert(0);
+  	  case SDM_CONSTANT: return mode_param;
+      case SDM_INERTIAL: return NAN; 
+      case SDM_PROGR: return 1/res;
     };
+    fprintf(stderr,"Unknown optimization mode: "COLOR_RED"%d"COLOR_RESET"\n", mode);
+    exit(1);
+  };
+
+  real update_alpha() {
+    switch(mode) {
+      case SDM_CONSTANT: return alpha;
+      case SDM_INERTIAL: return alpha+mode_param*last_res; 
+      case SDM_PROGR: return alpha*(1+mode_param); 
+    };
+    assert(0);
+  };
+
+  real decrease_alpha() {
+    switch(mode) {
+      case SDM_CONSTANT: return alpha/2;
+      case SDM_INERTIAL: return alpha/2;
+      case SDM_PROGR: return alpha/2;
+    };
+    assert(0);
+  };
+
+  real* grad=(real*)malloc(sizeof(real)*n); assert(grad);
+  real* bufa=(real*)malloc(sizeof(real)*n); assert(bufa);
+  real* bufgrad=(real*)malloc(sizeof(real)*n); assert(bufgrad);
+  real* toreturn=a; real* torelease=bufa; 
+  int status=1;
+
+  if(P) constres=P(a); else constres=0;
+  TF(a,grad,&f);
+  real res2=normsq(n,grad); res=rsqrt(res2/n); assert(!isnan(res));  
+  last_res=res; last_f=f;
+  alpha=init_alpha();
+
+  int iter=1;
+  while(iter<max_iter && status!=2) {
     if(res+constres<epsilon) { // If solution is found
-      //if(display) display(-iter,a,grad,f,res,constres,alpha);
       status=0; break; 
     };
     if(stop_signal>0) {
@@ -98,27 +105,57 @@ int steepest_descend(
       stop_signal=0;
       break;
     };
-    if(display) display(iter,a,grad,f,res,constres,alpha); 
-    //if(last_f==f) { status=2; break; }; // Iterations stop changing
-    // Calculation next aproximation
-    mult_sub(n,alpha,grad,a);
-    if(P) constres=P(a);
+    if(display) display(iter,a,grad,f,res,constres,alpha,last_f,last_res); 
+    //alpha=(res<=last_res)?update_alpha():decrease_alpha();
+    alpha=rabs(alpha);
+    alpha=update_alpha();
     last_res=res;
     last_f=f;
+    // update minimum
+    mult_sub_ext(n,alpha,grad,a,bufa);
+    if(P) constres=P(bufa);
+    while(iter<max_iter) {
+      TF(bufa,bufgrad,&f); iter++;
+      //print_vector(n, bufa);
+      //print_vector(n, bufgrad);
+      res2=normsq(n,bufgrad); res=rsqrt(res2/n); assert(!isnan(res));
+      if(rpabs(last_f-f)*1e2<EPSILON) { 
+        fprintf(stderr, "Maximum precision is reached\n");
+        status=2; break; 
+      }; 
+      if(f<last_f) break;
+      if(display) display(0,bufa,bufgrad,f,res,constres,alpha,last_f,last_res);
+      if(alpha<0) { 
+        fprintf(stderr, "Minimum with non-zero gradient\n");
+        status=2; break; 
+      };
+      if(rabs(alpha)<1e-5) {
+        fprintf(stderr, "Gradient error is too large\n");
+        status=2; break;
+      };
+      // { alpha=-alpha; } 
+      alpha=decrease_alpha();  
+      // step was too large
+      mult_sub_ext(n,alpha,grad,a,bufa);
+      if(P) constres=P(bufa);
+    };
+    real* tmp=a; a=bufa; bufa=tmp;
+    tmp=bufgrad; bufgrad=grad; grad=tmp;
   };
-  if(display) display(-iter,a,grad,f,res,constres,alpha);
-  free(grad); 
+  if(display) display(-iter,a,grad,f,res,constres,alpha,last_f,last_res);
+  if(a!=toreturn) copy_vector(n, a, toreturn);
+  free(bufgrad); free(torelease); free(grad); 
   return status;
 };
 
-// I is integrator
+// I is an integrator
 int flow_descend(
   int n, real* a, 
-  void (*TF)(const real* x, real* y, real* E),
+  void (*TF)(const real* x, real* y, realp* E),
   int mode, real mode_param, real epsilon, int max_iter,
-  void (*display)(int iter, real* a, real* grad_f, real f, real res, real constres, real alpha),
+  void (*display)(int iter, real* a, real* grad_f, realp f, real res, real constres, real alpha),
   real (*P)(real* a),
-  void (*I)(int N, void (*F)(const real* x, real* g, real* E), real T, real* X, real* E, int* iter)
+  void (*I)(int N, void (*F)(const real* x, real* g, realp* E), real T, real* X, realp* E, int* iter)
   )
 {
   int iter=0; real alpha; real res=NAN;
@@ -130,7 +167,7 @@ int flow_descend(
     default: assert(1);
   };
   int status=1;
-  real last_f=-INFINITY; real f=NAN;
+  realp last_f=-INFINITY; realp f=NAN;
   P(a);
   while(iter<max_iter) {
     int iter_plus; I(n, TF, -alpha, a, &f, &iter_plus); iter+=iter_plus;
@@ -197,7 +234,7 @@ int lagrange_conjugate_quad(
   void (*Q)(const real* x, real* y),
   void (*L)(real* y),
   int mode, real mode_param, real epsilon, int max_iter,
-  void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
+  void (*display)(int iter, real* a, real* grad_f, realp f, real res, real alpha),
   void (*C)(const real* x, real* r),
   void (*D)(const real* x, const real* u, real* r),
   void (*P)(const real* x, const real* y, real* r),
@@ -235,7 +272,7 @@ int lagrange_conjugate_quad(
   while(iter<max_iter) {
     // Calculate gradient at the point
     restart: Q(x0,gradx); iter++;
-    real f=-dot(N,x0,gradx)/2;
+    realp f=-dot(N,x0,gradx)/2;
     L(gradx);
     f+=dot(N,x0,gradx);
     D(x0,u,gradx);
@@ -427,7 +464,7 @@ int lagrange_conjugate(
   void (*Q)(const real* x, real* y),
   void (*L)(real* y),
   int mode, real mode_param, real epsilon, int max_iter,
-  void (*display)(int iter, real* a, real* grad_f, real f, real res, real alpha),
+  void (*display)(int iter, real* a, real* grad_f, realp f, real res, real alpha),
   void (*C)(const real* x, real* r),
   void (*D)(const real* x, const real* u, real* r),
   void (*P)(const real* x, const real* y, real* r),
