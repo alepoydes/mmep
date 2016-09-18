@@ -10,9 +10,9 @@
 #include "skyrmion.h"
 #include "octave.h"
 
-real epsilon=1e-6;
-int long max_iter=1000;
-real mode_param=0.2;
+real epsilon=1e-9;
+int long max_iter=10000;
+real mode_param=0.1;
 real param2=NAN;
 int mode=2;
 int integrator=0;
@@ -80,7 +80,7 @@ const char* optstr, char (*handle)(char opt, const char* arg)
       case '?': break;
       default: 
         if(!handle || !handle(c, optarg)) {
-      	  fprintf(stderr,COLOR_RED"Unprocessed option"COLOR_RESET" '%c'\n", c); 
+      	  fprintf(stderr,COLOR_RED "Unprocessed option" COLOR_RESET " '%c'\n", c); 
       	  exit(1);
       	};
     };

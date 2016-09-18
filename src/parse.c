@@ -29,15 +29,15 @@ int iswhitespace(const char* string) {
 };
 
 void realloc_u(int sz) {
-	atom_positions=realloc(atom_positions,sizeof(real)*sz*3);
+	atom_positions=(real*)realloc(atom_positions,sizeof(real)*sz*3);
 	assert(atom_positions);
 };
 
 void realloc_n(int sz) {
-	neighbours=realloc(neighbours,sizeof(int)*sz*5); assert(neighbours);
-	exchange_constant=realloc(exchange_constant,sizeof(real)*sz); 
+	neighbours=(int*)realloc(neighbours,sizeof(int)*sz*5); assert(neighbours);
+	exchange_constant=(real*)realloc(exchange_constant,sizeof(real)*sz); 
 	assert(exchange_constant);
-	dzyaloshinskii_moriya_vector=realloc(dzyaloshinskii_moriya_vector,sizeof(real)*sz*3);
+	dzyaloshinskii_moriya_vector=(real*)realloc(dzyaloshinskii_moriya_vector,sizeof(real)*sz*3);
 	assert(dzyaloshinskii_moriya_vector);
 };
 
@@ -71,31 +71,31 @@ void load_positions(const char* posfilename) {
 	fprintf(stderr, "Loading positions from '%s'\n", posfilename);
 	positions=(int*)malloc(sizeof(int)*SIZE); assert(positions);
 	FILE* posfile=fopen(posfilename, "r");
-	if(!posfile) { fprintf(stderr, "Can not open "COLOR_RED"%s"COLOR_RESET"\n", posfilename); exit(1); };
+	if(!posfile) { fprintf(stderr, "Can not open " COLOR_RED "%s" COLOR_RESET "\n", posfilename); exit(1); };
 	int count; 
    	char buf[256];
-   	if(!fgets(buf, sizeof(buf), posfile)) { fprintf(stderr, "There is no header in '"COLOR_RED"%s"COLOR_RESET"'\n", posfilename); exit(1); };
-	if(sscanf(buf, "%d", &count)!=1) { fprintf(stderr, "Wrong header of '"COLOR_RED"%s"COLOR_RESET"'\n", posfilename); exit(1); };
-	if(count!=SIZE) { fprintf(stderr, "Wrong number of spins in '"COLOR_RED"%s"COLOR_RESET"'\n", posfilename); exit(1); };
+   	if(!fgets(buf, sizeof(buf), posfile)) { fprintf(stderr, "There is no header in '" COLOR_RED "%s" COLOR_RESET "'\n", posfilename); exit(1); };
+	if(sscanf(buf, "%d", &count)!=1) { fprintf(stderr, "Wrong header of '" COLOR_RED "%s" COLOR_RESET "'\n", posfilename); exit(1); };
+	if(count!=SIZE) { fprintf(stderr, "Wrong number of spins in '" COLOR_RED "%s" COLOR_RESET "'\n", posfilename); exit(1); };
 	// invert translations matrix
 	real invtrans[3][3]; invertmatrix3((real*)translation_vectors, (real*)invtrans);
 	real tmp[3][3];	matrixmult3((real*)translation_vectors, (real*)invtrans, (real*)tmp); 
 	for3(j) for3(k) if(j==k) assert(rabs(tmp[j][k]-1)<1e-6); else assert(rabs(tmp[j][k])<1e-6);
 	for(int line=0; line<SIZE; line++) {
-       	if(!fgets(buf, sizeof(buf), posfile)) { fprintf(stderr, "Not enough data in '"COLOR_RED"%s"COLOR_RESET"'\n", posfilename); exit(1); };
+       	if(!fgets(buf, sizeof(buf), posfile)) { fprintf(stderr, "Not enough data in '" COLOR_RED "%s" COLOR_RESET "'\n", posfilename); exit(1); };
 		real pos[3]; 
-		int l=sscanf(buf, "%"RF"g %"RF"g %"RF"g", pos, pos+1, pos+2);
-		if(l<2 || l>3) { fprintf(stderr, "Position has wrong number of coordinates at '"COLOR_RED"%s line %d"COLOR_RESET"'\n", posfilename, line+2); exit(1); };
+		int l=sscanf(buf, "%" RF "g %" RF "g %" RF "g", pos, pos+1, pos+2);
+		if(l<2 || l>3) { fprintf(stderr, "Position has wrong number of coordinates at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", posfilename, line+2); exit(1); };
 		if(l<3) pos[2]=0;
-		//fprintf(stderr, "%d: %"RF"g %"RF"g %"RF"g : %s", l, pos[0], pos[1], pos[2], buf);
+		//fprintf(stderr, "%d: %" RF "g %" RF "g %" RF "g : %s", l, pos[0], pos[1], pos[2], buf);
 		int x,y,z,u;
 		if(get_nearest((real*)invtrans, pos, &u, &x, &y, &z)>0.01) {
-			fprintf(stderr, "Position %"RF"g %"RF"g %"RF"g at '"COLOR_RED"%s line %d"COLOR_RESET"' is too far from lattice\n", pos[0], pos[1], pos[2], posfilename, line+2); 
+			fprintf(stderr, "Position %" RF "g %" RF "g %" RF "g at '" COLOR_RED "%s line %d" COLOR_RESET "' is too far from lattice\n", pos[0], pos[1], pos[2], posfilename, line+2); 
 			exit(1);	
 		};
 		positions[line]=INDEX(u,x,y,z);
 	};
-	if(!feof(posfile)) fprintf(stderr, COLOR_YELLOW"Warning:"COLOR_RESET"Extra data in '%s'\n",posfilename);
+	if(!feof(posfile)) fprintf(stderr, COLOR_YELLOW "Warning:" COLOR_RESET "Extra data in '%s'\n",posfilename);
 	fclose(posfile); 
 };
 
@@ -103,37 +103,45 @@ void load_skyrmion(const char* spinsfilename, real* image) {
 	fprintf(stderr, "Loading image from '%s'\n", spinsfilename);
 	// Open files
 	FILE* spinsfile=fopen(spinsfilename, "r");
-	if(!spinsfile) { fprintf(stderr, "Can not open "COLOR_RED"%s"COLOR_RESET"\n", spinsfilename); exit(1); };
+	if(!spinsfile) { 
+		fprintf(stderr, "Can not open " COLOR_RED "%s" COLOR_RESET "\n", spinsfilename); 
+		exit(1); 
+	};
 	// Read header
    	char buf[256];
-   	if(!fgets(buf, sizeof(buf), spinsfile)) { fprintf(stderr, "There is no header in '"COLOR_RED"%s"COLOR_RESET"'\n", spinsfilename); exit(1); };	
+   	if(!fgets(buf, sizeof(buf), spinsfile)) { fprintf(stderr, "There is no header in '" COLOR_RED "%s" COLOR_RESET "'\n", spinsfilename); exit(1); };	
 	int count; 
-	if(sscanf(buf, "%d", &count)!=1) { fprintf(stderr, "Wrong header of '"COLOR_RED"%s"COLOR_RESET"'\n", spinsfilename); exit(1); };
-	if(count!=SIZE) { fprintf(stderr, "Wrong number of spins in '"COLOR_RED"%s"COLOR_RESET"'\n", spinsfilename); exit(1); };	
+	if(sscanf(buf, "%d", &count)!=1) { fprintf(stderr, "Wrong header of '" COLOR_RED "%s" COLOR_RESET "'\n", spinsfilename); exit(1); };
+	if(count!=SIZE) { fprintf(stderr, "Wrong number of spins in '" COLOR_RED "%s" COLOR_RESET "'\n", spinsfilename); exit(1); };	
 	// Empty buffer for image
 	for(int i=0; i<SIZE*3; i++) image[i]=0.;
 	// Read line by line
 	int empty_mask=active==NULL;
 	count=0;
 	for(int line=0; line<SIZE; line++) {
-       	if(!fgets(buf, sizeof(buf), spinsfile)) { fprintf(stderr, "Not enough data in '"COLOR_RED"%s"COLOR_RESET"'\n", spinsfilename); exit(1); };
+       	if(!fgets(buf, sizeof(buf), spinsfile)) { 
+       		fprintf(stderr, "Not enough data in '" COLOR_RED "%s" COLOR_RESET "'\n", spinsfilename); 
+       		exit(1); 
+       	};
 		real spin[3];
-		int l=sscanf(buf, "%"RF"g %"RF"g %"RF"g", spin, spin+1, spin+2);
-		if(l!=3) { fprintf(stderr, "Spin has wrong number of coordinates at '"COLOR_RED"%s line %d"COLOR_RESET"'\n", spinsfilename, line+2); exit(1); };
+		int l=sscanf(buf, "%" RF "g %" RF "g %" RF "g", spin, spin+1, spin+2);
+		if(l!=3) { fprintf(stderr, "Spin has wrong number of coordinates at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", spinsfilename, line+2); exit(1); };
 		if(normsq3(spin)<=0.5) continue;
 		count++;
 		normalize3(spin);
 		int id=positions[line];
 		if(empty_mask) SETACTIVE(id)
-		else if(!ISACTIVE(id)) { fprintf(stderr, "An attempt to set not active spin at '"COLOR_RED"%s line %d"COLOR_RESET"'\n", spinsfilename, line+2); exit(1); };
+		else if(!ISACTIVE(id)) { fprintf(stderr, "An attempt to set not active spin at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", spinsfilename, line+2); exit(1); };
 		id*=3;
 		for3(j) image[id+j]=spin[j];
 	};
 	// check if files are consistent
-	if(!feof(spinsfile)) fprintf(stderr, COLOR_YELLOW"Warning:"COLOR_RESET"Extra data in '%s'\n",spinsfilename); 
+	if(!feof(spinsfile)) fprintf(stderr, COLOR_YELLOW "Warning:" COLOR_RESET "Extra data in '%s'\n",spinsfilename); 
 	// Check/set total number of spins
 	if(empty_mask) number_of_active=count;
-	else if(number_of_active!=count) { fprintf(stderr, "Number of spins %d in image '"COLOR_RED"%s"COLOR_RESET"' does not match number of actvie spins %d\n", count, spinsfilename, number_of_active); exit(1); };
+	else if(number_of_active!=count) { 
+		fprintf(stderr, "Number of spins %d in image '" COLOR_RED "%s" COLOR_RESET "' does not match number of actvie spins %d\n", count, spinsfilename, number_of_active); 
+	exit(1); };
 	// finalizing
 	fclose(spinsfile);
 };
@@ -215,20 +223,20 @@ void parse_lattice(FILE* file) {
 				fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
 				exit(1); 
 			};
-			if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",&magnetic_field[0],&magnetic_field[1],&magnetic_field[2])!=3) {
+			if(sscanf(buf, "%" RF "g %" RF "g %" RF "g",&magnetic_field[0],&magnetic_field[1],&magnetic_field[2])!=3) {
 				fprintf(stderr,"Parse error:%d: real vector is expected\n",line); 
 				exit(1); 
 			};
 		} else if(match(buf,sec_temperature)) {
 			if(temperature!=0) {
-				fprintf(stderr, "Parse error:%d: temperature is set twice. Prev. value %"RF"g\n",line,temperature);
+				fprintf(stderr, "Parse error:%d: temperature is set twice. Prev. value %" RF "g\n",line,temperature);
 				exit(1);
 			};
 			if(!READLINE) { 
 				fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
 				exit(1); 
 			};
-			if(sscanf(buf, "%"RF"g",&temperature)!=1) {
+			if(sscanf(buf, "%" RF "g",&temperature)!=1) {
 				fprintf(stderr,"Parse error:%d: real value is expected\n",line); 
 				exit(1); 
 			};	
@@ -239,9 +247,9 @@ void parse_lattice(FILE* file) {
 				if(buf[0]=='[') { ready=1; break; };
 				if(magnetic_anisotropy_count>=capacity_anisotropy) { 
 					capacity_anisotropy=capacity_anisotropy*2+1; 
-					magnetic_anisotropy=realloc(magnetic_anisotropy, sizeof(magnetic_anisotropy_type)*capacity_anisotropy); 
+					magnetic_anisotropy=(magnetic_anisotropy_type*)realloc(magnetic_anisotropy, sizeof(magnetic_anisotropy_type)*capacity_anisotropy); 
 				};
-				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g",
+				if(sscanf(buf, "%" RF "g %" RF "g %" RF "g %" RF "g",
 					&magnetic_anisotropy[magnetic_anisotropy_count].norm,
 					&magnetic_anisotropy[magnetic_anisotropy_count].unit[0],
 					&magnetic_anisotropy[magnetic_anisotropy_count].unit[1],
@@ -273,7 +281,7 @@ void parse_lattice(FILE* file) {
 					fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
 					exit(1); 
 				};
-				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",&translation_vectors[j][0],&translation_vectors[j][1],&translation_vectors[j][2])!=3) {
+				if(sscanf(buf, "%" RF "g %" RF "g %" RF "g",&translation_vectors[j][0],&translation_vectors[j][1],&translation_vectors[j][2])!=3) {
 					fprintf(stderr,"Parse error:%d: real vector is expected\n",line); 
 					exit(1); 
 				};
@@ -283,7 +291,7 @@ void parse_lattice(FILE* file) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
 				if(sizeu>=capacityu) { capacityu=capacityu*2+1; realloc_u(capacityu); };
-				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g",atom_positions+3*sizeu+0,atom_positions+3*sizeu+1,atom_positions+3*sizeu+2)!=3) {
+				if(sscanf(buf, "%" RF "g %" RF "g %" RF "g",atom_positions+3*sizeu+0,atom_positions+3*sizeu+1,atom_positions+3*sizeu+2)!=3) {
 					fprintf(stderr,"Parse error:%d: real vector is expected\n",line); 
 					exit(1); 
 				};
@@ -294,7 +302,7 @@ void parse_lattice(FILE* file) {
 				fprintf(stderr,"Parse error:%d: %s is empty\n",line,sec_s); 
 				exit(1); 
 			};
-			if(sscanf(buf, "%"RF"g",&dipole)!=1) {
+			if(sscanf(buf, "%" RF "g",&dipole)!=1) {
 				fprintf(stderr,"Parse error:%d: real number is expected, got '%s'\n",line,buf); 
 				exit(1); 
 			};			
@@ -322,7 +330,7 @@ void parse_lattice(FILE* file) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
 				if(ec_size>=capacityn) { capacityn=capacityn*2+1; realloc_n(capacityn); };
-				if(sscanf(buf, "%"RF"g",exchange_constant+ec_size+0)!=1) {
+				if(sscanf(buf, "%" RF "g",exchange_constant+ec_size+0)!=1) {
 					fprintf(stderr,"Parse error:%d: not a real constant\n",line); 
 					exit(1); 
 				};
@@ -334,7 +342,7 @@ void parse_lattice(FILE* file) {
 				if(buf[0]=='[') { ready=1; break; };
 				if(dmv_size>=capacityn) { capacityn=capacityn*2+1; realloc_n(capacityn); };
 				real leng;
-				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g",&leng,dzyaloshinskii_moriya_vector+3*dmv_size+0,dzyaloshinskii_moriya_vector+3*dmv_size+1,dzyaloshinskii_moriya_vector+3*dmv_size+2)!=4) {
+				if(sscanf(buf, "%" RF "g %" RF "g %" RF "g %" RF "g",&leng,dzyaloshinskii_moriya_vector+3*dmv_size+0,dzyaloshinskii_moriya_vector+3*dmv_size+1,dzyaloshinskii_moriya_vector+3*dmv_size+2)!=4) {
 					fprintf(stderr,"Parse error:%d: not of the form: <length> <x> <y> <z>\n",line); 
 					exit(1); 
 				};
@@ -346,7 +354,7 @@ void parse_lattice(FILE* file) {
 				if(!READLINE) break;
 				if(buf[0]=='[') { ready=1; break; };
 				real o[3], n[3];
-				if(sscanf(buf, "%"RF"g %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g",&o[0],&o[1],&o[2],&n[0],&n[1],&n[2])!=6) {
+				if(sscanf(buf, "%" RF "g %" RF "g %" RF "g %" RF "g %" RF "g %" RF "g",&o[0],&o[1],&o[2],&n[0],&n[1],&n[2])!=6) {
 					fprintf(stderr,"Parse error:%d: not of the form: <x> <y> <z> <nx> <ny> <nz>\n",line); 
 					exit(1); 
 				};
@@ -368,14 +376,14 @@ void parse_lattice(FILE* file) {
 				if(buf[0]=='[') { ready=1; break; };
 				if(match(buf,"vertex ")) {
 					real center[3]; real radius; real winding, rotation;
-					if(sscanf(buf, "vertex %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g",center+0,center+1,center+2,&radius,&winding,&rotation)!=6) {
+					if(sscanf(buf, "vertex %" RF "g %" RF "g %" RF "g %" RF "g %" RF "g %" RF "g",center+0,center+1,center+2,&radius,&winding,&rotation)!=6) {
 						fprintf(stderr,"Parse error:%d: wrong format\n",line); 
 						exit(1); 
 					};
 					append_skyrmion(center, radius, winding, rotation, image);
 				} else if(match(buf,"uniform ")) {
 					real dir[3]; 
-					if(sscanf(buf, "uniform %"RF"g %"RF"g %"RF"g",dir+0,dir+1,dir+2)!=3) {
+					if(sscanf(buf, "uniform %" RF "g %" RF "g %" RF "g",dir+0,dir+1,dir+2)!=3) {
 						fprintf(stderr,"Parse error:%d: wrong format\n",line); 
 						exit(1); 
 					};
@@ -453,7 +461,7 @@ void parse_lattice(FILE* file) {
 		exit(1);	
 	};
 	if(isnan(magnetic_field[0]+magnetic_field[1]+magnetic_field[2])) {
-		fprintf(stderr,"Parse error: Magnetic field is not set: %"RF"g,%"RF"g,%"RF"g\n",magnetic_field[0],magnetic_field[1],magnetic_field[2]);
+		fprintf(stderr,"Parse error: Magnetic field is not set: %" RF "g,%" RF "g,%" RF "g\n",magnetic_field[0],magnetic_field[1],magnetic_field[2]);
 		exit(1);	
 	};
 	for(int j=0; j<3; j++) if(boundary_conditions[j]<0 || boundary_conditions[j]>1) {

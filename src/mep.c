@@ -106,7 +106,7 @@ void energy_evaluate_ftt(real* path) {
   };
 
   //for(int p=1; p<sizep; p++)
-  //  fprintf(stderr,"%d: %"RF"g %"RF"g %"RF"g\n",p,distance[p]-distance[p-1], inflation[p],energy[p]);
+  //  fprintf(stderr,"%d: %" RF "g %" RF "g %" RF "g\n",p,distance[p]-distance[p-1], inflation[p],energy[p]);
   free(v); free(u); free(q); 
 };
 
@@ -115,31 +115,31 @@ void energy_evaluate(real* path) {
   else energy_evaluate_neb(path);
 }
 
-void skyrmion_display(int iter, real* restrict a, real* restrict grad_f, realp f, 
+void skyrmion_display(int iter, real* __restrict__ a, real* __restrict__ grad_f, realp f, 
 real res, real constres, real alpha, realp last_f, real last_res) {
   static realp prev_f=NAN; static realp prev_res=NAN; 
   if(iter==1) { prev_f=f; prev_res=res; };
-  if((iter%(debug_every*sizep)==0 && iter>0) || (debug_every==1) || iter<0) {
+  if(iter%debug_every==0 || iter<0) {
     if(iter!=0) fprintf(stderr, "%6d", abs(iter));
     else fprintf(stderr, "%6s", "");
-    fprintf(stderr, " "COLOR_YELLOW"E"COLOR_RESET);
+    fprintf(stderr, " " COLOR_YELLOW "E" COLOR_RESET);
     watch_number(f,debug_every==1?last_f:prev_f,16);
-    fprintf(stderr, " "COLOR_YELLOW"R"COLOR_RESET);
+    fprintf(stderr, " " COLOR_YELLOW "R" COLOR_RESET);
     watch_number(res,debug_every==1?last_res:prev_res,16);
-    fprintf(stderr, "%+"RF"g", constres);
-    fprintf(stderr, " "COLOR_YELLOW"A"COLOR_RESET"%"RF"g", alpha);
-    //fprintf(stderr, " "COLOR_YELLOW"d"COLOR_RESET"%.2g", pow(last_res/res,1./alpha));    
+    fprintf(stderr, "%+" RF "g", constres);
+    fprintf(stderr, " " COLOR_YELLOW "A" COLOR_RESET "%" RF "g", alpha);
+    //fprintf(stderr, " " COLOR_YELLOW "d" COLOR_RESET "%.2g", pow(last_res/res,1./alpha));    
     fprintf(stderr, "\n");
   	if(debug_plot && iter!=0 && size<=1024) plot_field3(stdout,a);
     prev_f=f; prev_res=res;
   };
 };
 
-real quasynorm(real* restrict x) {
+real quasynorm(real* __restrict__ x) {
   normalize(x); return 0;
 };
 
-int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param, 
+int skyrmion_steepest_descent(real* __restrict__ x, int mode, real mode_param, 
 	real epsilon, int max_iter) 
 {
 	return steepest_descend(
@@ -151,7 +151,7 @@ int skyrmion_steepest_descent(real* restrict x, int mode, real mode_param,
 	);
 };
 
-void path_gradient(const real* restrict arg, real* restrict out, realp* restrict E) {
+void path_gradient(const real* __restrict__ arg, real* __restrict__ out, realp* __restrict__ E) {
   if(E) *E=0;
   for(int p=0; p<sizep; p++) 
     if(E) {
@@ -165,30 +165,30 @@ void energy_display(FILE* file) {
   fprintf(file,"plot '-' using 1:2 with linespoints axes x1y1 title 'energy', '' using 1:3 with lines axes x1y2 title 'grad.', '' using 1:4 with lines axes x1y2 title 'orth. grad.'\n");
   for(int k=0; k<3; k++) {
     for(int p=0; p<sizep; p++)
-      fprintf(file,"%.8"RPF"e %.8"RPF"e %.8"RPF"e %.8"RPF"e\n",distance[p],energy[p],diff[p],tdiff[p]);
+      fprintf(file,"%.8" RPF "e %.8" RPF "e %.8" RPF "e %.8" RPF "e\n",distance[p],energy[p],diff[p],tdiff[p]);
     fprintf(file,"EOF\n\n");
   };
   fflush(file);
 };
 
-void path_display(int iter, real* restrict mep, real* restrict grad_f
+void path_display(int iter, real* __restrict__ mep, real* __restrict__ grad_f
 , realp f, real res, real constres, real alpha, realp last_f, real last_res) {
   if(!post_optimization && res<10*epsilon) {
-      //fprintf(stderr,COLOR_YELLOW"Climbing is on."COLOR_RESET" Residue %"RF"g\n",res);
+      //fprintf(stderr,COLOR_YELLOW "Climbing is on." COLOR_RESET " Residue %" RF "g\n",res);
       post_optimization=1;
   }; 
   static realp prev_f=NAN; static realp prev_res=NAN;
   if(iter==1) { prev_f=f; prev_res=res; };
-  if((iter%debug_every==0 && iter>0) || (debug_every==1) || iter<0) {
+  if(iter%debug_every==0 || iter<0) {
     if(iter!=0) fprintf(stderr, "%6d", abs(iter));
     else fprintf(stderr, "%6s", "");
-    fprintf(stderr, " "COLOR_YELLOW"E"COLOR_RESET);
+    fprintf(stderr, " " COLOR_YELLOW "E" COLOR_RESET);
     watch_number(f/(sizep-1),debug_every==1?last_f/(sizep-1):prev_f/(sizep-1),16);
-    fprintf(stderr, " "COLOR_YELLOW"R"COLOR_RESET);
+    fprintf(stderr, " " COLOR_YELLOW "R" COLOR_RESET);
     watch_number(res,debug_every==1?last_res:prev_res,16);
-    fprintf(stderr, "%+"RF"g", constres);
-    fprintf(stderr, " "COLOR_YELLOW"A"COLOR_RESET"%"RF"g", alpha);
-    fprintf(stderr, COLOR_FAINT" %s"COLOR_RESET, post_optimization?"Climbing":"");        
+    fprintf(stderr, "%+.2" RF "g", constres);
+    fprintf(stderr, " " COLOR_YELLOW "A" COLOR_RESET "%" RF "g", alpha);
+    fprintf(stderr, COLOR_FAINT " %s" COLOR_RESET, post_optimization?"Climbing":"");        
     fprintf(stderr, "\n");
     if(debug_plot && iter!=0) {
       if(debug_plot_path) plot_path(stdout, sizep, mep);
@@ -217,18 +217,18 @@ void path_equilize_rec(real* mep, int from, int to) {
     // move the image to interval [dist(f),dist(f+1)]
     idx[p]=f;
     loc[p]=(distance[f+1]>distance[f])?(d-distance[f])/(distance[f+1]-distance[f]):0; // local coordinate
-    //fprintf(stderr,"[%d] %"RF"g [%d] %"RF"g + %"RF"g * %"RF"g\n",p,d,f,distance[f],loc,distance[f+1]-distance[f]);
+    //fprintf(stderr,"[%d] %" RF "g [%d] %" RF "g + %" RF "g * %" RF "g\n",p,d,f,distance[f],loc,distance[f+1]-distance[f]);
     assert(loc[p]>=0); assert(loc[p]<=1);
     dist[p]=d;
   };
   idx[from]=from; loc[from]=0;
   idx[to]=to; loc[to]=0;
 
-  //for(int p=from; p<=to; p++) fprintf(stderr,COLOR_GREEN"%d"COLOR_RESET":%.3"RF"g(%.3"RF"g %d %.3"RF"g) ",p,distance[p],dist[p],idx[p], loc[p]); fprintf(stderr,"\n");      
+  //for(int p=from; p<=to; p++) fprintf(stderr,COLOR_GREEN "%d" COLOR_RESET ":%.3" RF "g(%.3" RF "g %d %.3" RF "g) ",p,distance[p],dist[p],idx[p], loc[p]); fprintf(stderr,"\n");      
   /*for(int p=from; p<=to; p++) {
      if(abs(idx[p])>p) fprintf(stderr, COLOR_RED); else if(abs(idx[p])<p) fprintf(stderr, COLOR_BLUE);
      if(idx[p]<0) fprintf(stderr, COLOR_BOLD);
-     fprintf(stderr, "%d "COLOR_RESET, abs(idx[p])-from);
+     fprintf(stderr, "%d " COLOR_RESET, abs(idx[p])-from);
   }; fprintf(stderr, "\n");  
   */
 
@@ -244,7 +244,7 @@ void path_equilize_rec(real* mep, int from, int to) {
       idx[p]=-idx[p];
     };
   } else {
-    //fprintf(stderr, COLOR_FAINT"Failed to interpolate inplace\n"COLOR_RESET);
+    //fprintf(stderr, COLOR_FAINT "Failed to interpolate inplace\n" COLOR_RESET);
     // copying old images to a buffer
     real* buf=(real*)malloc(sizeof(real)*size*(to-from+1)); assert(buf);
     copy_vector(size*(to-from+1), mep+size*from, buf);
@@ -289,17 +289,18 @@ real path_normalize(real* mep) {
     energy_evaluate(mep);
     path_equilize(mep);
   };
-  for(int p=0; p<sizep; p++) normalize(mep+size*p);  
-  energy_evaluate(mep);
-  return 0;
+  real sum=0;
+  for(int p=0; p<sizep; p++) sum+=normalize(mep+size*p);  
+  //energy_evaluate(mep);
+  return sum;
 };
 
-void path_tangent_rec(const real* restrict mep, real* restrict grad, int from, int to) {
-  real* u=malloc(sizeof(real)*size); assert(u);
+void path_tangent_rec(const real* __restrict__ mep, real* __restrict__ grad, int from, int to) {
+  real* u=ralloc(size);
   int C=to-from+1;  
   //fprintf(stderr, "[%d-%d] ", from,to);
-  real* q=malloc(sizeof(real)*C); assert(q);
-  real* l=malloc(sizeof(real)*C); assert(l);
+  real* q=ralloc(C); 
+  real* l=ralloc(C); 
   l[0]=0; q[0]=0;
   for(int p=from+1; p<=to; p++) {
     l[p-from]=distance[p]-distance[from];
@@ -315,7 +316,7 @@ void path_tangent_rec(const real* restrict mep, real* restrict grad, int from, i
       //proj=dot(size,u,grad+p*size)/normu; // gradient tangential projection
       if(use_first_order_repar)
         proj+=(l[C-1]*(p-from)/(C-1)-l[p-from])*rsqrt(size);
-      //fprintf(stderr,"%d$ %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g\n",p,proj,l[p],q[p],distance[p],inflation[p]);
+      //fprintf(stderr,"%d$ %" RF "g %" RF "g %" RF "g %" RF "g %" RF "g\n",p,proj,l[p],q[p],distance[p],inflation[p]);
       mult_add(size, -proj/normu, u, grad+p*size);
     } else if(
         post_optimization 
@@ -333,7 +334,7 @@ void path_tangent_rec(const real* restrict mep, real* restrict grad, int from, i
   free(u); free(q); free(l);
 }
 
-void path_tangent_ftt(const real* restrict mep, real* restrict grad) {
+void path_tangent_ftt(const real* __restrict__ mep, real* __restrict__ grad) {
   // Project to the tangent subspaces
   for(int p=0; p<sizep; p++) 
     project_to_tangent(mep+size*p,grad+size*p);
@@ -363,8 +364,8 @@ void path_tangent_ftt(const real* restrict mep, real* restrict grad) {
 };
 
 // INVALID
-void path_tangent_rohart(const real* restrict mep, real* restrict grad) {
-  real* u=malloc(sizeof(real)*size); assert(u);
+void path_tangent_rohart(const real* __restrict__ mep, real* __restrict__ grad) {
+  real* u=ralloc(size);
   for(int p=0; p<sizep; p++) {
     //real l1=normsq(size, grad+size*p);
     project_to_tangent(mep+size*p,grad+size*p);
@@ -378,18 +379,18 @@ void path_tangent_rohart(const real* restrict mep, real* restrict grad) {
       //project_to_tangent(mep+size*p,grad+size*p);
       //l4=normsq(size, grad+size*p);
     };
-    //fprintf(stderr, "  %"RF"g  %"RF"g  %"RF"g  %"RF"g\n", l1, l2, l3, l4);
+    //fprintf(stderr, "  %" RF "g  %" RF "g  %" RF "g  %" RF "g\n", l1, l2, l3, l4);
   };
   free(u); 
 }
 
-void path_tangent_neb(const real* restrict mep, real* restrict grad) {
-  real* u=malloc(sizeof(real)*size); assert(u);
+void path_tangent_neb(const real* __restrict__ mep, real* __restrict__ grad) {
+  real* u=ralloc(size);
   real *g1=NULL, *g2=NULL, *g3=NULL; 
   if(remove_zero_modes) {
-    g1=malloc(sizeof(real)*size); assert(g1);
-    g2=malloc(sizeof(real)*size); assert(g2);
-    g3=malloc(sizeof(real)*size); assert(g3);
+    g1=ralloc(size);
+    g2=ralloc(size);
+    g3=ralloc(size);
   };
   // Find index f of node with
   realp max=-INFINITY; int f=-1;
@@ -428,19 +429,19 @@ void path_tangent_neb(const real* restrict mep, real* restrict grad) {
   free(u); if(g1)free(g1); if(g2)free(g2); if(g3)free(g3);
 }
 
-void path_tangent(const real* restrict mep, real* restrict grad) {
+void path_tangent(const real* __restrict__ mep, real* __restrict__ grad) {
   // Rohart way
   //path_tangent_rohart(mep, grad); return;
   if(use_ftt) path_tangent_ftt(mep, grad);
   else path_tangent_neb(mep, grad);
 }  
 
-void projected_path_gradient(const real* restrict arg, real* restrict out, realp* restrict E) {
+void projected_path_gradient(const real* __restrict__ arg, real* __restrict__ out, realp* __restrict__ E) {
   path_gradient(arg, out, E);
   path_tangent(arg, out);
 };
 
-int path_steepest_descent(real* restrict path, int mode, 
+int path_steepest_descent(real* __restrict__ path, int mode, 
   real mode_param, real epsilon, int max_iter) 
 {
   real updated_param=mode_param;
@@ -483,7 +484,7 @@ int main(int argc, char** argv) {
     "Calculate MEP for magnetic systems.", options_desc,
     "zPN:n:R:q0", handle_option);
   if(i<argc) {
-    fprintf(stderr, COLOR_RED"There are unused parameters:"COLOR_RESET"\n");
+    fprintf(stderr, COLOR_RED "There are unused parameters:" COLOR_RESET "\n");
     while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
   };
 
@@ -493,10 +494,10 @@ int main(int argc, char** argv) {
   if(remove_zero_modes)
     fprintf(stderr, "Zero modes (translations) are removed\n");
   if(random_noise>0) 
-    fprintf(stderr, "Initial path noise amplitude: %"RF"g\n", random_noise);
+    fprintf(stderr, "Initial path noise amplitude: %" RF "g\n", random_noise);
 
   size=SIZE*3;
-  real* path=(real*)malloc(sizeof(real)*size*max_sizep); assert(path);
+  real* path=ralloc(size*max_sizep); 
   distance=(realp*)malloc(sizeof(realp)*max_sizep); assert(distance);
   energy=(realp*)calloc(sizeof(realp),max_sizep); assert(energy);
   diff=(realp*)malloc(sizeof(realp)*max_sizep); assert(diff);
@@ -509,9 +510,9 @@ int main(int argc, char** argv) {
 
   fprintf(stderr, "Images on path: %d in [%d, %d]\n", sizep, min_sizep, max_sizep);  
   // find two minima
-  fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Initializing path\n"COLOR_RESET);
+  fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Initializing path\n" COLOR_RESET);
   if(initial_states_count<2) {
-    fprintf(stderr, COLOR_RED COLOR_BOLD"There should be at least two images in the path\n"COLOR_RESET);
+    fprintf(stderr, COLOR_RED COLOR_BOLD "There should be at least two images in the path\n" COLOR_RESET);
     exit(1);
   };
   copy_vector(size, initial_state, path);
@@ -530,13 +531,13 @@ int main(int argc, char** argv) {
   // minimize initial and final states
   
   if(!do_not_relax_ends) {
-    fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing initial state\n"COLOR_RESET);
+    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing initial state\n" COLOR_RESET);
     skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter*max_sizep);
-    fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Relaxing final state\n"COLOR_RESET);
+    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing final state\n" COLOR_RESET);
     skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, epsilon, max_iter*max_sizep);
   };
 
-  fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Calculating MEP\n"COLOR_RESET);
+  fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP\n" COLOR_RESET);
   // MEP calculation
   post_optimization=0;
   path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
@@ -550,7 +551,7 @@ int main(int argc, char** argv) {
       //skyrmion_middle(path+2*size*(p-1), path+2*size*p, path+size*(2*p-1));
     };
     sizep=2*(sizep-1)+1;
-    fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Increasing number of images to %d\n"COLOR_RESET, sizep);
+    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Increasing number of images to %d\n" COLOR_RESET, sizep);
     post_optimization=0;    
     path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   };
@@ -562,12 +563,12 @@ int main(int argc, char** argv) {
     if(max_energy<energy[p]) max_energy=energy[p];
     if(min_energy>energy[p]) min_energy=energy[p];    
   };
-  fprintf(stderr, COLOR_BLUE"Energy:"COLOR_RESET" initial %.8"RPF"f maximum %.8"RPF"f minimum %.8"RPF"f final %.8"RPF"f\n", energy[0],max_energy,min_energy,energy[sizep-1]);
-  fprintf(stderr, COLOR_BLUE"Barriers:"COLOR_RESET" forward %"RPF"g backward %"RPF"g\n", max_energy-energy[0], max_energy-energy[sizep-1]);  
+  fprintf(stderr, COLOR_BLUE "Energy:" COLOR_RESET " initial %.8" RPF "f maximum %.8" RPF "f minimum %.8" RPF "f final %.8" RPF "f\n", energy[0],max_energy,min_energy,energy[sizep-1]);
+  fprintf(stderr, COLOR_BLUE "Barriers:" COLOR_RESET " forward %" RPF "g backward %" RPF "g\n", max_energy-energy[0], max_energy-energy[sizep-1]);  
   if(!debug_plot) {
-    for(int p=0;p<sizep;p++) printf("%.8"RPF"g ", energy[p]);
+    for(int p=0;p<sizep;p++) printf("%.8" RPF "g ", energy[p]);
     printf("\n");
-    for(int p=0;p<sizep;p++) printf("%.8"RPF"g ", distance[p]);
+    for(int p=0;p<sizep;p++) printf("%.8" RPF "g ", distance[p]);
     printf("\n");
   };
   // Compare distances between images
@@ -576,10 +577,10 @@ int main(int argc, char** argv) {
     real d=distance[p]-distance[p-1]-mean;
     var+=d*d;
   };  
-  fprintf(stderr, COLOR_BLUE COLOR_BOLD"Std of distances between images:"COLOR_RESET" %"RF"g\n", rsqrt(var));
+  fprintf(stderr, COLOR_BLUE COLOR_BOLD "Std of distances between images:" COLOR_RESET " %" RF "g\n", rsqrt(var));
 
   // save energy
-  fprintf(stderr, COLOR_YELLOW COLOR_BOLD"Saving result\n"COLOR_RESET);
+  fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Saving result\n" COLOR_RESET);
   FILE* file=open_file(outdir,"/energy.gnuplot",TRUE);
   if(file) {
     fprintf(file,"set terminal png\nset output '%s/energy.png'\n", outdir);
@@ -596,7 +597,7 @@ int main(int argc, char** argv) {
   };
   // Octave output
   if(save_octave>0) {
-    fprintf(stderr, COLOR_YELLOW"Computing energy contributions\n"COLOR_RESET);
+    fprintf(stderr, COLOR_YELLOW "Computing energy contributions\n" COLOR_RESET);
     realp* contr=(realp*)malloc(sizeof(realp)*sizep*6);
     for(int p=0; p<sizep; p++) skyrmion_energy(path+p*SIZE*3, contr+6*p);
     file=open_file(outdir, "/mep.oct", TRUE);    

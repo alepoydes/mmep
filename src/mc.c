@@ -74,24 +74,24 @@ int main(int argc, char** argv) {
     "Run Metropolis-Hastings algorithm.", options_desc,
     "us:T:R:N:F:", handle_option);
   if(i<argc) {
-    fprintf(stderr, COLOR_RED"There are unused parameters:"COLOR_RESET"\n");
+    fprintf(stderr, COLOR_RED "There are unused parameters:" COLOR_RESET "\n");
     while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
   };
 
   real debug_every_sec=debug_every;
 
   if(temperature==0) {
-    fprintf(stderr, COLOR_RED"Temperature is not set or zero\n");
+    fprintf(stderr, COLOR_RED "Temperature is not set or zero\n");
     exit(1);
   };
 
   print_settings();
-  fprintf(stderr, COLOR_YELLOW"Temperature:"COLOR_RESET" %"RF"g\n", temperature); 
-  fprintf(stderr, COLOR_YELLOW"Step size:"COLOR_RESET" %"RF"g\n", step); 
-  fprintf(stderr, COLOR_YELLOW"Number of steps:"COLOR_RESET" %ld\n", max_iter); 
-  fprintf(stderr, COLOR_YELLOW"Update type:"COLOR_RESET" %s\n", update_by_one?"one by one":"simultaneous"); 
-  fprintf(stderr, COLOR_YELLOW"Rejection rule:"COLOR_RESET" %s\n", rejection_rule==0?"Metropolis-Hastings":"Nowak");   
-  fprintf(stderr, COLOR_YELLOW"Noise type:"COLOR_RESET" %s\n", random_number_generator==0?"fast noise":"symmetric noise"); 
+  fprintf(stderr, COLOR_YELLOW "Temperature:" COLOR_RESET " %" RF "g\n", temperature); 
+  fprintf(stderr, COLOR_YELLOW "Step size:" COLOR_RESET " %" RF "g\n", step); 
+  fprintf(stderr, COLOR_YELLOW "Number of steps:" COLOR_RESET " %ld\n", max_iter); 
+  fprintf(stderr, COLOR_YELLOW "Update type:" COLOR_RESET " %s\n", update_by_one?"one by one":"simultaneous"); 
+  fprintf(stderr, COLOR_YELLOW "Rejection rule:" COLOR_RESET " %s\n", rejection_rule==0?"Metropolis-Hastings":"Nowak");   
+  fprintf(stderr, COLOR_YELLOW "Noise type:" COLOR_RESET " %s\n", random_number_generator==0?"fast noise":"symmetric noise"); 
 
   // Initialize timer
   time_t last_time_reported;
@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
   long int iter_last=0;
   for(long int iter=0; iter<max_iter; iter++) {
     if(stop_signal) { 
-      fprintf(stderr, COLOR_RED"Aborting\n"COLOR_RESET); 
+      fprintf(stderr, COLOR_RED "Aborting\n" COLOR_RESET); 
       break; 
     };
     // show progress
@@ -145,18 +145,18 @@ int main(int argc, char** argv) {
         last_time_reported=now;
         struct tm* timeinfo=localtime(&now);
         char buf[100]; strftime(buf, sizeof(buf), "%H:%M:%S", timeinfo);
-        fprintf(stderr,COLOR_BLUE"%s"COLOR_RESET" ",buf);
-        fprintf(stderr,COLOR_YELLOW"#"COLOR_RESET"%ld ", mcs/per_iter);
-        fprintf(stderr,COLOR_YELLOW"Energy"COLOR_RESET" %.1"RPF"g(%.1"RPF"g) ",energy[5], energy[3]);
-        fprintf(stderr,COLOR_YELLOW"Acc."COLOR_RESET" %ld%% ",acceptence);
-        fprintf(stderr,COLOR_YELLOW"Iter./sec"COLOR_RESET" %ld ",iter_per_sec/per_iter);
-        fprintf(stderr,COLOR_YELLOW"ETA"COLOR_RESET" ");
+        fprintf(stderr,COLOR_BLUE "%s" COLOR_RESET " ",buf);
+        fprintf(stderr,COLOR_YELLOW "#" COLOR_RESET "%ld ", mcs/per_iter);
+        fprintf(stderr,COLOR_YELLOW "Energy" COLOR_RESET " %.1" RPF "g(%.1" RPF "g) ",energy[5], energy[3]);
+        fprintf(stderr,COLOR_YELLOW "Acc." COLOR_RESET " %ld%% ",acceptence);
+        fprintf(stderr,COLOR_YELLOW "Iter./sec" COLOR_RESET " %ld ",iter_per_sec/per_iter);
+        fprintf(stderr,COLOR_YELLOW "ETA" COLOR_RESET " ");
         fprint_timediff(stderr, (max_iter-iter)*ltime/iter);
         fprintf(stderr,"\n");
         fflush(stderr);
 
         skyrmion_energy(spins, energy);
-        //fprintf(stderr,COLOR_YELLOW"Energy"COLOR_RESET" %"RF"g(%"RF"g)\n",energy[5], energy[3]);
+        //fprintf(stderr,COLOR_YELLOW "Energy" COLOR_RESET " %" RF "g(%" RF "g)\n",energy[5], energy[3]);
       };    
     };
     // compute new state
@@ -185,8 +185,8 @@ int main(int argc, char** argv) {
       };
  
       //real e0[6]; skyrmion_energy(spins, e0);
-      //fprintf(stderr, "dT %d %d %d %d %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g\n", u,x,y,z,e0[0]-energy[0], e0[1]-energy[1], e0[2]-energy[2], e0[3]-energy[3], e0[4]-energy[4], e0[5]-energy[5]);
-      //fprintf(stderr, "   %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g\n", old[0],old[1],old[2], spins[idx],spins[idx+1],spins[idx+2]);      
+      //fprintf(stderr, "dT %d %d %d %d %" RF "g %" RF "g %" RF "g %" RF "g %" RF "g %" RF "g\n", u,x,y,z,e0[0]-energy[0], e0[1]-energy[1], e0[2]-energy[2], e0[3]-energy[3], e0[4]-energy[4], e0[5]-energy[5]);
+      //fprintf(stderr, "   %" RF "g %" RF "g %" RF "g %" RF "g %" RF "g %" RF "g\n", old[0],old[1],old[2], spins[idx],spins[idx+1],spins[idx+2]);      
       //for(int k=0; k<6; k++) energy[k]=e0[k];      
       
     } else {
@@ -220,7 +220,7 @@ int main(int argc, char** argv) {
       fwrite(ergy, sizeof(float), ne, file);
     };
   };
-  fprintf(stderr, COLOR_YELLOW"Done\n"COLOR_RESET);
+  fprintf(stderr, COLOR_YELLOW "Done\n" COLOR_RESET);
   // deinitialization
   fclose(file);
   free(spins); free(spins2);

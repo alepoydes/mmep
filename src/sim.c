@@ -36,23 +36,23 @@ void screen() {
   fprintf(stderr,"%d: ", iter); 
   fprintf(stderr,"Time ");
   watch_number(sim_time,sim_time0,4); sim_time0=sim_time;
-  fprintf(stderr," Time step %"RF"g ",time_step);
-  fprintf(stderr,COLOR_YELLOW"-/="COLOR_RESET" inc./dec. ");
-  fprintf(stderr,COLOR_YELLOW"`123"COLOR_RESET" speed \n");
+  fprintf(stderr," Time step %" RF "g ",time_step);
+  fprintf(stderr,COLOR_YELLOW "-/=" COLOR_RESET " inc./dec. ");
+  fprintf(stderr,COLOR_YELLOW "`123" COLOR_RESET " speed \n");
 
   fprintf(stderr,"Energy "); 
   watch_number(E,E0,6); E0=E;
-  fprintf(stderr," Damping %"RF"g ", damping);   
-  fprintf(stderr,COLOR_YELLOW"[/]"COLOR_RESET" dec./inc. ");
-  fprintf(stderr,COLOR_YELLOW"\\"COLOR_RESET" neg.    \n");
+  fprintf(stderr," Damping %" RF "g ", damping);   
+  fprintf(stderr,COLOR_YELLOW "[/]" COLOR_RESET " dec./inc. ");
+  fprintf(stderr,COLOR_YELLOW "\\" COLOR_RESET " neg.    \n");
 
   fprintf(stderr,"Total length "); 
   watch_number(L,L0,6); L0=L;
   fprintf(stderr,"           \n");  
 
   fprintf(stderr,"Field %s ",powered?"on":"off");
-  fprintf(stderr,"Strength %"RF"g ", power);
-  fprintf(stderr,COLOR_YELLOW";/'"COLOR_RESET" dec./inc.      \n");
+  fprintf(stderr,"Strength %" RF "g ", power);
+  fprintf(stderr,COLOR_YELLOW ";/'" COLOR_RESET " dec./inc.      \n");
 
   fprintf(stderr,"Integrator: ");
   switch(integrator) {
@@ -61,22 +61,22 @@ void screen() {
     case 2: fprintf(stderr,"Radau"); break;
     default: fprintf(stderr,"unknown"); break;
   };
-  fprintf(stderr," "COLOR_YELLOW"i"COLOR_RESET" chng.                      \n");  
+  fprintf(stderr," " COLOR_YELLOW "i" COLOR_RESET " chng.                      \n");  
 
   fprintf(stderr,"Key bindings:\n");
-  fprintf(stderr,"  "COLOR_YELLOW"ENTER"COLOR_RESET" - make screenshot\n");  
-  fprintf(stderr,"  "COLOR_YELLOW"SPACE"COLOR_RESET" - pause\n");
-  fprintf(stderr,"  "COLOR_YELLOW"m"COLOR_RESET" - select spins/external field\n");
-  fprintf(stderr,"  "COLOR_YELLOW"n"COLOR_RESET" - choose background\n");
-  fprintf(stderr,"  "COLOR_YELLOW"b"COLOR_RESET" - show/hide boundung box\n");
-  fprintf(stderr,"  "COLOR_YELLOW"r"COLOR_RESET" - reset camers\n");
-  fprintf(stderr,"  "COLOR_YELLOW"v"COLOR_RESET" - cycle arrow styles\n");
-  fprintf(stderr,"  "COLOR_YELLOW"t"COLOR_RESET" - turn transparency on/off\n");
+  fprintf(stderr,"  " COLOR_YELLOW "ENTER" COLOR_RESET " - make screenshot\n");  
+  fprintf(stderr,"  " COLOR_YELLOW "SPACE" COLOR_RESET " - pause\n");
+  fprintf(stderr,"  " COLOR_YELLOW "m" COLOR_RESET " - select spins/external field\n");
+  fprintf(stderr,"  " COLOR_YELLOW "n" COLOR_RESET " - choose background\n");
+  fprintf(stderr,"  " COLOR_YELLOW "b" COLOR_RESET " - show/hide boundung box\n");
+  fprintf(stderr,"  " COLOR_YELLOW "r" COLOR_RESET " - reset camers\n");
+  fprintf(stderr,"  " COLOR_YELLOW "v" COLOR_RESET " - cycle arrow styles\n");
+  fprintf(stderr,"  " COLOR_YELLOW "t" COLOR_RESET " - turn transparency on/off\n");
   fprintf(stderr,"Mouse actions:\n");
-  fprintf(stderr,"  "COLOR_YELLOW"wheel"COLOR_RESET" - change scale\n");
-  fprintf(stderr,"  "COLOR_YELLOW"middle drag"COLOR_RESET" - translate scene\n");
-  fprintf(stderr,"  "COLOR_YELLOW"right drag"COLOR_RESET" - rotate scene\n");
-  fprintf(stderr,"  "COLOR_YELLOW"hold left"COLOR_RESET" - emit magnetic field\n");
+  fprintf(stderr,"  " COLOR_YELLOW "wheel" COLOR_RESET " - change scale\n");
+  fprintf(stderr,"  " COLOR_YELLOW "middle drag" COLOR_RESET " - translate scene\n");
+  fprintf(stderr,"  " COLOR_YELLOW "right drag" COLOR_RESET " - rotate scene\n");
+  fprintf(stderr,"  " COLOR_YELLOW "hold left" COLOR_RESET " - emit magnetic field\n");
 
   fprintf(stderr,"\nDipole int. neigh. %d\n", dipole_count);
 
@@ -161,7 +161,7 @@ void mouse_function(int button, int state, real p[3]) {
 
 void motion_function(real p[3]) {
   if(powered) {
-    //fprintf(stderr, "%"RF"g %"RF"g %"RF"g \n", p[0], p[1], p[2]);
+    //fprintf(stderr, "%" RF "g %" RF "g %" RF "g \n", p[0], p[1], p[2]);
     forall(u,x,y,z) {
       int i=INDEX(u,x,y,z)*3;
       real vec[3]; COORDS(u,x,y,z,vec);
@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
     "Integrate LLG equation and visializate dynamics.", options_desc,
     "", handle_option);
   if(i<argc) {
-    fprintf(stderr, COLOR_RED"There are unused parameters:"COLOR_RESET"\n");
+    fprintf(stderr, COLOR_RED "There are unused parameters:" COLOR_RESET "\n");
     while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
   };
 
@@ -205,11 +205,11 @@ int main(int argc, char** argv) {
   is_aborting=initDisplay(&argc, argv);
 
   // initialize magnetic field
-  nonuniform_field=malloc(sizeof(real)*SIZE*3); assert(nonuniform_field);
+  nonuniform_field=ralloc(SIZE*3);
   set_to_field(nonuniform_field);
   // Main loop
   fprintf(stderr, CLEAR_SCREEN);
-  display_buffer=malloc(sizeof(real)*SIZE*3); assert(display_buffer);
+  display_buffer=ralloc(SIZE*3); 
   while(!is_aborting) { 
     if(is_new_frame) {
       screen();

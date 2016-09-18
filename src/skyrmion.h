@@ -71,45 +71,45 @@ extern int number_of_active;
 
 extern int* positions;
 
-void skyrmion_energy(const real* restrict arg, realp energy[6]);
-void node_energy(int u, int x, int y, int z, const real* restrict arg, real energy[6]);
+void skyrmion_energy(const real* __restrict__ arg, realp energy[6]);
+void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real energy[6]);
 
-void skyrmion_gradient(const real* restrict arg, real* restrict grad, realp* restrict energy);
-void projected_gradient(const real* restrict arg, real* restrict grad, realp* restrict energy);
-void hamiltonian_hessian(const real* restrict arg, real* restrict out);
-void subtract_field(real* restrict inout);
-void set_to_field(real* restrict out);
+void skyrmion_gradient(const real* __restrict__ arg, real* __restrict__ grad, realp* __restrict__ energy);
+void projected_gradient(const real* __restrict__ arg, real* __restrict__ grad, realp* __restrict__ energy);
+void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out);
+void subtract_field(real* __restrict__ inout);
+void set_to_field(real* __restrict__ out);
 
-real normalize(real* restrict a);
-realp seminormalize(real factor, real* restrict a);
+real normalize(real* __restrict__ a);
+realp seminormalize(real factor, real* __restrict__ a);
 // Project vector field 'b' to tangent space of unit length vector field 'a'
-void project_to_tangent(const real* restrict a, real* restrict b);
+void project_to_tangent(const real* __restrict__ a, real* __restrict__ b);
 
-void skyrmion_random(real* restrict a);
-void skyrmion_constrain(const real* restrict a, real* restrict r);
-void skyrmion_constrain_gradient(const real* restrict a, const real* restrict u, real* restrict r);
-void skyrmion_constrain_adjucent(const real* restrict a, const real* restrict b, real* restrict r);
-void skyrmion_middle(const real* restrict a, const real* restrict b, real* restrict r);
-void skyrmion_middle_fourth_order(const real* restrict a, const real* restrict b, const real* restrict c, const real* restrict d, real* restrict r);
-void skyrmion_middle_third_order(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
+void skyrmion_random(real* __restrict__ a);
+void skyrmion_constrain(const real* __restrict__ a, real* __restrict__ r);
+void skyrmion_constrain_gradient(const real* __restrict__ a, const real* __restrict__ u, real* __restrict__ r);
+void skyrmion_constrain_adjucent(const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ r);
+void skyrmion_middle(const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ r);
+void skyrmion_middle_fourth_order(const real* __restrict__ a, const real* __restrict__ b, const real* __restrict__ c, const real* __restrict__ d, real* __restrict__ r);
+void skyrmion_middle_third_order(const real* __restrict__ a, const real* __restrict__ b, const real* __restrict__ c, real* __restrict__ r);
 void skyrmion_geodesic(real noise, int sizep, real* p);
 void skyrmion_geodesic_rec(real noise, real* p, int n, int m);
-void two_point_tangent0(const real* restrict a, const real* restrict b, real* restrict r);
-void two_point_tangent1(const real* restrict a, const real* restrict b, real* restrict r);
-void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
-void three_point_tangent_mean(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
-void three_point_tangent_stable(real ea, real eb, real ec, const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r);
-//void three_point_equalize(const real* restrict a, const real* restrict b, real* restrict r);
-//void three_point_equalizer(const real* restrict a, const real* restrict c, const real* restrict b, real* restrict r);
+void two_point_tangent0(const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ r);
+void two_point_tangent1(const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ r);
+void three_point_tangent(const real* __restrict__ a, const real* __restrict__ b, const real* __restrict__ c, real* __restrict__ r);
+void three_point_tangent_mean(const real* __restrict__ a, const real* __restrict__ b, const real* __restrict__ c, real* __restrict__ r);
+void three_point_tangent_stable(real ea, real eb, real ec, const real* __restrict__ a, const real* __restrict__ b, const real* __restrict__ c, real* __restrict__ r);
+//void three_point_equalize(const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ r);
+//void three_point_equalizer(const real* __restrict__ a, const real* __restrict__ c, const real* __restrict__ b, real* __restrict__ r);
 
 realp skyrmion_minimum_energy();
 
 void append_skyrmion(const real center[3], real distance, real winding, 
-	real rotation, real* restrict data);
+	real rotation, real* __restrict__ data);
 
 #define COORDS(u,x,y,z,vec) { (vec)[0]=atom_positions[3*u+0]+x*translation_vectors[0][0]+y*translation_vectors[1][0]+z*translation_vectors[2][0]; (vec)[1]=atom_positions[3*u+1]+x*translation_vectors[0][1]+y*translation_vectors[1][1]+z*translation_vectors[2][1]; (vec)[2]=atom_positions[3*u+2]+x*translation_vectors[0][2]+y*translation_vectors[1][2]+z*translation_vectors[2][2]; }
 
-void group_generator(const real* restrict spins, int axis, real* restrict gen);
+void group_generator(const real* __restrict__ spins, int axis, real* __restrict__ gen);
 
 void prepare_dipole_table(real negligible);
 

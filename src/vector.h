@@ -1,7 +1,6 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#define _GNU_SOURCE
 #include <math.h>
 #include <float.h>
 
@@ -112,7 +111,7 @@ real dot3(const real* x, const real* y);
 //#define normalize3(x) { real t=(3-normsq3(x))*0.5; (x)[0]*=t; (x)[1]*=t; (x)[2]*=t; }
 //#define normalize3(x) { real t=(1+normsq3(x))/2; (x)[0]/=t; (x)[1]/=t; (x)[2]/=t; }
 //#define normalize3(x) { real t=normsq3(x); if(t>0) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
-#define NORMEPS2 (1E-14)
+extern real NORMEPS2;
 real normalize3(real* x);
 #define seminormalize3(factor,x) ({ real t=rsqrt(normsq3(x)); if(t>0) { real f=1-factor+factor/t; (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; t>0?rabs((1-t)*(1-factor)):1; })
 #define middle3(x,y,z) { (z)[0]=((x)[0]+(y)[0])/2; (z)[1]=((x)[1]+(y)[1])/2; (z)[2]=((x)[2]+(y)[2])/2; normalize3(z); }
@@ -167,15 +166,15 @@ void add_random_vector(real alpha, int n, const real* a, real* b);
 void add_random_cone(real alpha, int n, const real* a, real* b);
 void zero_vector(int n, real* a);
 void copy_vector(int n, const real* a, real* b);
-void sub_inplace(int n, const real* restrict a, real* restrict c);
-void sub(int n, const real* restrict a, const real* restrict b, real* restrict c);
-void add_inplace(int n, const real* restrict a, real* restrict c);
-void add_constant_inplace(int n, real a, real* restrict c);
-void negate_inplace(int n, real* restrict c);
-void negate_div(int n, real* restrict a, real* restrict c);
-void const_div_inplace(int n, real a, real* restrict c);
-void linear_comb(int n, real a, const real* restrict b, real c, real* restrict d, real* restrict e);
+void sub_inplace(int n, const real* __restrict__ a, real* __restrict__ c);
+void sub(int n, const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ c);
+void add_inplace(int n, const real* __restrict__ a, real* __restrict__ c);
+void add_constant_inplace(int n, real a, real* __restrict__ c);
+void negate_inplace(int n, real* __restrict__ c);
+void negate_div(int n, real* __restrict__ a, real* __restrict__ c);
+void const_div_inplace(int n, real a, real* __restrict__ c);
+void linear_comb(int n, real a, const real* __restrict__ b, real c, real* __restrict__ d, real* __restrict__ e);
 
-void gram_schmidt(int N, int K, real* restrict* V);
+void gram_schmidt(int N, int K, real* __restrict__* V);
 
 #endif

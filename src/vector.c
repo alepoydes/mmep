@@ -5,6 +5,8 @@
 #include <math.h>
 #include <assert.h>
 
+real NORMEPS2=0;//1e-14;
+
 real* ralloc(int n) {
 	real* buf=(real*)malloc(sizeof(real)*n); 
 	assert(buf);
@@ -14,19 +16,20 @@ real* ralloc(int n) {
 real normalize3(real* x) { 
 	real t=normsq3(x); 
 	real e=rabs(t-1);
-	if (t>0 && e>NORMEPS2) { 
+	if(t==0) return 0;
+	if (e>NORMEPS2) { 
 		real f=rsqrt(t); 
 		(x)[0]/=f; (x)[1]/=f; (x)[2]/=f; 
 		return 0;
 	}; 
-	return e; 
+	return e;//EPSILON;//rabs(normsq3(x)-1);
 };
 
-real dot3(const real* restrict x, const real* restrict y) {
+real dot3(const real* __restrict__ x, const real* __restrict__ y) {
 	return x[0]*y[0]+x[1]*y[1]+x[2]*y[2];
 }; 
 
-void cross3(const real* restrict a,const real* restrict b,real* restrict c) { 
+void cross3(const real* __restrict__ a,const real* __restrict__ b,real* __restrict__ c) { 
 	(c)[0]=(a)[1]*(b)[2]-(a)[2]*(b)[1]; 
 	(c)[1]=(a)[2]*(b)[0]-(a)[0]*(b)[2]; 
 	(c)[2]=(a)[0]*(b)[1]-(a)[1]*(b)[0]; 
@@ -76,7 +79,7 @@ realp dot(int n, const real* a, const real* b) {
 	return nrm;	
 };
 
-void mult_sub(int n, real a, const real* restrict b, real* restrict c) {
+void mult_sub(int n, real a, const real* __restrict__ b, real* __restrict__ c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]-=a*b[k];
 };
@@ -86,7 +89,7 @@ void mult_sub_ext(int n, real a, const real* b, const real* c, real* d) {
 	for(int k=0; k<n; k++) d[k]=c[k]-a*b[k];
 };
 
-void mult_add(int n, real a, const real* restrict b, real* restrict c) {
+void mult_add(int n, real a, const real* __restrict__ b, real* __restrict__ c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]+=a*b[k];
 };
@@ -136,52 +139,52 @@ void sub_const(int n, real a, real* c) {
 	for(int k=0; k<n; k++) c[k]-=a;
 };
 
-void copy_vector(int n, const real* restrict a, real* restrict b) {
+void copy_vector(int n, const real* __restrict__ a, real* __restrict__ b) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) b[k]=a[k];
 };
 
-void add_mult(int n, const real* restrict a, real b, real* restrict c) {
+void add_mult(int n, const real* __restrict__ a, real b, real* __restrict__ c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]=b*c[k]+a[k];
 }; 
 
-void sub_inplace(int n, const real* restrict a, real* restrict c) {
+void sub_inplace(int n, const real* __restrict__ a, real* __restrict__ c) {
 	#pragma omp parallel for
 	for(int k=0; k<n; k++) c[k]-=a[k];
 }; 
-void sub(int n, const real* restrict a, const real* restrict b, real* restrict c) {
+void sub(int n, const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ c) {
 	#pragma omp parallel for
 	for(int k=0; k<n; k++) c[k]=a[k]-b[k];
 };
 
-void add_inplace(int n, const real* restrict a, real* restrict c) {
+void add_inplace(int n, const real* __restrict__ a, real* __restrict__ c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]+=a[k];
 }; 
 
-void negate_inplace(int n, real* restrict c) {
+void negate_inplace(int n, real* __restrict__ c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]=-c[k];
 }; 
 
-void negate_div(int n, real* restrict a, real* restrict c) {
+void negate_div(int n, real* __restrict__ a, real* __restrict__ c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) 
 		if(a[k]!=0) c[k]/=-a[k]; else c[k]=0;
 }; 
 
-void add_constant_inplace(int n, real a, real* restrict c) {
+void add_constant_inplace(int n, real a, real* __restrict__ c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]+=a;
 };
 
-void linear_comb(int n, real a, const real* restrict b, real c, real* restrict d, real* restrict e) {
+void linear_comb(int n, real a, const real* __restrict__ b, real c, real* __restrict__ d, real* __restrict__ e) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) e[k]=a*b[k]+c*d[k];
 }; 
 
-void const_div_inplace(int n, real a, real* restrict c) {
+void const_div_inplace(int n, real a, real* __restrict__ c) {
 	#pragma omp parallel for 
 	for(int k=0; k<n; k++) c[k]/=a;
 };
@@ -190,8 +193,8 @@ void const_div_inplace(int n, real a, real* restrict c) {
 // Vectors are not normalized.
 // The resulting V[k] is the projection of input V[k]
 // onto orthogonal subspace to V[j] for all j<k.
-void gram_schmidt(int N, int K, real* restrict* V) {
-	real* sqnorms=alloca(sizeof(real)*K);
+void gram_schmidt(int N, int K, real* __restrict__* V) {
+	real sqnorms[K];
 	for(int k=0; k<K; k++) {
 		for(int j=0; j<k; j++) 
 			if(sqnorms[j]>1e-7) {

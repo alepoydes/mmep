@@ -28,9 +28,9 @@ void runge_kutta(
 	)
 {
 	// Allocate buffers
-	real* k=malloc(sizeof(real)*N); assert(k);
-	real* y=malloc(sizeof(real)*N); assert(y);
-	real* g=malloc(sizeof(real)*N); assert(g);
+	real* k=ralloc(N); 
+	real* y=ralloc(N); 
+	real* g=ralloc(N); 
 	// Prepare data
 	copy_vector(N,X,y);
 	// first
@@ -68,7 +68,7 @@ void euler(
 	)
 {
 	// Allocate buffers
-	real* g=malloc(sizeof(real)*N); assert(g);
+	real* g=ralloc(N);
 	// first
 	F(X,g,E);
 	mult_add(N,T,g,X);
@@ -102,8 +102,8 @@ real runge_kutta_implicit(
 	void (*F)(const real* x, real* g, realp* E),
 	real T,
 	int D,
-	const real* restrict A,
-	const real* restrict B,
+	const real* __restrict__ A,
+	const real* __restrict__ B,
 	real* X,
 	real tol,
 	int max_iter,
@@ -114,9 +114,9 @@ real runge_kutta_implicit(
 	// check arguments
 	assert(D>0); assert(N>=0);
 	// Allocate buffers
-	real* mu=malloc(sizeof(real)*N*D); assert(mu);
-	real* mu1=malloc(sizeof(real)*N*D); assert(mu1);
-	real* g=malloc(sizeof(real)*N); assert(g);
+	real* mu=ralloc(N*D);
+	real* mu1=ralloc(N*D);
+	real* g=ralloc(N); 
 	// Initial approximation
 	real err=NAN;
 	F(X, mu, E);
@@ -136,7 +136,7 @@ real runge_kutta_implicit(
 		real* tmp=mu1; mu1=mu; mu=tmp;
 		// check if converged
 		err=rpsqrt(distsq(N*D, mu, mu1));
-		//fprintf(stderr, "RK: iter %d err %"RF"g\n",i,err);
+		//fprintf(stderr, "RK: iter %d err %" RF "g\n",i,err);
 		if(err<tol) break;
 	}; // intermediate steps are in mu
 	free(mu1); free(g);
@@ -160,7 +160,7 @@ real radau_integrator(
 {
 	real r=rsqrt(6);
 	real B[3]={(16-r)/36,(16+r)/36,1./9};
-	real A[9]={(16.-r)/72, (328-167*r)/1800,(-2+3*r)/450,
+	real A[9]={(16-r)/72, (328-167*r)/1800,(-2+3*r)/450,
 		(328+167*r)/1800,(16+r)/72,(-2-3*r)/450,
 		(85-10*r)/180,(85+10*r)/180,1./18};
 	return runge_kutta_implicit(N, F, T, 3, A, B, X, tol, max_iter, E, iter);
@@ -179,6 +179,7 @@ real gauss_integrator(
 {
 	real r=rsqrt(3);
 	real B[2]={0.5,0.5};
-	real A[4]={1./4, 1./4-r/6, 1./4+r/6, 1./4};
+	real A[4]={1./4, static_cast<real>(1./4)-r/6, 
+		static_cast<real>(1./4)+r/6, 1./4};
 	return runge_kutta_implicit(N, F, T, 2, A, B, X, tol, max_iter, E, iter);
 };
