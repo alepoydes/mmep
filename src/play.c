@@ -2,7 +2,6 @@
 #include "skyrmion.h"
 #include "optim.h"
 #include "plot.h"
-#include "parse.h"
 #include "debug.h"
 #include "display.h"
 #include "bitmap.h"

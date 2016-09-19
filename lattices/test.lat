@@ -1,6 +1,6 @@
 [size]
 # <x> <y> <z>
-1 1 1
+10 10 1
 [boundary conditions]
 # <BC along x> <BC along y> <BC along z>
 0 0 0
@@ -17,10 +17,10 @@
 0.0 0.5 0
 [neigborood]
 # <x> <y> <z> <s> <d>
-0 0 0 1 0
--1 0 0 1 0
--1 1 0 1 0
-0 1 0 1 0
+[0 0 0] 1 0
+[-1 0 0] 1 0
+[-1 1 0] 1 0
+[0 1 0] 1 0
 [dipole]
 0
 [external field]
@@ -44,6 +44,5 @@
 0 0 0 0
 [image]
 random
-
 # barrier 90.52587869 meV
 # Pre-exponential factor  8.1637E13 s^{-1}

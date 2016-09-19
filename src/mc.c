@@ -9,7 +9,6 @@
 
 #include "vector.h"
 #include "skyrmion.h"
-#include "parse.h"
 #include "debug.h"
 #include "integra.h"
 #include "cmd.h"

@@ -1,3 +1,6 @@
+#ifndef SKYRMION_H
+#define SKYRMION_H
+
 #include "vector.h"
 
 // Physical parameters
@@ -117,3 +120,5 @@ void prepare_dipole_table(real negligible);
 // with gven tolerance.
 // If there is no atom with these coordinates, return negative value.
 //int coordinates_to_index(const real coord[3], real tol, int cell[3]);
+
+#endif

@@ -17,10 +17,10 @@
 0.0 0.5 0
 [neigborood]
 # <x> <y> <z> <s> <d>
-0 0 0 1 0
--1 0 0 1 0
--1 1 0 1 0
-0 1 0 1 0
+[0 0 0] 1 0
+[-1 0 0] 1 0
+[-1 1 0] 1 0
+[0 1 0] 1 0
 [dipole]
 0
 [external field]
@@ -42,15 +42,15 @@
 0 0 0 0
 0 0 0 0
 0 0 0 0
-[cut by plane]
+[cut]
 # <point x> <point y> <point z> <normal x> <normal y> <normal z>
-10 0 0 -1 0 0
-0 4 0 0 -1 0
+plane 10 0 0 -1 0 0
+plane 0 4 0 0 -1 0
 [image]
 uniform 0 1 0
 [image]
-random
-#uniform 1 0 0
+#random
+uniform 1 0 0
 [image]
 uniform 0 -1 0
 

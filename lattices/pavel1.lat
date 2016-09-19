@@ -36,16 +36,16 @@
 # <x>,<y>,<z> refer to a cell, hence are integer.
 # <s> and <d> are integer from 0 to u, where enumeration
 # corresponds to the order of atoms in section [unit cell]
-1 0 0 0 0
-0 1 0 0 0
--1 1 0 0 0
+[1 0 0] 0 0
+[0 1 0] 0 0
+[-1 1 0] 0 0
 
 [external field]
 # Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
 # <H_x> <H_y> <H_z>
 # muB = 5.7883818066E-5 eV/T = 5.7883818066E-2 meV/T 
 # muS = 3 * muB * T, T=1
-0 0 0.173651454198	
+#0 0 0.173651454198	
 
 # muS = 3 * muB * 1.5 T = 0.26046 meV
 #0 0 0.26046
@@ -54,7 +54,7 @@
 #0 0 0.5157108
 
 # muS = 3 * muB * 0.9341171 T = 0.1622107928 meV
-#0 0 0.1622107928
+0 0 0.1622107928
 #0 0 0
 [magnetic anisotropy]
 # Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)

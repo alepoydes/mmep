@@ -12,8 +12,8 @@ volatile int stop_signal=0;
 
 FILE* open_file(const char* dir, const char* filename, char to_write) {
 	char buf[1024]="";
-	if(dir) strncat(buf, dir, sizeof(buf)-strlen(buf));
-	if(filename) strncat(buf, filename, sizeof(buf)-strlen(buf));
+	if(dir) strncat(buf, dir, sizeof(buf)-strlen(buf)-1);
+	if(filename) strncat(buf, filename, sizeof(buf)-strlen(buf)-1);
     fprintf(stderr, COLOR_YELLOW "%s" COLOR_RESET " '%s'\n",to_write?"Saving":"Reading",buf);
 	FILE* file=fopen(buf,to_write?"wb":"rb");
 	if(!file) fprintf(stderr, COLOR_RED "Can not open '%s' for %s\n" COLOR_RESET,buf,to_write?"writing":"reading");

@@ -5,7 +5,7 @@
 #include <getopt.h>
 #include <string.h>
 
-#include "parse.h"
+#include "parser.h"
 #include "debug.h"
 #include "skyrmion.h"
 #include "octave.h"
@@ -111,9 +111,10 @@ const char* optstr, char (*handle)(char opt, const char* arg)
 };
 
 void print_settings() {
+  fprintf(stderr, "Size of real: %zd\n", sizeof(real));
+  fprintf(stderr,"Using lattice %dx%dx%dx%d with %d bonds\n",sizeu,sizex,sizey,sizez,sizen);
   if(active) fprintf(stderr, "Active spins: %d / %d\n", number_of_active, SIZE);
     else fprintf(stderr, "Active spins: all / %d\n", SIZE);
-  fprintf(stderr, "Size of real: %zd\n", sizeof(real));
 };
 
 void oct_save_lattice(FILE* file) {

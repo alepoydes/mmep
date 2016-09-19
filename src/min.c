@@ -2,7 +2,6 @@
 #include "skyrmion.h"
 #include "optim.h"
 #include "plot.h"
-
 #include "debug.h"
 #include "octave.h"
 #include "integra.h"
