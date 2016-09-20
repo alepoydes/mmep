@@ -45,30 +45,34 @@ extern int yydebug;
 # define YYTOKENTYPE
   enum yytokentype
   {
-    REAL = 258,
-    SZ = 259,
-    INTEGER = 260,
-    FILENAME = 261,
-    EOL = 262,
-    PLANE = 263,
-    VERTEX = 264,
-    UNIFORM = 265,
-    RANDOM = 266,
-    SECS = 267,
-    SECEF = 268,
-    SECMA = 269,
-    SECBC = 270,
-    SECTV = 271,
-    SECUC = 272,
-    SECN = 273,
-    SECEC = 274,
-    SECDMV = 275,
-    SECIMAGE = 276,
-    SECLOADIMAGE = 277,
-    SECPOSITIONS = 278,
-    SECDIPOLE = 279,
-    SECTEMP = 280,
-    SECCUT = 281
+    NEG = 258,
+    REAL = 259,
+    SZ = 260,
+    INTEGER = 261,
+    FILENAME = 262,
+    ID = 263,
+    EOL = 264,
+    SECS = 265,
+    SECEF = 266,
+    SECMA = 267,
+    SECBC = 268,
+    SECTV = 269,
+    SECUC = 270,
+    SECN = 271,
+    SECEC = 272,
+    SECDMV = 273,
+    SECIMAGE = 274,
+    SECLOADIMAGE = 275,
+    SECPOSITIONS = 276,
+    SECDIPOLE = 277,
+    SECTEMP = 278,
+    SECCUT = 279,
+    PLANE = 280,
+    VERTEX = 281,
+    UNIFORM = 282,
+    RANDOM = 283,
+    BCFREE = 284,
+    BCPERIODIC = 285
   };
 #endif
 
@@ -77,7 +81,7 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 29 "src/parser.y" /* yacc.c:1909  */
+#line 45 "src/parser.y" /* yacc.c:1909  */
 
  uint sz;
  int i;
@@ -85,7 +89,7 @@ union YYSTYPE
  real vec[3];
  char* fn;
 
-#line 89 "src/parser.tab.h" /* yacc.c:1909  */
+#line 93 "src/parser.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

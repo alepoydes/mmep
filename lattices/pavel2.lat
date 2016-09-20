@@ -1,98 +1,53 @@
 [size]
-# Grid dimesions <x> x <y> x <z>
-# <x> <y> <z>
-100 100 1
+100, 100
 [boundary conditions]
-# Boundary conditions along every axis
-# <BC along x> <BC along y> <BC along z>
-# Every BC can be one of
-#   0 : free
-#   1 : periodic
-1 0 0
+periodic free
 [translation vectors]
-# Lattice generators
-# <X_x> <X_y> <X_z>
-# <Y_x> <Y_y> <Y_z>
-# <Z_x> <Z_y> <Z_z>
-# Cell with indices (a,b,c) has origin at
-# (a*<X_x>+b*<Y_x>+c*<Z_x>, a*<X_y>+b*<Y_y>+c*<Z_y>, a*<X_z>+b*<Y_z>+c*<Z_z>)
-1 0 0
-0.5 0.866025403784438646763723170752936 0
-0 0 1
+{1, 0}
+{sin(pi/6), cos(pi/6)}
 [unit cell]
-# Position of every atom in the unit cell
-# <x_1> <y_1> <z_1>
-# ...
-# <x_u> <y_u> <z_u>
-# All coordinates age given in the basis of translation vectors,
-# hence <x_i>,<y_i>,<z_i> belongs to [0,1].
-0 0 0
+{0, 0}
 [neigborood]
-# All nearest neighbours of every atom in the unit cell
-# <x> <y> <z> <s> <d>
-# Each line corrsponds to couple of interacting atoms
-# where first is the atom <s> in the cell (0,0,0)
-# and the second is the atom <d> in the cell (<x>,<y>,<z>).
-# <x>,<y>,<z> refer to a cell, hence are integer.
-# <s> and <d> are integer from 0 to u, where enumeration
-# corresponds to the order of atoms in section [unit cell]
-[1 0 0] 0 0
-[0 1 0] 0 0
-[-1 1 0] 0 0
-
+{1, 0} 0, 0
+{0, 1} 0, 0
+{-1, 1} 0, 0
 [external field]
-# Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
-# <H_x> <H_y> <H_z>
 # muB = 5.7883818066E-5 eV/T = 5.7883818066E-2 meV/T 
-# muS = 3 * muB * T, T=1
-0 0 0.173651454198
-
-# muS = 3 * muB * 1.5 T = 0.26046 meV
-#0 0 0.26046
-
-# muS = 3 * muB * 2.97 T = 0.5157108 meV
-#0 0 0.5157108
-
-# muS = 3 * muB * 0.9341171 T = 0.1622107928 meV
-#0 0 0.1622107928
-
-#0 0 0
+#{0, 0, 0.057883818066*3*1} # meV
+#{0, 0, 0.057883818066*3*1.5}
+#{0, 0, 0.057883818066*3*2.97}
+{0, 0, 0.057883818066*3*0.9341171}
+#{0, 0, 0}
 [magnetic anisotropy]
-# Magnetic anisotropy vector K=(<K_x>, <K_y>, <K_z>)
-# <absolute value> <K_x> <K_y> <K_z> (meV)
-0.4064060 0 0 1
+0.4064060 {0, 0, 1} # meV
 [exchange constant]
-# Echange constants J_{sd} for every pair of atoms stated in [neighborhood]
-# <J>
-5.8809717
+5.8809717 # meV
 5.8809717
 5.8809717
 [dzyaloshinskii moriya vector]
-# Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
-# <D_x> <D_y> <D_z>
-1.5567671 0 -1 0
-1.5567671 0.866025403784438646763723170752936 -0.5 0
-1.5567671 0.866025403784438646763723170752936 0.5 0
+1.5567671 {0, -1} # meV
+1.5567671 {cos(pi/6), -sin(pi/6)}
+1.5567671 {cos(pi/6), sin(pi/6)}
 [image]
-vertex 75 25 0 10 0 -1
+vertex {75, 25} 10, 0, -1
 [image]
-vertex 75 22.5 0 10 0 -1
+vertex {75, 22.5} 10, 0, -1
 [image]
-vertex 75 20 0 10 0 -1
+vertex {75, 20} 10, 0, -1
 [image]
-vertex 75 17.5 0 10 0 -1
+vertex {75, 17.5} 10, 0, -1
 [image]
-vertex 75 15 0 10 0 -1
+vertex {75, 15} 10, 0, -1
 [image]
-vertex 75 12.5 0 10 0 -1
+vertex {75, 12.5} 10, 0, -1
 [image]
-vertex 75 10 0 10 0 -1
+vertex {75, 10} 10, 0, -1
 [image]
-vertex 75 7.5 0 10 0 -1
+vertex {75, 7.5} 10, 0, -1
 [image]
-vertex 75 5 0 10 0 -1
+vertex {75, 5} 10, 0, -1
 [image]
-vertex 75 2.5 0 10 0 -1
+vertex {75, 2.5} 10, 0, -1
 [image]
-vertex 75 0 0 10 0 -1
+vertex {75, 0} 10, 0, -1
 [image]

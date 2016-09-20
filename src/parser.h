@@ -6,6 +6,7 @@
 
 /* interface to the lexer */
 extern int yylineno; /* from lexer */
+extern int yydebug;
 void yyerror(const char *s, ...);
 
 int yylex(void);

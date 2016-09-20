@@ -43,7 +43,7 @@ $(SRCDIR)/%.lex.c: $(SRCDIR)/%.l
 	flex -o $@ $<
 
 $(SRCDIR)/%.tab.c: $(SRCDIR)/%.y
-	bison -o $@ -d $<
+	bison -r states -o $@ -d $<
 
 $(OBJDIR)/%.f.o: $(SRCDIR)/%.c $(SRCDIR)/*.h
 	$(CC) $< $(OPT) -I $(SRCDIR) -c -o $@	

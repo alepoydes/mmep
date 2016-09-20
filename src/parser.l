@@ -21,7 +21,6 @@ EXP ([Ee][-+]?[0-9]+)
 	BEGIN INITIAL;
 }
 
-
 "[size]" { return SECS; }
 "[external field]" { return SECEF; }
 "[magnetic anisotropy]" { return SECMA; }
@@ -37,19 +36,31 @@ EXP ([Ee][-+]?[0-9]+)
 "[dipole]" { return SECDIPOLE; }
 "[temperature]" { return SECTEMP; }
 "[cut]" { return SECCUT; }
+
 "plane" { return PLANE; }
 "vertex" { return VERTEX; }
 "uniform" { return UNIFORM; }
 "random" { return RANDOM; }
+"free" { return BCFREE; }
+"periodic" { return BCPERIODIC; }
 
-"[" |
-"]" |
-"+" |
-"-" |
-"*" |
-"/" |
-"(" |
-")" { return yytext[0]; }
+[A-Za-z][a-zA-Z0-9]* {
+	yylval.fn=strdup(yytext);
+	return ID;
+}
+
+
+"[" | 
+"]" | 
+"{" | 
+"}" | 
+"+" | 
+"-" | 
+"*" | 
+"/" | 
+"(" | 
+")" |
+"," { return yytext[0]; }
 
 -?[0-9]+"."[0-9]*{EXP}? |
 "."[0-9]+{EXP}? { yylval.r = atof(yytext); return REAL; }

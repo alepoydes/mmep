@@ -1,10 +1,10 @@
 /* Lattice description file parser */
 %{
-#define YYDEBUG 1
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>	
+#include <string.h>	
 #include "parser.h"	
 #include "debug.h"	
 #include "skyrmion.h"	
@@ -18,13 +18,29 @@ void load_positions(const char* posfilename);
 void load_skyrmion(const char* spinsfilename, real* image);
 void set_uniform(real* dir, real* spin);
 void cut_by_plane(real* o, real* n);
-void append_anisotropy(real scalar, real k0, real k1, real k2);
+void append_anisotropy(real scalar, real k[3]);
 real* allocate_image();
+real apply(const char* name, real arg);
+real get_var(const char* name);
+int get_var_int(const char* name);
 
 int capacityu, capacityn, dmv_size, ec_size, capacity_anisotropy;
 
+#define YYDEBUG 1
+#include "parser.tab.h"
+
 extern FILE *yyin;
+
+#define YYPRINT(file, type, value) yyprint (file, type, value)
+static void yyprint(FILE* file, int type, YYSTYPE value); 
+
 %}
+
+%define parse.error verbose
+
+%left '+' '-'
+%left '*' '/'
+%left NEG
 
 %union {
  uint sz;
@@ -38,19 +54,21 @@ extern FILE *yyin;
 %token <r> REAL
 %token <sz> SZ
 %token <i> INTEGER
-%token <fn> FILENAME
+%token <fn> FILENAME ID
 %token EOL
-%token PLANE
-%token VERTEX UNIFORM RANDOM
 
 %token SECS SECEF SECMA SECBC SECTV SECUC SECN SECEC
 %token SECDMV SECIMAGE SECLOADIMAGE SECPOSITIONS SECDIPOLE
 %token SECTEMP SECCUT
 
-%type <vec> vector
-%type <r> exp real
-%type <i> integer
+%token PLANE
+%token VERTEX UNIFORM RANDOM
+%token BCFREE BCPERIODIC
 
+%type <sz> bc sz
+%type <vec> vector
+%type <r> exp 
+%type <i> integer
 
 %%
 
@@ -58,21 +76,35 @@ latticefile:
 	| latticefile section
 
 section:
-	  SECS EOL SZ SZ SZ EOL { 
-	  	sizex=$3; sizey=$4; sizez=$5; 
+	  SECS EOL sz ',' sz ',' sz EOL { 
+	  	sizex=$3; sizey=$5; sizez=$7; 
+	  	}
+	| SECS EOL sz ',' sz  EOL { 
+	  	sizex=$3; sizey=$5; sizez=1; 
 	  	}
 	| SECEF EOL vector EOL { copy3($3, magnetic_field); }
 	| SECMA EOL malist
-	| SECBC EOL SZ SZ SZ EOL { 
+	| SECBC EOL bc bc bc EOL { 
 		boundary_conditions[0]=$3; 
 		boundary_conditions[1]=$4; 
 		boundary_conditions[2]=$5; 
 		}
+	| SECBC EOL bc bc EOL { 
+		boundary_conditions[0]=$3; 
+		boundary_conditions[1]=$4; 
+		boundary_conditions[2]=0; 
+		}		
 	| SECTV EOL vector EOL vector EOL vector EOL { 
 		copy3($3, translation_vectors[0]);
 		copy3($5, translation_vectors[1]);
 		copy3($7, translation_vectors[2]);
 		}
+	| SECTV EOL vector EOL vector EOL { 
+		copy3($3, translation_vectors[0]);
+		copy3($5, translation_vectors[1]);
+		real vec[3]={0,0,1};
+		copy3(vec, translation_vectors[2]);
+		}		
 	| SECUC EOL uclist 
 	| SECN EOL nlist
 	| SECEC EOL eclist
@@ -99,9 +131,12 @@ section:
 		}
 	| SECCUT EOL cutlist
 
+bc: BCFREE { $$=0; }
+	| BCPERIODIC { $$=1; }
+
 malist: 
-	| malist exp exp exp exp EOL { 
-		append_anisotropy($2, $3, $4, $5); }
+	| malist exp vector EOL { 
+		append_anisotropy($2, $3); }
 
 uclist: 
 	| uclist vector EOL {
@@ -111,13 +146,22 @@ uclist:
 		}
 
 nlist:
-	| nlist '[' integer integer integer ']' SZ SZ EOL {
+	| nlist '{' integer ',' integer ',' integer '}' SZ ',' SZ EOL {
 		if(sizen>=capacityn) { capacityn=capacityn*2+1; realloc_n(capacityn); };
 		neighbours[5*sizen+0]=$3;
-		neighbours[5*sizen+1]=$4;
-		neighbours[5*sizen+2]=$5;
+		neighbours[5*sizen+1]=$5;
+		neighbours[5*sizen+2]=$7;
+		neighbours[5*sizen+3]=$9;
+		neighbours[5*sizen+4]=$11;
+		sizen++;
+		}
+	| nlist '{' integer ',' integer '}' SZ ',' SZ EOL {
+		if(sizen>=capacityn) { capacityn=capacityn*2+1; realloc_n(capacityn); };
+		neighbours[5*sizen+0]=$3;
+		neighbours[5*sizen+1]=$5;
+		neighbours[5*sizen+2]=0;
 		neighbours[5*sizen+3]=$7;
-		neighbours[5*sizen+4]=$8;
+		neighbours[5*sizen+4]=$9;
 		sizen++;
 		}
 
@@ -145,9 +189,9 @@ cutlist:
 		cut_by_plane($3,$4); }
 
 imagelist:
-	| imagelist VERTEX vector exp exp exp EOL {
+	| imagelist VERTEX vector exp ',' exp ',' exp EOL {
 		real* image=initial_state+SIZE*3*(initial_states_count-1);
-		append_skyrmion($3, $4, $5, $6, image);
+		append_skyrmion($3, $4, $6, $8, image);
 		}
 	| imagelist UNIFORM vector EOL {
 		real* image=initial_state+SIZE*3*(initial_states_count-1);
@@ -159,19 +203,47 @@ imagelist:
 		skyrmion_random(image);
 		}
 
+sz: SZ
+	| ID { 
+		int n=get_var_int($1); 
+		if(n<0) yyerror("Variable " COLOR_RED "'%s'" COLOR_RESET " value " COLOR_RED "%d" COLOR_RESET " is negative\n", $1, n);
+		$$=n;
+		}
+
 integer: INTEGER { $$=$1; }
 	| SZ { $$=(int)$1; } 
+	| ID { $$=get_var_int($1); }
 
-real: REAL { $$=$1; }
-	| integer { $$=$1; }
+exp:  ID '(' exp ')' { $$=apply($1, $3); }
+	| ID { $$=get_var($1); }
+	| exp '+' exp { $$=$1+$3; }
+	| exp '-' exp { $$=$1-$3; }
+	| exp '*' exp { $$=$1*$3; }
+	| exp '/' exp { $$=$1/$3; }
+	| '-' exp %prec NEG { $$=-$2; }
+	| '(' exp ')' { $$=$2; }
+	| REAL
+	| INTEGER { $$=$1; }
+	| SZ { $$=(int)$1; } 
 
-exp: real { 
-	//fprintf(stderr, COLOR_BLUE "%" RF "g\n" COLOR_RESET, $1); 
-	}
-
-vector: exp exp exp { $$[0]=$1; $$[1]=$2; $$[2]=$3; }
+vector: '{' exp ',' exp ',' exp '}' { 
+		$$[0]=$2; $$[1]=$4; $$[2]=$6; }
+	| '{' exp ',' exp '}' { 
+		$$[0]=$2; $$[1]=$4; $$[2]=0; }
 
 %%
+
+static void yyprint(FILE* file, int type, YYSTYPE value) {
+  if (type==FILENAME || type==ID)
+    fprintf(file, COLOR_BLUE "%s" COLOR_RESET, value.fn);
+  else if(type==SZ)
+    fprintf (file, COLOR_BLUE "%d" COLOR_RESET, value.sz);
+  else if(type==INTEGER)
+    fprintf (file, COLOR_BLUE "%d" COLOR_RESET, value.i);
+  else if(type==REAL)
+    fprintf (file, COLOR_BLUE "%" RF "g" COLOR_RESET, value.r);
+}
+
 
 void yyerror(const char *s, ...) {
  va_list ap;
@@ -186,11 +258,43 @@ void parse_lattice(FILE* file) {
 	capacityu=capacityn=sizen=sizeu=dmv_size=ec_size=0; 
 	capacity_anisotropy=magnetic_anisotropy_count=0;
 
-	//yydebug=1;
 	yyin=file;
 	yyparse();
 
 	validate();
+};
+
+real apply(const char* name, real arg) {
+	if(strcmp(name,"sin")==0) {
+		real c,s; rsincos(arg, &s, &c); return s;
+	} else if(strcmp(name,"cos")==0) {
+		real c,s; rsincos(arg, &s, &c); return c;
+	} else if(strcmp(name,"exp")==0) {
+		return rexp(arg);
+	} else if(strcmp(name,"print")==0) {
+		fprintf(stderr,COLOR_BLUE "%" RF "g" COLOR_RESET "\n", arg);
+		return arg;
+	};
+	yyerror("Undefined function " COLOR_RED "'%s'" COLOR_RESET "\n", name);
+	exit(1);
+};
+
+int get_var_int(const char* name) {
+	const char* val=getenv(name);
+	if(val) return atoi(val);
+	yyerror("Undefined variable " COLOR_RED "'%s'" COLOR_RESET "\n", name);
+	exit(1);	
+};
+
+real get_var(const char* name) {
+	const char* val=getenv(name);
+	if(val) {
+		return atof(val);
+	} else if(strcmp(name,"pi")==0) {
+		return M_PI;
+	};
+	yyerror("Undefined variable " COLOR_RED "'%s'" COLOR_RESET "\n", name);
+	exit(1);	
 };
 
 real* allocate_image() {
@@ -249,16 +353,16 @@ void validate() {
 	realloc_u(sizeu); realloc_n(sizen);
 };
 
-void append_anisotropy(real scalar, real k0, real k1, real k2) {
+void append_anisotropy(real scalar, real k[3]) {
 	if(magnetic_anisotropy_count>=capacity_anisotropy) { 
 		capacity_anisotropy=capacity_anisotropy*2+1; 
 		magnetic_anisotropy=(magnetic_anisotropy_type*)
 			realloc(magnetic_anisotropy, sizeof(magnetic_anisotropy_type)*capacity_anisotropy); 
 	};
 	magnetic_anisotropy[magnetic_anisotropy_count].norm=scalar;
-	magnetic_anisotropy[magnetic_anisotropy_count].unit[0]=k0;
-	magnetic_anisotropy[magnetic_anisotropy_count].unit[1]=k1;
-	magnetic_anisotropy[magnetic_anisotropy_count].unit[2]=k2;
+	magnetic_anisotropy[magnetic_anisotropy_count].unit[0]=k[0];
+	magnetic_anisotropy[magnetic_anisotropy_count].unit[1]=k[1];
+	magnetic_anisotropy[magnetic_anisotropy_count].unit[2]=k[2];
 	real t=normsq3(magnetic_anisotropy[magnetic_anisotropy_count].unit);
 	magnetic_anisotropy[magnetic_anisotropy_count].norm*=t;
 	if(magnetic_anisotropy[magnetic_anisotropy_count].norm>0) {

@@ -58,6 +58,7 @@ const char* optstr, char (*handle)(char opt, const char* arg)
   while(1) {
     static struct option long_options[] = {      
       {"help", no_argument, 0, 'h'},
+      {"debug", no_argument, 0, 1000},
       {0, 0, 0, 0}
     };
     int option_index = 0;
@@ -77,6 +78,7 @@ const char* optstr, char (*handle)(char opt, const char* arg)
       case 'o': save_octave=1; break;      
       case 'O': save_octave=2; break;      
       case 'D': outdir=strdup(optarg); break;
+      case 1000: yydebug=1; break;
       case '?': break;
       default: 
         if(!handle || !handle(c, optarg)) {
