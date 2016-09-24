@@ -27,7 +27,7 @@ int do_not_relax_ends=0;
 static int flat_distance=1;
 
 realp *distance=NULL, *energy=NULL, *diff=NULL, *tdiff=NULL, *inflation=NULL;
-int post_optimization=0;
+int post_optimization=1;
 int single_maximum=1;
 
 void energy_evaluate_neb(real* path) {
@@ -538,7 +538,7 @@ int main(int argc, char** argv) {
 
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP\n" COLOR_RESET);
   // MEP calculation
-  post_optimization=0;
+  post_optimization=1;
   path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   while(2*(sizep-1)+1<=max_sizep) {
     // interpolating path
@@ -551,7 +551,7 @@ int main(int argc, char** argv) {
     };
     sizep=2*(sizep-1)+1;
     fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Increasing number of images to %d\n" COLOR_RESET, sizep);
-    post_optimization=0;    
+    //post_optimization=0;    
     path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   };
   // Ouput result

@@ -18,6 +18,7 @@ void load_positions(const char* posfilename);
 void load_skyrmion(const char* spinsfilename, real* image);
 void set_uniform(real* dir, real* spin);
 void cut_by_plane(real* o, real* n);
+void cut_sphere(real* o, real r);
 void append_anisotropy(real scalar, real k[3]);
 real* allocate_image();
 real apply(const char* name, real arg);
@@ -61,7 +62,7 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 %token SECDMV SECIMAGE SECLOADIMAGE SECPOSITIONS SECDIPOLE
 %token SECTEMP SECCUT
 
-%token PLANE
+%token PLANE SPHERE
 %token VERTEX UNIFORM RANDOM
 %token BCFREE BCPERIODIC
 
@@ -187,6 +188,8 @@ dmvlist:
 cutlist:
 	| cutlist PLANE vector vector EOL { 
 		cut_by_plane($3,$4); }
+	| cutlist SPHERE vector exp EOL { 
+		cut_sphere($3,$4); }		
 
 imagelist:
 	| imagelist VERTEX vector exp ',' exp ',' exp EOL {
@@ -406,6 +409,7 @@ real get_nearest(const real* invtrans, const real* pos, int* u, int* x, int* y, 
 
 void load_positions(const char* posfilename) {
 	fprintf(stderr, "Loading positions from '%s'\n", posfilename);
+	if(positions) yyerror("Atoms positions should be loaded once\n");
 	positions=(int*)malloc(sizeof(int)*SIZE); assert(positions);
 	FILE* posfile=fopen(posfilename, "r");
 	if(!posfile) { fprintf(stderr, "Can not open " COLOR_RED "%s" COLOR_RESET "\n", posfilename); exit(1); };
@@ -484,18 +488,22 @@ void load_skyrmion(const char* spinsfilename, real* image) {
 };
 
 void set_uniform(real* dir, real* spin) {
+	int count=0;
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
 		if(ISACTIVE(i)) {
+			count++;
 			i*=3; for3(j) spin[i+j]=dir[j];
 		} else {
 			i*=3; for3(j) spin[i+j]=0;
 		};
 	};
+	number_of_active=count;
 };
 
 void cut_by_plane(real* o, real* n) {
 	int first=active==NULL;
+	int count=0;
 	real d=dot3(o,n);
 	forall(u,x,y,z) {
 		real vec[3];
@@ -503,10 +511,34 @@ void cut_by_plane(real* o, real* n) {
 		real a=dot3(vec,n)-d;
 		int i=INDEX(u,x,y,z);	
 		if(first) {
-			if(a>=0) { SETACTIVE(i); }
+			if(a>=0) { SETACTIVE(i); count++; }
 			else { SETPASSIVE(i); };
 		} else {
-			if(a<0) { SETPASSIVE(i); };
+			if(a>=0) { count++; }
+			else { SETPASSIVE(i); };
 		};
 	};
+	number_of_active=count;
+};
+
+void cut_sphere(real* o, real r) {
+	real rsq=r*r;
+	int first=active==NULL;
+	int count=0;	
+	forall(u,x,y,z) {
+		real vec[3];
+		COORDS(u,x,y,z,vec);
+		sub3(vec,o,vec);
+		real a=normsq3(vec)-rsq;
+		if(r<0) a=-a;
+		int i=INDEX(u,x,y,z);	
+		if(first) {
+			if(a<=0) { SETACTIVE(i); count++; }
+			else { SETPASSIVE(i); };
+		} else {
+			if(a<=0) { count++; }
+			else { SETPASSIVE(i); };
+		};
+	};
+	number_of_active=count;	
 };

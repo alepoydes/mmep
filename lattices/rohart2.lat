@@ -1,0 +1,46 @@
+[size]
+200, 116
+[boundary conditions]
+free free
+[translation vectors]
+{1, 0}
+{0, 2*cos(pi/6)}
+[unit cell]
+{0, 0}
+{sin(pi/6), cos(pi/6)}
+[neigborood]
+{-1, 0} 0, 0
+{-1, 0} 1, 1
+{0, 0} 0, 1
+{0, -1} 0, 1
+{-1, 0} 0, 1
+{-1, -1} 0, 1
+[dipole]
+#0.007483327
+0
+[external field]
+# muB = 5.788e-5 eV/T = 5.788e-2 meV/T
+{0, 0, -2.1*0.25*-0.05788}
+#{0, 0, 0}
+[magnetic anisotropy]
+#0.4 {0, 0, 1}
+0.293 {0, 0, 1}
+#0.276 {0, 0, 1}
+[exchange constant]
+29
+29 
+29
+29
+29
+29
+[dzyaloshinskii moriya vector]
+-1.5 {0, -1}
+-1.5 {0, -1}
+-1.5 {-cos(pi/6), sin(pi/6)}
+-1.5 {cos(pi/6), sin(pi/6)}
+-1.5 {-cos(pi/6), -sin(pi/6)}
+-1.5 {cos(pi/6), -sin(pi/6)}
+[cut]
+sphere {100, 116*cos(pi/6)} 100
+[image]
+uniform {0,0,1}

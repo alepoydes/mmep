@@ -16,23 +16,23 @@ free free
 {-1, 0} 0, 1
 {-1, -1} 0, 1
 [dipole]
-0.007483327
+0.007483327 # meV
 #0
 [external field]
 {0, 0, -2.1*0.05788*0.25}
 #{0, 0, 0}
 [magnetic anisotropy]
-#0.4 {0, 0, 1}
+#0.4 {0, 0, 1} # meV
 0.293 {0, 0, 1}
 [exchange constant]
-29
+29 # meV
 29 
 29
 29
 29
 29
 [dzyaloshinskii moriya vector]
--1.5 {0, -1}
+-1.5 {0, -1} # meV
 -1.5 {0, -1}
 -1.5 {-cos(pi/6), sin(pi/6)}
 -1.5 {cos(pi/6), sin(pi/6)}

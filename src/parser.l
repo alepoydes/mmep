@@ -37,6 +37,7 @@ EXP ([Ee][-+]?[0-9]+)
 "[temperature]" { return SECTEMP; }
 "[cut]" { return SECCUT; }
 
+"sphere" { return SPHERE; }
 "plane" { return PLANE; }
 "vertex" { return VERTEX; }
 "uniform" { return UNIFORM; }

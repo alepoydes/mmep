@@ -3,6 +3,10 @@ PREFIX="tmp/"
 PARAM=$1
 shift 1
 
+DESC=`echo $@ | tr -dc '[:alnum:]\n\r'`
+PREFIX="${PREFIX}${DESC}/"
+mkdir "${PREFIX}"
+
 while IFS='' read -r line || [[ -n "$line" ]]; do
 	IFS=';' read -ra components <<< "${line}" 
 	path=$PREFIX
@@ -14,6 +18,6 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 	path="${path}/"
 	echo "Populating " $path
 	mkdir "${path}"
-	$@ -D "${path}"
+	$@ -D "${path}" || exit 1
 	gnuplot "${path}/"*.gnuplot
 done < ${PARAM}

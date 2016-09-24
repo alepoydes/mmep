@@ -54,12 +54,12 @@ void watch_number(realp next, realp prev, int digits) {
   	fprintf(stderr,COLOR_RESET);
 };
 
-#define MAX_SIG 3
+#define MAX_SIG 2
 
 void signal_handler(int sig) {
 	if(sig==SIGINT) {
     	fprintf(stderr, COLOR_YELLOW "received SIGINT %d/%d\n" COLOR_RESET, ++stop_signal, MAX_SIG);
-    	if(stop_signal>MAX_SIG) exit(1);
+    	if(stop_signal>=MAX_SIG) exit(1);
 	};
 };
 
