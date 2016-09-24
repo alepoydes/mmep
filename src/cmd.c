@@ -113,10 +113,10 @@ const char* optstr, char (*handle)(char opt, const char* arg)
 };
 
 void print_settings() {
-  fprintf(stderr, "Size of real: %zd\n", sizeof(real));
+  fprintf(stderr, "Machine epsilon: %"RF"g (%zd bytes per real)\n", RT(EPSILON), sizeof(real));
   fprintf(stderr,"Using lattice %dx%dx%dx%d with %d bonds\n",sizeu,sizex,sizey,sizez,sizen);
   if(active) fprintf(stderr, "Active spins: %d / %d\n", number_of_active, SIZE);
-    else fprintf(stderr, "Active spins: all / %d\n", SIZE);
+  else fprintf(stderr, "Active spins: all / %d\n", SIZE);
 };
 
 void oct_save_lattice(FILE* file) {

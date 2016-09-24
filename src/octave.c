@@ -69,7 +69,7 @@ push(_r+1*SIZE,_c+2*SIZE,-(_sign)*(_a)[0]); push(_r+2*SIZE,_c+2*SIZE,_diag); };
 	fprintf(file,"# columns: %d\n",SIZE*3);
 	// data
 	for(int l=0; l<len; l++) 
-		fprintf(file,"%d %d %.*" RF "g\n",data[l].r+1,data[l].c+1,DIGITS,data[l].v);	
+		fprintf(file,"%d %d %.*" RF "g\n",data[l].r+1,data[l].c+1,DIGITS,RT(data[l].v));
 	// footer
 	fprintf(file,"\n\n");
 	free(data);
@@ -82,10 +82,10 @@ void oct_save_linear(FILE* file) {
 	fprintf(file,"# columns: %d\n",1);
 	if(nonuniform_field) {
 		for3(j) forlla(u,x,y,z)
-			fprintf(file,"%.*" RF "g\n",DIGITS,-nonuniform_field[j+3*INDEX(u,x,y,z)]);	
+			fprintf(file,"%.*" RF "g\n",DIGITS,RT(-nonuniform_field[j+3*INDEX(u,x,y,z)]));	
 	} else {
 		for3(j) forlla(u,x,y,z)
-			fprintf(file,"%.*" RF "g\n",DIGITS,-magnetic_field[j]);	
+			fprintf(file,"%.*" RF "g\n",DIGITS,RT(-magnetic_field[j]));	
 	};
 	fprintf(file,"\n\n");	
 };
@@ -97,8 +97,8 @@ void oct_save_state(FILE* file, const char* name, real* data) {
 	fprintf(file,"# columns: %d\n",1);
 	for3(j) forlla(u,x,y,z) {
 		int id=INDEX(u,x,y,z);
-		if(ISACTIVE(id)) fprintf(file,"%.*" RF "g\n",DIGITS,data[j+3*id]);	
-		else fprintf(file,"%.*" RF "g\n",DIGITS,(real)0.);	
+		if(ISACTIVE(id)) fprintf(file,"%.*" RF "g\n",DIGITS,RT(data[j+3*id]));	
+		else fprintf(file,"%.*" RF "g\n",DIGITS,RT(0.));	
 	};
 	fprintf(file,"\n\n");	
 };
@@ -110,7 +110,7 @@ void oct_save_vertices(FILE* file) {
 	fprintf(file,"# columns: %d\n",1);
 	for3(j) forlla(u,x,y,z) {
 		real vec[3]; COORDS(u,x,y,z,vec);
-		fprintf(file,"%.*" RF "g\n",DIGITS,vec[j]);
+		fprintf(file,"%.*" RF "g\n",DIGITS,RT(vec[j]));
 	};
 	fprintf(file,"\n\n");	
 };
@@ -130,14 +130,14 @@ void oct_save_finish(FILE* file) {
 void oct_save_real(FILE* file, const char* name, real value) {
 	fprintf(file,"# name: %s\n",name);
 	fprintf(file,"# type: scalar\n");
-	fprintf(file,"%.*" RF "g\n",DIGITS,value);
+	fprintf(file,"%.*" RF "g\n",DIGITS,RT(value));
 	fprintf(file,"\n\n");	
 };
 
 void oct_save_realp(FILE* file, const char* name, realp value) {
 	fprintf(file,"# name: %s\n",name);
 	fprintf(file,"# type: scalar\n");
-	fprintf(file,"%.*" RPF "g\n",PDIGITS,value);
+	fprintf(file,"%.*" RPF "g\n",PDIGITS,RT(value));
 	fprintf(file,"\n\n");	
 };
 
@@ -146,7 +146,7 @@ void oct_save_field(FILE* file, const char* name, real* data) {
 	fprintf(file,"# type: matrix\n");
 	fprintf(file,"# ndims: 5\n%d %d %d %d 3\n",sizeu,sizex,sizey,sizez);
 	for3(j) forlla(u,x,y,z)
-		fprintf(file,"%.*" RF "g\n",DIGITS,data[3*INDEX(u,x,y,z)+j]);
+		fprintf(file,"%.*" RF "g\n",DIGITS,RT(data[3*INDEX(u,x,y,z)+j]));
 	fprintf(file,"\n\n");
 };
 
@@ -155,7 +155,7 @@ void oct_save_path(FILE* file, const char* name, real* data, int sizep) {
 	fprintf(file,"# type: matrix\n");
 	fprintf(file,"# ndims: 6\n%d %d %d %d %d 3\n",sizep,sizeu,sizex,sizey,sizez);
 	for3(j) forlla(u,x,y,z) for(int p=0; p<sizep; p++) 		
-		fprintf(file,"%.*" RF "g\n",DIGITS,data[3*(p*SIZE+INDEX(u,x,y,z))+j]);
+		fprintf(file,"%.*" RF "g\n",DIGITS,RT(data[3*(p*SIZE+INDEX(u,x,y,z))+j]));
 	fprintf(file,"\n\n");
 };
 
@@ -164,7 +164,7 @@ void oct_save_vector(FILE* file, const char* name, real* data, int length) {
 	fprintf(file,"# type: matrix\n");
 	fprintf(file,"# ndims: 2\n1 %d\n", length);
 	for(int l=0; l<length; l++) 
-		fprintf(file,"%.*" RF "g\n",DIGITS,data[l]);
+		fprintf(file,"%.*" RF "g\n",DIGITS,RT(data[l]));
 	fprintf(file,"\n\n");	
 };
 
@@ -173,7 +173,7 @@ void oct_save_vectorp(FILE* file, const char* name, realp* data, int length) {
 	fprintf(file,"# type: matrix\n");
 	fprintf(file,"# ndims: 2\n1 %d\n", length);
 	for(int l=0; l<length; l++) 
-		fprintf(file,"%.*" RPF "g\n",PDIGITS,data[l]);
+		fprintf(file,"%.*" RPF "g\n",PDIGITS,RT(data[l]));
 	fprintf(file,"\n\n");	
 };
 
@@ -192,7 +192,7 @@ void oct_save_matrix(FILE* file, const char* name, real* data, int height, int w
 	fprintf(file,"# ndims: 2\n%d %d\n", height, width);
 	for(int c=0; c<width; c++) 
 	for(int r=0; r<height; r++) 
-		fprintf(file,"%.*" RF "g\n",DIGITS,data[r*width+c]);
+		fprintf(file,"%.*" RF "g\n",DIGITS,RT(data[r*width+c]));
 	fprintf(file,"\n\n");	
 };
 
@@ -202,7 +202,7 @@ void oct_save_matrixp(FILE* file, const char* name, realp* data, int height, int
 	fprintf(file,"# ndims: 2\n%d %d\n", height, width);
 	for(int c=0; c<width; c++) 
 	for(int r=0; r<height; r++) 
-		fprintf(file,"%.*" RPF "g\n",PDIGITS,data[r*width+c]);
+		fprintf(file,"%.*" RPF "g\n",PDIGITS,RT(data[r*width+c]));
 	fprintf(file,"\n\n");	
 };
 

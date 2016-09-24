@@ -55,17 +55,17 @@ int steepest_descend(
   realp last_f=-INFINITY, f=NAN;
   real constres=NAN, res=NAN, last_res=0;
 
-  auto init_alpha=[mode, mode_param, res]() {
+  real init_alpha() {
     switch(mode) {
   	  case SDM_CONSTANT: return mode_param;
-      case SDM_INERTIAL: return static_cast<real>(NAN); 
+      case SDM_INERTIAL: return (real)(NAN); 
       case SDM_PROGR: return res>1?1/res:1;
     };
     fprintf(stderr,"Unknown optimization mode: " COLOR_RED "%d" COLOR_RESET "\n", mode);
     exit(1);
   };
 
-  auto update_alpha=[mode, mode_param, last_res](real alpha) {
+  real update_alpha(real alpha) {
     switch(mode) {
       case SDM_CONSTANT: return alpha;
       case SDM_INERTIAL: return alpha+mode_param*last_res; 
@@ -74,7 +74,7 @@ int steepest_descend(
     assert(0);
   };
 
-  auto decrease_alpha=[mode](real alpha) {
+  real decrease_alpha(real alpha) {
     switch(mode) {
       case SDM_CONSTANT: return alpha/2;
       case SDM_INERTIAL: return alpha/2;
@@ -283,11 +283,11 @@ int lagrange_conjugate_quad(
     real last_res=res;
     // Diplay progress
     #ifdef DEBUG
-      fprintf(stderr,COLOR_RED "%d: res=%" RF "g %+" RF "g mu=%" RF "g\n" COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M),mu);
+      fprintf(stderr,COLOR_RED "%d: res=%" RF "g %+" RF "g mu=%" RF "g\n" COLOR_RESET,iter,RT(rsqrt(resx/N)),RT(rsqrt(resu/M)),RT(mu));
       if(N+M<=8) {
         fprintf(stderr, COLOR_YELLOW);
-        for(int j=0;j<N;j++) fprintf(stderr,"%" RF "g ",x0[j]); fprintf(stderr,":");
-        for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",u[j]); 
+        for(int j=0;j<N;j++) fprintf(stderr,"%" RF "g ",RT(x0[j])); fprintf(stderr,":");
+        for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",RT(u[j])); 
         fprintf(stderr,COLOR_RESET "\n");
       };
     #endif
@@ -296,7 +296,7 @@ int lagrange_conjugate_quad(
     // Reporting result
     if(res<epsilon) { 
       #ifdef DEBUG
-        fprintf(stderr,COLOR_RED "%d: Converged %.3" RF "g < %.3" RF "g\n" COLOR_RESET,iter,res,epsilon);
+        fprintf(stderr,COLOR_RED "%d: Converged %.3" RF "g < %.3" RF "g\n" COLOR_RESET,iter,RT(res),RT(epsilon));
       #endif    
       if(display) display(-iter,x0,gradx,f,res,mu);
       status=0; break; 
@@ -327,7 +327,7 @@ int lagrange_conjugate_quad(
     // If the quadratic form is not positive, update shift 'mu'
     if(positive<min_mu) { 
       #ifdef DEBUG
-        fprintf(stderr,"  %d: " COLOR_BLUE COLOR_BOLD "Hessian is small:" COLOR_RESET " %.3" RF "e < %.3" RF "e\n",iter,positive,min_mu);
+        fprintf(stderr,"  %d: " COLOR_BLUE COLOR_BOLD "Hessian is small:" COLOR_RESET " %.3" RF "e < %.3" RF "e\n",iter,RT(positive),RT(min_mu));
       #endif
       mu=MU_INC;  
       continue; 
@@ -343,7 +343,7 @@ int lagrange_conjugate_quad(
     while(iter<max_iter) {
       if(rabs(q)<dot_precision) { 
         #ifdef DEBUG        
-          fprintf(stderr,COLOR_BLUE COLOR_ITALIC "  %d: Small q: %.3" RF "e < %.3" RF "e\n" COLOR_RESET,iter,q,dot_precision);
+          fprintf(stderr,COLOR_BLUE COLOR_ITALIC "  %d: Small q: %.3" RF "e < %.3" RF "e\n" COLOR_RESET,iter,RT(q),RT(dot_precision));
         #endif        
         //mu+=min_mu; goto restart; 
         add_inplace(N,xn,x0); 
@@ -370,9 +370,9 @@ int lagrange_conjugate_quad(
       #ifdef DEBUG 
         // Debug
         if(N+M<=8) {
-          fprintf(stderr, COLOR_YELLOW "  X:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",xn[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",un[j]); fprintf(stderr,"\n");
-          fprintf(stderr, COLOR_YELLOW "  G:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",gradx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",gradu[j]); fprintf(stderr,"\n");
-          fprintf(stderr, COLOR_YELLOW "  C:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",conjx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",conju[j]); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW "  X:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",RT(xn[j])); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",RT(un[j])); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW "  G:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",RT(gradx[j])); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",RT(gradu[j])); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW "  C:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",RT(conjx[j])); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",RT(conju[j])); fprintf(stderr,"\n");
         };
       #endif      
       resx=normsq(N,gradx); resu=normsq(M,gradu); res=rsqrt(resx/N+resu/N);
@@ -380,13 +380,13 @@ int lagrange_conjugate_quad(
       //if(res<epsilon) { // Auxilliary problem is solved
       if(/*res<epsilon ||*/ res<top_res) { // Auxilliary problem is solved
         #ifdef DEBUG 
-          fprintf(stderr,COLOR_GREEN "  %d: Residual is small: R %.3" RF "e %+.3" RF "e \n" COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M));
+          fprintf(stderr,COLOR_GREEN "  %d: Residual is small: R %.3" RF "e %+.3" RF "e \n" COLOR_RESET,iter,RT(rsqrt(resx/N)),RT(rsqrt(resu/M)));
         #endif  
         break; 
       };
       if(res>100*last_res) { // Unstability detected ???
         #ifdef DEBUG 
-          fprintf(stderr,COLOR_GREEN "  %d: Residual increases: R %.3" RF "e %+.3" RF "e \n" COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M));
+          fprintf(stderr,COLOR_GREEN "  %d: Residual increases: R %.3" RF "e %+.3" RF "e \n" COLOR_RESET,iter,RT(rsqrt(resx/N)),RT(rsqrt(resu/M)));
         #endif  
         break; 
       };
@@ -408,7 +408,7 @@ int lagrange_conjugate_quad(
       real positive=mu+dot(N,kktx,hkktx)/normsq(N,kktx); // Must be positive if x0 is minimum
       if(positive<min_mu) { 
         #ifdef DEBUG 
-          fprintf(stderr,"  %d: " COLOR_BLUE COLOR_BOLD "Hessian is small:" COLOR_RESET " %.3" RF "e < %.3" RF "e\n",iter,positive,min_mu);
+          fprintf(stderr,"  %d: " COLOR_BLUE COLOR_BOLD "Hessian is small:" COLOR_RESET " %.3" RF "e < %.3" RF "e\n",iter,RT(positive),RT(min_mu));
         #endif  
         mu=MU_INC; 
         goto restart; 
@@ -436,11 +436,11 @@ int lagrange_conjugate_quad(
       add_mult(N, gradx, beta, conjx); add_mult(M, gradu, beta, conju); 
       add_mult(N, hgradx, beta, hconjx); add_mult(M, hgradu, beta, hconju); 
       #ifdef DEBUG 
-        fprintf(stderr,COLOR_GREEN "  %d: R %.3" RF "e %+.3" RF "e A %.3" RF "e B %.3" RF "e P %.3" RF "e q %.3" RF "e\n" COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M),alpha,beta,positive,q);
+        fprintf(stderr,COLOR_GREEN "  %d: R %.3" RF "e %+.3" RF "e A %.3" RF "e B %.3" RF "e P %.3" RF "e q %.3" RF "e\n" COLOR_RESET,iter,RT(rsqrt(resx/N)),RT(rsqrt(resu/M)),RT(alpha),RT(beta),RT(positive),RT(q));
       #endif   
     };
     #ifdef DEBUG 
-      fprintf(stderr,COLOR_BLUE "  %d: Hessian bottom %.3" RF "e\n" COLOR_RESET,iter,low_boundary-mu);
+      fprintf(stderr,COLOR_BLUE "  %d: Hessian bottom %.3" RF "e\n" COLOR_RESET,iter,RT(low_boundary-mu));
     #endif    
     real delta_mu=(-low_boundary+min_mu)*0.3;
     //delta_mu=0;
@@ -520,10 +520,10 @@ int lagrange_conjugate(
     real last_res=res;
     // Diplay progress
     #ifdef DEBUG
-      fprintf(stderr,COLOR_RED "%d: res=%" RF "g %+" RF "g mu=%" RF "g\n" COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M),mu);
+      fprintf(stderr,COLOR_RED "%d: res=%" RF "g %+" RF "g mu=%" RF "g\n" COLOR_RESET,iter,RT(rsqrt(resx/N)),RT(rsqrt(resu/M)),RT(mu));
       if(N+M<=8) {
         fprintf(stderr, COLOR_YELLOW);
-        for(int j=0;j<N;j++) fprintf(stderr,"%" RF "g ",x0[j]); 
+        for(int j=0;j<N;j++) fprintf(stderr,"%" RF "g ",RT(x0[j])); 
         //fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",u[j]); 
         fprintf(stderr,COLOR_RESET "\n");
       };
@@ -531,7 +531,7 @@ int lagrange_conjugate(
     // Reporting result
     if(res<epsilon) { 
       #ifdef DEBUG
-        fprintf(stderr,COLOR_RED "%d: Converged %.3" RF "g < %.3" RF "g\n" COLOR_RESET,iter,res,epsilon);
+        fprintf(stderr,COLOR_RED "%d: Converged %.3" RF "g < %.3" RF "g\n" COLOR_RESET,iter,RT(res),RT(epsilon));
       #endif    
       if(display) display(-iter,x0,gradx,f,res,mu);
       status=0; break; 
@@ -556,7 +556,7 @@ int lagrange_conjugate(
     // If the quadratic form is not positive, update shift 'mu'
     if(positive<min_mu) { 
       #ifdef DEBUG
-        fprintf(stderr,"  %d: " COLOR_BLUE COLOR_BOLD "Hessian is small:" COLOR_RESET " %.3" RF "e < %.3" RF "e\n",iter,positive,min_mu);
+        fprintf(stderr,"  %d: " COLOR_BLUE COLOR_BOLD "Hessian is small:" COLOR_RESET " %.3" RF "e < %.3" RF "e\n",iter,RT(positive),RT(min_mu));
       #endif
       mu=MU_INC;  
       continue; 
@@ -576,7 +576,7 @@ int lagrange_conjugate(
     while(iter<max_iter) {
       if(rabs(q)<dot_precision) { 
         #ifdef DEBUG        
-          fprintf(stderr,COLOR_BLUE COLOR_ITALIC "  %d: Small q: %.3" RF "e < %.3" RF "e\n" COLOR_RESET,iter,q,dot_precision);
+          fprintf(stderr,COLOR_BLUE COLOR_ITALIC "  %d: Small q: %.3" RF "e < %.3" RF "e\n" COLOR_RESET,iter,RT(q),RT(dot_precision));
         #endif        
         //mu+=min_mu; goto restart; 
         add_inplace(N,xn,x0); 
@@ -603,9 +603,9 @@ int lagrange_conjugate(
       #ifdef DEBUG 
         // Debug
         if(N+M<=8) {
-          fprintf(stderr, COLOR_YELLOW "  X:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",xn[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",un[j]); fprintf(stderr,"\n");
-          fprintf(stderr, COLOR_YELLOW "  G:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",gradx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",gradu[j]); fprintf(stderr,"\n");
-          fprintf(stderr, COLOR_YELLOW "  C:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",conjx[j]); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",conju[j]); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW "  X:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",RT(xn[j])); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",RT(un[j])); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW "  G:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",RT(gradx[j])); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",RT(gradu[j])); fprintf(stderr,"\n");
+          fprintf(stderr, COLOR_YELLOW "  C:" COLOR_RESET); for(int j=0;j<N;j++) fprintf(stderr," %" RF "g",RT(conjx[j])); fprintf(stderr,":"); for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",RT(conju[j])); fprintf(stderr,"\n");
         };
       #endif      
       resx=normsq(N,gradx); resu=normsq(M,gradu); res=rsqrt(resx/N+resu/N);
@@ -613,13 +613,13 @@ int lagrange_conjugate(
       //if(res<epsilon) { // Auxilliary problem is solved
       if(res<top_res) { // Auxilliary problem is solved
         #ifdef DEBUG 
-          fprintf(stderr,COLOR_GREEN "  %d: Residual is small: R %.3" RF "e %+.3" RF "e \n" COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M));
+          fprintf(stderr,COLOR_GREEN "  %d: Residual is small: R %.3" RF "e %+.3" RF "e \n" COLOR_RESET,iter,RT(rsqrt(resx/N)),RT(rsqrt(resu/M)));
         #endif  
         break; 
       };
       if(res>100*last_res) { // Unstability detected ???
         #ifdef DEBUG 
-          fprintf(stderr,COLOR_GREEN "  %d: Residual increases: R %.3" RF "e %+.3" RF "e \n" COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M));
+          fprintf(stderr,COLOR_GREEN "  %d: Residual increases: R %.3" RF "e %+.3" RF "e \n" COLOR_RESET,iter,RT(rsqrt(resx/N)),RT(rsqrt(resu/M)));
         #endif  
         break; 
       };
@@ -640,7 +640,7 @@ int lagrange_conjugate(
       real positive=mu+dot(N,kktx,hkktx)/normsq(N,kktx); // Must be positive if x0 is minimum
       if(positive<min_mu) { 
         #ifdef DEBUG 
-          fprintf(stderr,"  %d: " COLOR_BLUE COLOR_BOLD "Hessian is small:" COLOR_RESET " %.3" RF "e < %.3" RF "e\n",iter,positive,min_mu);
+          fprintf(stderr,"  %d: " COLOR_BLUE COLOR_BOLD "Hessian is small:" COLOR_RESET " %.3" RF "e < %.3" RF "e\n",iter,RT(positive),RT(min_mu));
         #endif  
         mu=MU_INC; 
         goto restart; 
@@ -668,11 +668,11 @@ int lagrange_conjugate(
       add_mult(N, gradx, beta, conjx); add_mult(M, gradu, beta, conju); 
       add_mult(N, hgradx, beta, hconjx); add_mult(M, hgradu, beta, hconju); 
       #ifdef DEBUG 
-        fprintf(stderr,COLOR_GREEN "  %d: R %.3" RF "e %+.3" RF "e A %.3" RF "e B %.3" RF "e P %.3" RF "e q %.3" RF "e\n" COLOR_RESET,iter,rsqrt(resx/N),rsqrt(resu/M),alpha,beta,positive,q);
+        fprintf(stderr,COLOR_GREEN "  %d: R %.3" RF "e %+.3" RF "e A %.3" RF "e B %.3" RF "e P %.3" RF "e q %.3" RF "e\n" COLOR_RESET,iter,RT(rsqrt(resx/N)),RT(rsqrt(resu/M)),RT(alpha),RT(beta),RT(positive),RT(q));
       #endif   
     };
     #ifdef DEBUG 
-      fprintf(stderr,COLOR_BLUE "  %d: Hessian bottom %.3" RF "e\n" COLOR_RESET,iter,low_boundary);
+      fprintf(stderr,COLOR_BLUE "  %d: Hessian bottom %.3" RF "e\n" COLOR_RESET,iter,RT(low_boundary));
     #endif    
     real delta_mu=(-mu-2*low_boundary+min_mu)*0.1;
     delta_mu=0;

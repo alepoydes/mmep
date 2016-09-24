@@ -12,7 +12,12 @@ def normalize(A):
     return A/np.expand_dims(np.sqrt(np.sum(A**2,axis=-1)),-1)
 
 def project_to_tangent_space(state, grad): 
-    return grad-np.expand_dims(np.sum(state*grad, axis=-1),-1)*state
+    pgrad=grad.copy()
+    l=np.sum(state**2, axis=-1)
+    mask=l<1e-5
+    pgrad-=np.expand_dims(np.sum(state*grad, axis=-1),-1)*state
+    pgrad[mask]=0
+    return pgrad
 
 def norm(x): return np.sqrt(np.sum(x**2))
 

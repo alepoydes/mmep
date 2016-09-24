@@ -85,8 +85,8 @@ int main(int argc, char** argv) {
   };
 
   print_settings();
-  fprintf(stderr, COLOR_YELLOW "Temperature:" COLOR_RESET " %" RF "g\n", temperature); 
-  fprintf(stderr, COLOR_YELLOW "Step size:" COLOR_RESET " %" RF "g\n", step); 
+  fprintf(stderr, COLOR_YELLOW "Temperature:" COLOR_RESET " %" RF "g\n", RT(temperature)); 
+  fprintf(stderr, COLOR_YELLOW "Step size:" COLOR_RESET " %" RF "g\n", RT(step)); 
   fprintf(stderr, COLOR_YELLOW "Number of steps:" COLOR_RESET " %ld\n", max_iter); 
   fprintf(stderr, COLOR_YELLOW "Update type:" COLOR_RESET " %s\n", update_by_one?"one by one":"simultaneous"); 
   fprintf(stderr, COLOR_YELLOW "Rejection rule:" COLOR_RESET " %s\n", rejection_rule==0?"Metropolis-Hastings":"Nowak");   
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
         char buf[100]; strftime(buf, sizeof(buf), "%H:%M:%S", timeinfo);
         fprintf(stderr,COLOR_BLUE "%s" COLOR_RESET " ",buf);
         fprintf(stderr,COLOR_YELLOW "#" COLOR_RESET "%ld ", mcs/per_iter);
-        fprintf(stderr,COLOR_YELLOW "Energy" COLOR_RESET " %.1" RPF "g(%.1" RPF "g) ",energy[5], energy[3]);
+        fprintf(stderr,COLOR_YELLOW "Energy" COLOR_RESET " %.1" RPF "g(%.1" RPF "g) ",RT(energy[5]), RT(energy[3]));
         fprintf(stderr,COLOR_YELLOW "Acc." COLOR_RESET " %ld%% ",acceptence);
         fprintf(stderr,COLOR_YELLOW "Iter./sec" COLOR_RESET " %ld ",iter_per_sec/per_iter);
         fprintf(stderr,COLOR_YELLOW "ETA" COLOR_RESET " ");

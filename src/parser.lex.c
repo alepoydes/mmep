@@ -675,9 +675,10 @@ char *yytext;
 #line 4 "src/parser.l"
 # include "parser.h"
 # include "parser.tab.h"
+#define YY_NO_INPUT 1
 
 /* float exponent */
-#line 681 "src/parser.lex.c"
+#line 682 "src/parser.lex.c"
 
 #define INITIAL 0
 #define IFILE 1
@@ -900,7 +901,7 @@ YY_DECL
 #line 13 "src/parser.l"
 
 
-#line 904 "src/parser.lex.c"
+#line 905 "src/parser.lex.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1187,7 +1188,7 @@ YY_RULE_SETUP
 #line 82 "src/parser.l"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 1191 "src/parser.lex.c"
+#line 1192 "src/parser.lex.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(IFILE):
 	yyterminate();

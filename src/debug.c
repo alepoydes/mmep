@@ -34,8 +34,10 @@ void fprint_timediff(FILE* file, double timediff) {
 
 void watch_number(realp next, realp prev, int digits) {
 	char bufn[100], bufp[100]; 
-	uint nn=sprintf(bufn,"%.*" RPF "f",digits,next); assert(nn<sizeof(bufn));
-	uint np=sprintf(bufp,"%.*" RPF "f",digits,prev); assert(np<sizeof(bufp));
+	uint nn=SPRINTF(bufn,"%.*" SRF "f",digits,next); 
+	assert(nn<sizeof(bufn));
+	uint np=SPRINTF(bufp,"%.*" SRF "f",digits,prev); 
+	assert(np<sizeof(bufp));
 	//int ap=0; 
 	uint d=0;
 	uint c; for(c=0; c<nn && nn==np && bufn[c]==bufp[c]; c++) {
@@ -71,6 +73,6 @@ void init_signal() {
 void print_vector(int N, real* data) {
 	printf("[");
 	for(int n=0; n<N; n++) 
-		printf("%s%" RF "g", n>0?COLOR_FAINT "," COLOR_RESET:"", data[n]);
+		printf("%s%" RF "g", n>0?COLOR_FAINT "," COLOR_RESET:"", RT(data[n]));
 	printf("]\n");
 };

@@ -35,13 +35,13 @@ void screen() {
   fprintf(stderr,"%d: ", iter); 
   fprintf(stderr,"Time ");
   watch_number(sim_time,sim_time0,4); sim_time0=sim_time;
-  fprintf(stderr," Time step %" RF "g ",time_step);
+  fprintf(stderr," Time step %" RF "g ",RT(time_step));
   fprintf(stderr,COLOR_YELLOW "-/=" COLOR_RESET " inc./dec. ");
   fprintf(stderr,COLOR_YELLOW "`123" COLOR_RESET " speed \n");
 
   fprintf(stderr,"Energy "); 
   watch_number(E,E0,6); E0=E;
-  fprintf(stderr," Damping %" RF "g ", damping);   
+  fprintf(stderr," Damping %" RF "g ", RT(damping));   
   fprintf(stderr,COLOR_YELLOW "[/]" COLOR_RESET " dec./inc. ");
   fprintf(stderr,COLOR_YELLOW "\\" COLOR_RESET " neg.    \n");
 
@@ -50,7 +50,7 @@ void screen() {
   fprintf(stderr,"           \n");  
 
   fprintf(stderr,"Field %s ",powered?"on":"off");
-  fprintf(stderr,"Strength %" RF "g ", power);
+  fprintf(stderr,"Strength %" RF "g ", RT(power));
   fprintf(stderr,COLOR_YELLOW ";/'" COLOR_RESET " dec./inc.      \n");
 
   fprintf(stderr,"Integrator: ");

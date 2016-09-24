@@ -179,7 +179,7 @@ real gauss_integrator(
 {
 	real r=rsqrt(3);
 	real B[2]={0.5,0.5};
-	real A[4]={1./4, static_cast<real>(1./4)-r/6, 
-		static_cast<real>(1./4)+r/6, 1./4};
+	real A[4]={1./4, (real)(1./4)-r/6, 
+		(real)(1./4)+r/6, 1./4};
 	return runge_kutta_implicit(N, F, T, 2, A, B, X, tol, max_iter, E, iter);
 };

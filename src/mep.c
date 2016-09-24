@@ -125,8 +125,8 @@ real res, real constres, real alpha, realp last_f, real last_res) {
     watch_number(f,debug_every==1?last_f:prev_f,16);
     fprintf(stderr, " " COLOR_YELLOW "R" COLOR_RESET);
     watch_number(res,debug_every==1?last_res:prev_res,16);
-    fprintf(stderr, "%+" RF "g", constres);
-    fprintf(stderr, " " COLOR_YELLOW "A" COLOR_RESET "%" RF "g", alpha);
+    fprintf(stderr, "%+" RF "g", RT(constres));
+    fprintf(stderr, " " COLOR_YELLOW "A" COLOR_RESET "%" RF "g", RT(alpha));
     //fprintf(stderr, " " COLOR_YELLOW "d" COLOR_RESET "%.2g", pow(last_res/res,1./alpha));    
     fprintf(stderr, "\n");
   	if(debug_plot && iter!=0 && size<=1024) plot_field3(stdout,a);
@@ -164,7 +164,7 @@ void energy_display(FILE* file) {
   fprintf(file,"plot '-' using 1:2 with linespoints axes x1y1 title 'energy', '' using 1:3 with lines axes x1y2 title 'grad.', '' using 1:4 with lines axes x1y2 title 'orth. grad.'\n");
   for(int k=0; k<3; k++) {
     for(int p=0; p<sizep; p++)
-      fprintf(file,"%.8" RPF "e %.8" RPF "e %.8" RPF "e %.8" RPF "e\n",distance[p],energy[p],diff[p],tdiff[p]);
+      fprintf(file,"%.8" RPF "e %.8" RPF "e %.8" RPF "e %.8" RPF "e\n",RT(distance[p]),RT(energy[p]),RT(diff[p]),RT(tdiff[p]));
     fprintf(file,"EOF\n\n");
   };
   fflush(file);
@@ -185,9 +185,9 @@ void path_display(int iter, real* __restrict__ mep, real* __restrict__ grad_f
     watch_number(f/(sizep-1),debug_every==1?last_f/(sizep-1):prev_f/(sizep-1),16);
     fprintf(stderr, " " COLOR_YELLOW "R" COLOR_RESET);
     watch_number(res,debug_every==1?last_res:prev_res,16);
-    fprintf(stderr, "%+.2" RF "g", constres);
-    fprintf(stderr, " " COLOR_YELLOW "A" COLOR_RESET "%" RF "g", alpha);
-    fprintf(stderr, COLOR_FAINT " %s" COLOR_RESET, post_optimization?"Climbing":"");        
+    fprintf(stderr, "%+.2" RF "g", RT(constres));
+    fprintf(stderr, " " COLOR_YELLOW "A" COLOR_RESET "%" RF "g", RT(alpha));
+    fprintf(stderr, COLOR_FAINT " %s" COLOR_RESET, post_optimization?"Climbing":"");
     fprintf(stderr, "\n");
     if(debug_plot && iter!=0) {
       if(debug_plot_path) plot_path(stdout, sizep, mep);
@@ -493,7 +493,7 @@ int main(int argc, char** argv) {
   if(remove_zero_modes)
     fprintf(stderr, "Zero modes (translations) are removed\n");
   if(random_noise>0) 
-    fprintf(stderr, "Initial path noise amplitude: %" RF "g\n", random_noise);
+    fprintf(stderr, "Initial path noise amplitude: %" RF "g\n", RT(random_noise));
 
   size=SIZE*3;
   real* path=ralloc(size*max_sizep); 
@@ -562,12 +562,12 @@ int main(int argc, char** argv) {
     if(max_energy<energy[p]) max_energy=energy[p];
     if(min_energy>energy[p]) min_energy=energy[p];    
   };
-  fprintf(stderr, COLOR_BLUE "Energy:" COLOR_RESET " initial %.8" RPF "f maximum %.8" RPF "f minimum %.8" RPF "f final %.8" RPF "f\n", energy[0],max_energy,min_energy,energy[sizep-1]);
-  fprintf(stderr, COLOR_BLUE "Barriers:" COLOR_RESET " forward %" RPF "g backward %" RPF "g\n", max_energy-energy[0], max_energy-energy[sizep-1]);  
+  fprintf(stderr, COLOR_BLUE "Energy:" COLOR_RESET " initial %.8" RPF "f maximum %.8" RPF "f minimum %.8" RPF "f final %.8" RPF "f\n", RT(energy[0]),RT(max_energy),RT(min_energy),RT(energy[sizep-1]));
+  fprintf(stderr, COLOR_BLUE "Barriers:" COLOR_RESET " forward %" RPF "g backward %" RPF "g\n", RT(max_energy-energy[0]), RT(max_energy-energy[sizep-1]));  
   if(!debug_plot) {
-    for(int p=0;p<sizep;p++) printf("%.8" RPF "g ", energy[p]);
+    for(int p=0;p<sizep;p++) printf("%.8" RPF "g ", RT(energy[p]));
     printf("\n");
-    for(int p=0;p<sizep;p++) printf("%.8" RPF "g ", distance[p]);
+    for(int p=0;p<sizep;p++) printf("%.8" RPF "g ", RT(distance[p]));
     printf("\n");
   };
   // Compare distances between images
@@ -576,7 +576,7 @@ int main(int argc, char** argv) {
     real d=distance[p]-distance[p-1]-mean;
     var+=d*d;
   };  
-  fprintf(stderr, COLOR_BLUE COLOR_BOLD "Std of distances between images:" COLOR_RESET " %" RF "g\n", rsqrt(var));
+  fprintf(stderr, COLOR_BLUE COLOR_BOLD "Std of distances between images:" COLOR_RESET " %" RF "g\n", RT(rsqrt(var)));
 
   // save energy
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Saving result\n" COLOR_RESET);

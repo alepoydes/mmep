@@ -1,5 +1,5 @@
 #OPT=-std=gnu99 -flto -Ofast -march=native -fopenmp
-OPT=-std=c++14 -flto -Ofast -march=native
-CC=g++
+OPT=-std=gnu99 -flto -Ofast -march=native
+CC=gcc
 
 include Makefile.common

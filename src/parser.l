@@ -5,7 +5,7 @@
 # include "parser.tab.h"
 %}
 
-%option nounput noyywrap nodefault yylineno
+%option nounput noinput noyywrap nodefault yylineno
 %x IFILE
 
 /* float exponent */

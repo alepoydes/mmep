@@ -64,7 +64,7 @@
 /* Copy the first part of user declarations.  */
 #line 2 "src/parser.y" /* yacc.c:339  */
 
-
+#include "vector.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>	
@@ -1951,11 +1951,11 @@ static void yyprint(FILE* file, int type, YYSTYPE value) {
   if (type==FILENAME || type==ID)
     fprintf(file, COLOR_BLUE "%s" COLOR_RESET, value.fn);
   else if(type==SZ)
-    fprintf (file, COLOR_BLUE "%d" COLOR_RESET, value.sz);
+    fprintf(file, COLOR_BLUE "%d" COLOR_RESET, value.sz);
   else if(type==INTEGER)
-    fprintf (file, COLOR_BLUE "%d" COLOR_RESET, value.i);
+    fprintf(file, COLOR_BLUE "%d" COLOR_RESET, value.i);
   else if(type==REAL)
-    fprintf (file, COLOR_BLUE "%" RF "g" COLOR_RESET, value.r);
+    fprintf(file, COLOR_BLUE "%" RF "g" COLOR_RESET, RT(value.r));
 }
 
 
@@ -1986,7 +1986,7 @@ real apply(const char* name, real arg) {
 	} else if(strcmp(name,"exp")==0) {
 		return rexp(arg);
 	} else if(strcmp(name,"print")==0) {
-		fprintf(stderr,COLOR_BLUE "%" RF "g" COLOR_RESET "\n", arg);
+		fprintf(stderr,COLOR_BLUE "%" RF "g" COLOR_RESET "\n", RT(arg));
 		return arg;
 	};
 	yyerror("Undefined function " COLOR_RED "'%s'" COLOR_RESET "\n", name);
@@ -2005,7 +2005,7 @@ real get_var(const char* name) {
 	if(val) {
 		return atof(val);
 	} else if(strcmp(name,"pi")==0) {
-		return M_PI;
+		return R_PI;
 	};
 	yyerror("Undefined variable " COLOR_RED "'%s'" COLOR_RESET "\n", name);
 	exit(1);	
@@ -2135,14 +2135,14 @@ void load_positions(const char* posfilename) {
 	for3(j) for3(k) if(j==k) assert(rabs(tmp[j][k]-1)<1e-6); else assert(rabs(tmp[j][k])<1e-6);
 	for(int line=0; line<SIZE; line++) {
        	if(!fgets(buf, sizeof(buf), posfile)) { fprintf(stderr, "Not enough data in '" COLOR_RED "%s" COLOR_RESET "'\n", posfilename); exit(1); };
-		real pos[3]; 
-		int l=sscanf(buf, "%" RF "g %" RF "g %" RF "g", pos, pos+1, pos+2);
+		long double posd[3]; 
+		int l=sscanf(buf, "%Lg %Lg %Lg", posd, posd+1, posd+2);
 		if(l<2 || l>3) { fprintf(stderr, "Position has wrong number of coordinates at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", posfilename, line+2); exit(1); };
-		if(l<3) pos[2]=0;
-		//fprintf(stderr, "%d: %" RF "g %" RF "g %" RF "g : %s", l, pos[0], pos[1], pos[2], buf);
+		if(l<3) posd[2]=0;
+		real pos[3]={pos[0],pos[1],pos[2]};
 		int x,y,z,u;
 		if(get_nearest((real*)invtrans, pos, &u, &x, &y, &z)>0.01) {
-			fprintf(stderr, "Position %" RF "g %" RF "g %" RF "g at '" COLOR_RED "%s line %d" COLOR_RESET "' is too far from lattice\n", pos[0], pos[1], pos[2], posfilename, line+2); 
+			fprintf(stderr, "Position %" RF "g %" RF "g %" RF "g at '" COLOR_RED "%s line %d" COLOR_RESET "' is too far from lattice\n", RT(pos[0]), RT(pos[1]), RT(pos[2]), posfilename, line+2); 
 			exit(1);	
 		};
 		positions[line]=INDEX(u,x,y,z);
@@ -2175,9 +2175,10 @@ void load_skyrmion(const char* spinsfilename, real* image) {
        		fprintf(stderr, "Not enough data in '" COLOR_RED "%s" COLOR_RESET "'\n", spinsfilename); 
        		exit(1); 
        	};
-		real spin[3];
-		int l=sscanf(buf, "%" RF "g %" RF "g %" RF "g", spin, spin+1, spin+2);
+		long double spind[3];
+		int l=sscanf(buf, "%Lg %Lg %Lg", spind, spind+1, spind+2);
 		if(l!=3) { fprintf(stderr, "Spin has wrong number of coordinates at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", spinsfilename, line+2); exit(1); };
+		real spin[3]={spind[0],spind[1],spind[2]};
 		if(normsq3(spin)<=0.5) continue;
 		count++;
 		normalize3(spin);

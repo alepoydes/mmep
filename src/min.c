@@ -24,9 +24,9 @@ real constres, real alpha, realp last_f, real last_res) {
     watch_number(f,debug_every==1?last_f:prev_f,16);
     fprintf(stderr, " " COLOR_YELLOW "R" COLOR_RESET);
     watch_number(res,debug_every==1?last_res:prev_res,16);
-    fprintf(stderr, "%+.2" RF "g", constres);
-    fprintf(stderr, " " COLOR_YELLOW "A" COLOR_RESET "%" RF "g", alpha);
-    //fprintf(stderr, " " COLOR_YELLOW "d" COLOR_RESET "%.2g", pow(last_res/res,1./alpha));    
+    fprintf(stderr, "%+.2" RF "g", RT(constres));
+    fprintf(stderr, " " COLOR_YELLOW "A" COLOR_RESET "%" RF "g", RT(alpha));
+    //fprintf(stderr, " " COLOR_YELLOW "d" COLOR_RESET "%.2g", pow(last_res/res,1./alpha));
     fprintf(stderr, "\n");
   	if(debug_plot && iter!=0) 
       plot_field3(stdout,a);
@@ -49,7 +49,7 @@ void integrate(int N, void (*F)(const real* x, real* g, realp* E), real T, real*
     default: fprintf(stderr, COLOR_RED "Unknown integrator:" COLOR_RESET " %d\n", integrator); exit(1);
   };
   if(err>1e-5) 
-    fprintf(stderr, COLOR_RED "Warning:" COLOR_RESET " Runge-Kutta convergence error: %" RF "g\n", err);
+    fprintf(stderr, COLOR_RED "Warning:" COLOR_RESET " Runge-Kutta convergence error: %" RF "g\n", RT(err));
 };
 
 int skyrmion_steepest_descent(real* __restrict__ x) {
@@ -96,19 +96,19 @@ int main(int argc, char** argv) {
 
   // Saving result
   realp energy[6]; skyrmion_energy(spins, energy);
-  fprintf(stderr,COLOR_YELLOW "Zeeman energy:" COLOR_RESET " %.10" RPF "f\n",energy[1]);
-  fprintf(stderr,COLOR_YELLOW "Exchange energy:" COLOR_RESET " %.10" RPF "f\n",energy[2]);
-  fprintf(stderr,COLOR_YELLOW "Anisotropy energy:" COLOR_RESET " %.10" RPF "f\n",energy[0]);
-  fprintf(stderr,COLOR_YELLOW "Dzyaloshinskii-Moriya energy:" COLOR_RESET " %.10" RPF "f\n",energy[3]);
-  fprintf(stderr,COLOR_YELLOW "Dipole interaction energy:" COLOR_RESET " %.10" RPF "f\n",energy[4]);
+  fprintf(stderr,COLOR_YELLOW "Zeeman energy:" COLOR_RESET " %.10" RPF "f\n",RT(energy[1]));
+  fprintf(stderr,COLOR_YELLOW "Exchange energy:" COLOR_RESET " %.10" RPF "f\n",RT(energy[2]));
+  fprintf(stderr,COLOR_YELLOW "Anisotropy energy:" COLOR_RESET " %.10" RPF "f\n",RT(energy[0]));
+  fprintf(stderr,COLOR_YELLOW "Dzyaloshinskii-Moriya energy:" COLOR_RESET " %.10" RPF "f\n",RT(energy[3]));
+  fprintf(stderr,COLOR_YELLOW "Dipole interaction energy:" COLOR_RESET " %.10" RPF "f\n",RT(energy[4]));
   realp ergy=energy[5];
-  fprintf(stderr,COLOR_YELLOW "TOTAL energy:" COLOR_RESET " %.10" RPF "f\n",ergy);  
+  fprintf(stderr,COLOR_YELLOW "TOTAL energy:" COLOR_RESET " %.10" RPF "f\n",RT(ergy));  
 
   // Checking gradient
   real* grad=(real*)malloc(sizeof(real)*size); assert(grad);
   projected_gradient(spins, grad, NULL);
   real nrm=rpsqrt(normsq(size, grad));
-  fprintf(stderr,COLOR_YELLOW "Gradient norm:" COLOR_RESET " %.10" RF "f\n",nrm/size);    
+  fprintf(stderr,COLOR_YELLOW "Gradient norm:" COLOR_RESET " %.10" RF "f\n",RT(nrm/size));    
 
   fprintf(stderr, COLOR_YELLOW "Saving gnuplot\n" COLOR_RESET);
   FILE* file=open_file(outdir,"/state.gnuplot",TRUE);

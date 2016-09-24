@@ -3,6 +3,7 @@ MAKEFLAGS += --no-builtin-rules
 
 LIB:=-lm
 LIBGL:=-lglut -lGLU -lGL -pthread -lpng
+LIBQUAD:=-lquadmath
 
 OBJDIR:=obj
 BINDIR:=bin
@@ -22,7 +23,7 @@ $(BINDIR)/$(1)d: $(addprefix $(OBJDIR)/,$(2:.c=.d.o)) $(OBJDIR)/$(1).d.o
 	$(CC) $$^ $$(OPT) $(3) -o $$@
 
 $(BINDIR)/$(1)q: $(addprefix $(OBJDIR)/,$(2:.c=.q.o)) $(OBJDIR)/$(1).q.o
-	$(CC) $$^ $$(OPT) $(3) -o $$@
+	$(CC) $$^ $$(OPT) $(3) $$(LIBQUAD) -o $$@
 endef
 
 define object

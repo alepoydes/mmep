@@ -1,11 +1,10 @@
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-
 #include "vector.h"
 #include "skyrmion.h"
 #include "debug.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
 
 // Physical parameters
 real magnetic_field[3]={NAN,NAN,NAN};

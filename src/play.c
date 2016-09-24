@@ -36,8 +36,10 @@ void parseMEP(FILE* file) {
       sizea=sizea*2+1;
       mep=(real*)realloc(mep,sizeof(real)*SIZE*3*sizea);
     };
-    real p[3],v[3];
-    int c=sscanf(buf,"%" RF "g %" RF "g %" RF "g %" RF "g %" RF "g %" RF "g",p,p+1,p+2,v,v+1,v+2);
+    long double pd[3],vd[3];
+    int c=sscanf(buf,"%Lg %Lg %Lg %Lg %Lg %Lg",pd,pd+1,pd+2,vd,vd+1,vd+2);
+    //real p[3]={pd[0],pd[1],pd[2]};
+    real v[3]={vd[0],vd[1],vd[2]};
     if(c!=6) {
       if(pos==0) { // skipping head
         continue;
@@ -75,7 +77,7 @@ void evaluateEnergy() {
     subtract_field(g);
     energy[f]+=dot(3*SIZE,spins,g);
     //energy[f]=NAN;
-    fprintf(stderr, "Frame %d Energy %" RF "g\n",f,energy[f]);
+    fprintf(stderr, "Frame %d Energy %" RF "g\n",f,RT(energy[f]));
   };
   free(g);
 };
@@ -181,7 +183,7 @@ int main(int argc, char** argv) {
   while(!is_aborting) { 
     usleep(100);
     if(is_new_frame) {
-      fprintf(stderr, "Frame %d/%d Energy %" RF "g       \r", frame, sizef,energy[frame]);
+      fprintf(stderr, "Frame %d/%d Energy %" RF "g       \r", frame, sizef,RT(energy[frame]));
       if(play_mode==1) {
         if(step%abs(speed)==0) {
           frame=(frame+1)%sizef;

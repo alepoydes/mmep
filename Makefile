@@ -1,1 +1,1 @@
-include Makefile.gcc.debug
+include Makefile.gcc.release

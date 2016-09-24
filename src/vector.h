@@ -1,6 +1,7 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
+#define _GNU_SOURCE
 #include <math.h>
 #include <float.h>
 
@@ -19,52 +20,35 @@
 	#define rsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
 #endif
 	#define RF "l"
+	#define SRF RF
+	#define RT(x) (x)
 	#define EPSILON DBL_EPSILON
 	#define DIGITS DBL_DIG
-
-	#define realp long double
-	#define rpsqrt(x) sqrtl(x)
-	#define rpabs(x) fabsl(x)
-	#define rpacos(x) acosl(x)
-	#define rpexp(x) expl(x)
-#if defined(__clang__)
-	#define rpsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
-#elif defined(__GNUC__) || defined(__GNUG__)
-	#define rpsincos(x,y,z) sincosl(x,y,z)
-#elif defined(_MSC_VER)
-	#define rpsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
-#endif
-	#define RPF "L"
-	#define PEPSILON LDBL_EPSILON
-	#define PDIGITS LDBL_DIG
+	#define R_PI M_PI
+	#define SPRINTF(...) sprintf(__VA_ARGS__)
 
 #elif defined QUAD
+	#include <quadmath.h>
 
-	#define real long double
-	#define rsqrt(x) sqrtl(x)
-	#define rabs(x) fabsl(x)
-	#define racos(x) acosl(x)
-	#define rexp(x) expl(x)
+	#define real __float128
+	#define rsqrt(x) sqrtq(x)
+	#define rabs(x) fabsq(x)
+	#define racos(x) acosq(x)
+	#define rexp(x) expq(x)
 #if defined(__clang__)
-	#define rsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
+	#define rsincos(x,y,z) { *(y)=sinq(x); *(z)=cosq(x); }
 #elif defined(__GNUC__) || defined(__GNUG__)
-	#define rsincos(x,y,z) sincosl(x,y,z)
+	#define rsincos(x,y,z) sincosq(x,y,z)
 #elif defined(_MSC_VER)
-	#define rsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
+	#define rsincos(x,y,z) { *(y)=sinq(x); *(z)=cosq(x); }
 #endif
 	#define RF "L"
-	#define EPSILON LDBL_EPSILON
-	#define DIGITS LDBL_DIG
-
-	#define realp real
-	#define rpsqrt(x) rsqrt(x)
-	#define rpabs(x) rabs(x)
-	#define rpacos(x) acosl(x)
-	#define rpexp(x) expl(x)
-	#define rpsincos(x,y,z) rsincos(x,y,z)
-	#define RPF RF
-	#define PEPSILON EPSILON
-	#define PDIGITS DIGITS
+	#define SRF "Q"
+	#define RT(x) (long double)(x)
+	#define EPSILON FLT128_EPSILON
+	#define DIGITS FLT128_DIG
+	#define R_PI M_PIq
+	#define SPRINTF(buf, ...) quadmath_snprintf(buf, sizeof(buf), __VA_ARGS__)
 
 #else 
 
@@ -81,26 +65,24 @@
 	#define rsincos(x,y,z) { *(y)=sinf(x); *(z)=cosf(x); }
 #endif
 	#define RF ""
+	#define SRF RF
+	#define RT(x) (x)
 	#define EPSILON FLT_EPSILON
 	#define DIGITS FLT_DIG
-
-	#define realp double
-	#define rpsqrt(x) sqrt(x)
-	#define rpabs(x) fabs(x)
-	#define rpacos(x) acos(x)
-	#define rpexp(x) exp(x)
-#if defined(__clang__)
-	#define rpsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
-#elif defined(__GNUC__) || defined(__GNUG__)
-	#define rpsincos(x,y,z) sincos(x,y,z)
-#elif defined(_MSC_VER)
-	#define rpsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
-#endif
-	#define RPF "l"
-	#define PEPSILON DBL_EPSILON
-	#define PDIGITS DBL_DIG
+	#define R_PI M_PI
+	#define SPRINTF(...) sprintf(__VA_ARGS__)
 
 #endif  
+
+#define realp real
+#define rpsqrt(x) rsqrt(x)
+#define rpabs(x) rabs(x)
+#define rpacos(x) acosl(x)
+#define rpexp(x) expl(x)
+#define rpsincos(x,y,z) rsincos(x,y,z)
+#define RPF RF
+#define PEPSILON EPSILON
+#define PDIGITS DIGITS
 
 real* ralloc(int n);
 // считает длину вектора
