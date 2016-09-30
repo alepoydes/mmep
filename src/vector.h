@@ -20,52 +20,35 @@
 	#define rsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
 #endif
 	#define RF "l"
+	#define SRF RF
+	#define RT(x) (x)
 	#define EPSILON DBL_EPSILON
 	#define DIGITS DBL_DIG
-
-	#define realp long double
-	#define rpsqrt(x) sqrtl(x)
-	#define rpabs(x) fabsl(x)
-	#define rpacos(x) acosl(x)
-	#define rpexp(x) expl(x)
-#if defined(__clang__)
-	#define rpsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
-#elif defined(__GNUC__) || defined(__GNUG__)
-	#define rpsincos(x,y,z) sincosl(x,y,z)
-#elif defined(_MSC_VER)
-	#define rpsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
-#endif
-	#define RPF "L"
-	#define PEPSILON LDBL_EPSILON
-	#define PDIGITS LDBL_DIG
+	#define R_PI M_PI
+	#define SPRINTF(...) sprintf(__VA_ARGS__)
 
 #elif defined QUAD
+	#include <quadmath.h>
 
-	#define real long double
-	#define rsqrt(x) sqrtl(x)
-	#define rabs(x) fabsl(x)
-	#define racos(x) acosl(x)
-	#define rexp(x) expl(x)
+	#define real __float128
+	#define rsqrt(x) sqrtq(x)
+	#define rabs(x) fabsq(x)
+	#define racos(x) acosq(x)
+	#define rexp(x) expq(x)
 #if defined(__clang__)
-	#define rsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
+	#define rsincos(x,y,z) { *(y)=sinq(x); *(z)=cosq(x); }
 #elif defined(__GNUC__) || defined(__GNUG__)
-	#define rsincos(x,y,z) sincosl(x,y,z)
+	#define rsincos(x,y,z) sincosq(x,y,z)
 #elif defined(_MSC_VER)
-	#define rsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
+	#define rsincos(x,y,z) { *(y)=sinq(x); *(z)=cosq(x); }
 #endif
 	#define RF "L"
-	#define EPSILON LDBL_EPSILON
-	#define DIGITS LDBL_DIG
-
-	#define realp real
-	#define rpsqrt(x) rsqrt(x)
-	#define rpabs(x) rabs(x)
-	#define rpacos(x) acosl(x)
-	#define rpexp(x) expl(x)
-	#define rpsincos(x,y,z) rsincos(x,y,z)
-	#define RPF RF
-	#define PEPSILON EPSILON
-	#define PDIGITS DIGITS
+	#define SRF "Q"
+	#define RT(x) (long double)(x)
+	#define EPSILON FLT128_EPSILON
+	#define DIGITS FLT128_DIG
+	#define R_PI M_PIq
+	#define SPRINTF(buf, ...) quadmath_snprintf(buf, sizeof(buf), __VA_ARGS__)
 
 #else 
 
@@ -82,50 +65,35 @@
 	#define rsincos(x,y,z) { *(y)=sinf(x); *(z)=cosf(x); }
 #endif
 	#define RF ""
+	#define SRF RF
+	#define RT(x) (x)
 	#define EPSILON FLT_EPSILON
 	#define DIGITS FLT_DIG
-
-	#define realp double
-	#define rpsqrt(x) sqrt(x)
-	#define rpabs(x) fabs(x)
-	#define rpacos(x) acos(x)
-	#define rpexp(x) exp(x)
-#if defined(__clang__)
-	#define rpsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
-#elif defined(__GNUC__) || defined(__GNUG__)
-	#define rpsincos(x,y,z) sincos(x,y,z)
-#elif defined(_MSC_VER)
-	#define rpsincos(x,y,z) { *(y)=sin(x); *(z)=cos(x); }
-#endif
-	#define RPF "l"
-	#define PEPSILON DBL_EPSILON
-	#define PDIGITS DBL_DIG
+	#define R_PI M_PI
+	#define SPRINTF(...) sprintf(__VA_ARGS__)
 
 #endif  
+
+#define realp real
+#define rpsqrt(x) rsqrt(x)
+#define rpabs(x) rabs(x)
+#define rpacos(x) acosl(x)
+#define rpexp(x) expl(x)
+#define rpsincos(x,y,z) rsincos(x,y,z)
+#define RPF RF
+#define PEPSILON EPSILON
+#define PDIGITS DIGITS
 
 real* ralloc(int n);
 // считает длину вектора
 #define normsq3(x) ((x)[0]*(x)[0]+(x)[1]*(x)[1]+(x)[2]*(x)[2])
 // считает скалярное произведение векторов
-//#define dot3(x,y) ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
 real dot3(const real* x, const real* y);
-//#define normalize3(x) { real t=(3-normsq3(x))*0.5; (x)[0]*=t; (x)[1]*=t; (x)[2]*=t; }
-//#define normalize3(x) { real t=(1+normsq3(x))/2; (x)[0]/=t; (x)[1]/=t; (x)[2]/=t; }
-//#define normalize3(x) { real t=normsq3(x); if(t>0) { real f=rsqrt(1/t); (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; }
-#define NORMEPS2 (1E-14)
+extern real NORMEPS2;
 real normalize3(real* x);
 #define seminormalize3(factor,x) ({ real t=rsqrt(normsq3(x)); if(t>0) { real f=1-factor+factor/t; (x)[0]*=f; (x)[1]*=f; (x)[2]*=f; }; t>0?rabs((1-t)*(1-factor)):1; })
 #define middle3(x,y,z) { (z)[0]=((x)[0]+(y)[0])/2; (z)[1]=((x)[1]+(y)[1])/2; (z)[2]=((x)[2]+(y)[2])/2; normalize3(z); }
-// z=a*l_-1.5(0)+b*l_-0.5(0)+c*l_0.5(0)+d*l_1.5(0)
-// l_-1.5(p)=(--0.5)(-0.5)(-1.5)/(-1.5--0.5)/(-1.5-0.5)/(-1.5-1.5)=-1*1*3/2/4/6=-1/16
-// l_-0.5(p)=(--1.5)(-0.5)(-1.5)/(-0.5--1.5)/(-0.5-0.5)/(-0.5-1.5)=3*1*3/2/2/4=9/16
-// l_0.5(p)=(--1.5)(--0.5)(-1.5)/(0.5--1.5)/(0.5--0.5)/(0.5-1.5)=3*1*-3/4/2/-2=9/16
-// l_1.5(p)=(--1.5)(--0.5)(-0.5)/(1.5--1.5)/(1.5--0.5)/(1.5-0.5)=3*1*-1/6/4/2=-1/16
 #define middle_fourth_order3(a,b,c,d,z) { (z)[0]=(-(a)[0]+9*(b)[0]+9*(c)[0]-(d)[0])/16; (z)[1]=(-(a)[1]+9*(b)[1]+9*(c)[1]-(d)[1])/16; (z)[2]=(-(a)[2]+9*(b)[2]+9*(c)[2]-(d)[2])/16;  normalize3(z); }
-// z=a*l_-0.5(0)+b*l_0.5(0)+c*l_1.5(0)
-// l_-0.5(p)=(-0.5)(-1.5)/(-0.5-0.5)/(-0.5-1.5)=-1*-3/-2/-4=3/8
-// l_0.5(p)=(0.5)(-1.5)/(0.5+0.5)/(0.5-1.5)=1*-3/2/-2=3/4
-// l_1.5(p)=(0.5)(-0.5)/(1.5+0.5)/(1.5-0.5)=1*-1/4/2=-1/8
 #define middle_third_order3(a,b,c,z) { (z)[0]=(3*(a)[0]+6*(b)[0]-(c)[0])/8; (z)[1]=(3*(a)[1]+6*(b)[1]-(c)[1])/8; (z)[2]=(3*(a)[2]+6*(b)[2]-(c)[2])/8;  normalize3(z); }
 
 #define sub3(x,y,z) { (z)[0]=(x)[0]-(y)[0]; (z)[1]=(x)[1]-(y)[1]; (z)[2]=(x)[2]-(y)[2]; }
@@ -167,15 +135,15 @@ void add_random_vector(real alpha, int n, const real* a, real* b);
 void add_random_cone(real alpha, int n, const real* a, real* b);
 void zero_vector(int n, real* a);
 void copy_vector(int n, const real* a, real* b);
-void sub_inplace(int n, const real* restrict a, real* restrict c);
-void sub(int n, const real* restrict a, const real* restrict b, real* restrict c);
-void add_inplace(int n, const real* restrict a, real* restrict c);
-void add_constant_inplace(int n, real a, real* restrict c);
-void negate_inplace(int n, real* restrict c);
-void negate_div(int n, real* restrict a, real* restrict c);
-void const_div_inplace(int n, real a, real* restrict c);
-void linear_comb(int n, real a, const real* restrict b, real c, real* restrict d, real* restrict e);
+void sub_inplace(int n, const real* __restrict__ a, real* __restrict__ c);
+void sub(int n, const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ c);
+void add_inplace(int n, const real* __restrict__ a, real* __restrict__ c);
+void add_constant_inplace(int n, real a, real* __restrict__ c);
+void negate_inplace(int n, real* __restrict__ c);
+void negate_div(int n, real* __restrict__ a, real* __restrict__ c);
+void const_div_inplace(int n, real a, real* __restrict__ c);
+void linear_comb(int n, real a, const real* __restrict__ b, real c, real* __restrict__ d, real* __restrict__ e);
 
-void gram_schmidt(int N, int K, real* restrict* V);
+void gram_schmidt(int N, int K, real* __restrict__* V);
 
 #endif

@@ -1,12 +1,10 @@
-#define _GNU_SOURCE
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-
 #include "vector.h"
 #include "skyrmion.h"
 #include "debug.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
 
 // Physical parameters
 real magnetic_field[3]={NAN,NAN,NAN};
@@ -102,7 +100,7 @@ realp skyrmion_minimum_energy() {
 	return min;
 };
 
-void skyrmion_gradient(const real* restrict arg, real* restrict grad, realp* restrict energy) {
+void skyrmion_gradient(const real* __restrict__ arg, real* __restrict__ grad, realp* __restrict__ energy) {
 	assert(arg); 
   	hamiltonian_hessian(arg, grad);
   	if(energy) *energy=-dot(3*SIZE, arg, grad)/2;
@@ -110,12 +108,12 @@ void skyrmion_gradient(const real* restrict arg, real* restrict grad, realp* res
   	if(energy) (*energy)+=dot(3*SIZE, arg, grad);
 };
 
-void projected_gradient(const real* restrict arg, real* restrict grad, realp* restrict energy) {
+void projected_gradient(const real* __restrict__ arg, real* __restrict__ grad, realp* __restrict__ energy) {
     skyrmion_gradient(arg, grad, energy);
     project_to_tangent(arg, grad);
 };
 
-void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
+void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 	// Compute anisotropy part
 	real K2[magnetic_anisotropy_count][3]; 
 	for(int n=0; n<magnetic_anisotropy_count; n++) for3(j) 
@@ -210,7 +208,7 @@ void hamiltonian_hessian(const real* restrict arg, real* restrict out) {
 	};	
 };
 
-void node_energy(int u, int x, int y, int z, const real* restrict arg, real energy[6]) {
+void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real energy[6]) {
 	real anisotropy_energy=0;
 	real zeeman_energy=0;
 	int i=INDEX(u,x,y,z);
@@ -301,7 +299,7 @@ void node_energy(int u, int x, int y, int z, const real* restrict arg, real ener
 // energy[3] - D-M energy
 // energy[4] - dipole energy
 // energy[5] - total energy
-void skyrmion_energy(const real* restrict arg, realp energy[6]) {
+void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 	//for(int j=0;j<5;j++) energy[j]=0;
 	// Compute anisotropy part
 	realp anisotropy_energy=0;
@@ -386,7 +384,7 @@ void skyrmion_energy(const real* restrict arg, realp energy[6]) {
 	energy[5]=energy[0]+energy[1]+energy[2]+energy[3]+energy[4];
 };
 
-void subtract_field(real* restrict inout) {
+void subtract_field(real* __restrict__ inout) {
 	if(nonuniform_field) {
 		#pragma omp parallel for collapse(4)
 		forall(u,x,y,z) {
@@ -405,7 +403,7 @@ void subtract_field(real* restrict inout) {
 	};
 };
 
-void set_to_field(real* restrict out) {
+void set_to_field(real* __restrict__ out) {
 	real field[3]={0,0,1};
 	#pragma omp parallel for collapse(4)
 	forall(u,x,y,z) {
@@ -416,7 +414,7 @@ void set_to_field(real* restrict out) {
 };
 
 // Normalize vector field so every vector has unit length 
-real normalize(real* restrict a) {
+real normalize(real* __restrict__ a) {
 	real sum=0;
 	#pragma omp parallel for collapse(4) reduction(+:sum)
 	forall(u,x,y,z) {
@@ -427,7 +425,7 @@ real normalize(real* restrict a) {
 	return sum;
 };
 
-realp seminormalize(real factor, real* restrict a) {
+realp seminormalize(real factor, real* __restrict__ a) {
 	realp sum=0;
 	#pragma omp parallel for collapse(4) reduction(+:sum)
 	forall(u,x,y,z) {
@@ -439,7 +437,7 @@ realp seminormalize(real factor, real* restrict a) {
 };
 
 // Project vector field 't' to tangent space of unit length vector field 'a'
-void project_to_tangent(const real* restrict a, real* restrict b) {
+void project_to_tangent(const real* __restrict__ a, real* __restrict__ b) {
 	#pragma omp parallel for collapse(4)
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
@@ -449,7 +447,7 @@ void project_to_tangent(const real* restrict a, real* restrict b) {
 };
 
 // C:x->(<x|P_j x>/2-1/2)_j
-void skyrmion_constrain(const real* restrict a, real* restrict r) {
+void skyrmion_constrain(const real* __restrict__ a, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
   	forall(u,x,y,z) {
   		int i=INDEX(u,x,y,z);
@@ -458,7 +456,7 @@ void skyrmion_constrain(const real* restrict a, real* restrict r) {
 };
 
 // D:x,u,r->r+sum_l u_l P_j x
-void skyrmion_constrain_gradient(const real* restrict a, const real* restrict lambda, real* restrict r) {
+void skyrmion_constrain_gradient(const real* __restrict__ a, const real* __restrict__ lambda, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)
   	forall(u,x,y,z) {
 	  	int i=INDEX(u,x,y,z);
@@ -468,7 +466,7 @@ void skyrmion_constrain_gradient(const real* restrict a, const real* restrict la
 };
 
 // P:x,y->(<x|P_j y>)_l
-void skyrmion_constrain_adjucent(const real* restrict a, const real* restrict b, real* restrict r) {
+void skyrmion_constrain_adjucent(const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
   	forall(u,x,y,z) {
 	  	int i=INDEX(u,x,y,z);
@@ -476,7 +474,7 @@ void skyrmion_constrain_adjucent(const real* restrict a, const real* restrict b,
   	};
 };
 
-void skyrmion_middle(const real* restrict a, const real* restrict b, real* restrict r) {
+void skyrmion_middle(const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
   	forall(u,x,y,z) {
 	  	int i=INDEX(u,x,y,z);
@@ -487,7 +485,7 @@ void skyrmion_middle(const real* restrict a, const real* restrict b, real* restr
 
 // calculate point in between of b and c by interpolation of curve given by
 // points a,b,c and d in that order
-void skyrmion_middle_fourth_order(const real* restrict a, const real* restrict b, const real* restrict c, const real* restrict d, real* restrict r) {
+void skyrmion_middle_fourth_order(const real* __restrict__ a, const real* __restrict__ b, const real* __restrict__ c, const real* __restrict__ d, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
   	forall(u,x,y,z) {
 	  	int i=INDEX(u,x,y,z);
@@ -496,7 +494,7 @@ void skyrmion_middle_fourth_order(const real* restrict a, const real* restrict b
   	};
 };
 
-void skyrmion_middle_third_order(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {
+void skyrmion_middle_third_order(const real* __restrict__ a, const real* __restrict__ b, const real* __restrict__ c, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
   	forall(u,x,y,z) {
 	  	int i=INDEX(u,x,y,z);
@@ -524,7 +522,7 @@ void skyrmion_geodesic(real noise, int sizep, real* p) {
 	skyrmion_geodesic_rec(noise, p, 0, sizep-1); 
 }
 
-void two_point_tangent0(const real* restrict a, const real* restrict b, real* restrict r) {
+void two_point_tangent0(const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z);
@@ -536,7 +534,7 @@ void two_point_tangent0(const real* restrict a, const real* restrict b, real* re
 	};
 };
 
-void two_point_tangent1(const real* restrict a, const real* restrict b, real* restrict r) {
+void two_point_tangent1(const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z);
@@ -549,7 +547,7 @@ void two_point_tangent1(const real* restrict a, const real* restrict b, real* re
 };
 
 // tangent r to path defined by three consequative points a,b,c
-void three_point_tangent(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {
+void three_point_tangent(const real* __restrict__ a, const real* __restrict__ b, const real* __restrict__ c, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z);
@@ -561,7 +559,7 @@ void three_point_tangent(const real* restrict a, const real* restrict b, const r
 	};
 };
 
-void three_point_tangent_stable(real ea, real eb, real ec, const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {
+void three_point_tangent_stable(real ea, real eb, real ec, const real* __restrict__ a, const real* __restrict__ b, const real* __restrict__ c, real* __restrict__ r) {
 	if(ea<eb && eb<ec) {
 		#pragma omp parallel for collapse(4)	
 		forall(u,x,y,z) {	
@@ -599,7 +597,7 @@ void three_point_tangent_stable(real ea, real eb, real ec, const real* restrict 
 };
 
 // tangent r to path defined by three consequative points a,b,c
-void three_point_tangent_mean(const real* restrict a, const real* restrict b, const real* restrict c, real* restrict r) {
+void three_point_tangent_mean(const real* __restrict__ a, const real* __restrict__ b, const real* __restrict__ c, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		real t1[3],t2[3];
@@ -618,7 +616,7 @@ void three_point_tangent_mean(const real* restrict a, const real* restrict b, co
 
 /*
 // r moved along b-a to satisfy |r-a|=|r-b|
-void three_point_equalize(const real* restrict a, const real* restrict b, real* restrict r) {
+void three_point_equalize(const real* __restrict__ a, const real* __restrict__ b, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		real vec[3];
@@ -632,7 +630,7 @@ void three_point_equalize(const real* restrict a, const real* restrict b, real* 
 	};
 };
 
-void three_point_equalizer(const real* restrict a, const real* restrict c, const real* restrict b, real* restrict r) {
+void three_point_equalizer(const real* __restrict__ a, const real* __restrict__ c, const real* __restrict__ b, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		real vec[3];
@@ -648,7 +646,7 @@ void three_point_equalizer(const real* restrict a, const real* restrict c, const
 };
 */
 void append_skyrmion(const real center[3], real distance, real winding, 
-	real rotation, real* restrict data) 
+	real rotation, real* __restrict__ data) 
 {
 	real field[3]={0,0,1}; 
 	#pragma omp parallel for collapse(4)	
@@ -684,7 +682,7 @@ void append_skyrmion(const real center[3], real distance, real winding,
 		quaternion_product(q,q1,q2);
 		q[1]=-q[1]; q[2]=-q[2]; q[3]=-q[3];
 		quaternion_product(q2,q,q1);
-		//fprintf(stderr,"Error %"RF"g\n",rsqrt(normsq3(q1+1))-1);
+		//fprintf(stderr,"Error %" RF "g\n",rsqrt(normsq3(q1+1))-1);
 		//assert(rabs(rsqrt(normsq3(q1+1))-1)<1e-8);
 		copy3(q1+1,data+i);
 	};
@@ -692,8 +690,8 @@ void append_skyrmion(const real center[3], real distance, real winding,
 
 
 // axis: 0=x, 1=y, 2=z
-void group_generator(const real* restrict spins, 
-int axis, real* restrict gen) {
+void group_generator(const real* __restrict__ spins, 
+int axis, real* __restrict__ gen) {
 	int N;
 	switch(axis) {
 		case 0: N=sizex; break;
@@ -705,12 +703,12 @@ int axis, real* restrict gen) {
 	};
 // checking parameters
 	if(N%2==0) {
-		fprintf(stderr, COLOR_BOLD COLOR_RED"Error:"COLOR_RESET 
+		fprintf(stderr, COLOR_BOLD COLOR_RED "Error:" COLOR_RESET 
 			"Axis %d has even length %d\n",axis,N);
 		exit(1);
 	};
 // computing kernel	
-	real* kernel=malloc(sizeof(real)*N); assert(kernel);
+	real* kernel=ralloc(N);
 	real mult=M_PI/N; 
 	kernel[0]=0;
 	for(int n=1; n<N; n++) {
@@ -739,7 +737,7 @@ int axis, real* restrict gen) {
 	free(kernel);
 };
 
-void skyrmion_random(real* restrict a) {
+void skyrmion_random(real* __restrict__ a) {
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
 		if(ISACTIVE(i)) {

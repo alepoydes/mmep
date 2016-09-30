@@ -1,132 +1,84 @@
 [size]
-# Grid dimesions <x> x <y> x <z>
-# <x> <y> <z>
-200 116 1
-#30 30 1 
+200, 116
 [boundary conditions]
-# Boundary conditions along every axis
-# <BC along x> <BC along y> <BC along z>
-# Every BC can be one of
-#   0 : free
-#   1 : periodic
-#1 1 0
-0 0 0
+free free
 [translation vectors]
-# Lattice generators
-# <X_x> <X_y> <X_z>
-# <Y_x> <Y_y> <Y_z>
-# <Z_x> <Z_y> <Z_z>
-# Cell with indices (a,b,c) has origin at
-# (a*<X_x>+b*<Y_x>+c*<Z_x>, a*<X_y>+b*<Y_y>+c*<Z_y>, a*<X_z>+b*<Y_z>+c*<Z_z>)
-1 0 0
-0. 1.73205081 0
-0 0 1
+{1, 0}
+{0, 2*cos(pi/6)}
 [unit cell]
-# Position of every atom in the unit cell
-# <x_1> <y_1> <z_1>
-# ...
-# <x_u> <y_u> <z_u>
-# All coordinates age given in the basis of translation vectors,
-# hence <x_i>,<y_i>,<z_i> belongs to [0,1].
-0. 0. 0
-0.5 0.8660254 0
+{0, 0}
+{sin(pi/6), cos(pi/6)}
 [neigborood]
-# All nearest neighbours of every atom in the unit cell
-# <x> <y> <z> <s> <d>
-# Each line corrsponds to couple of interacting atoms
-# where first is the atom <s> in the cell (0,0,0)
-# and the second is the atom <d> in the cell (<x>,<y>,<z>).
-# <x>,<y>,<z> refer to a cell, hence are integer.
-# <s> and <d> are integer from 0 to u, where enumeration
-# corresponds to the order of atoms in section [unit cell]
--1 0 0 0 0
--1 0 0 1 1
-0 0 0 0 1
-0 -1 0 0 1
--1 0 0 0 1
--1 -1 0 0 1
-# The parameters are
-# μ_{at}=\|S_i\|=2.1μ_B/atom, J=29 meV/bond,
-# d=−1.5 meV/bond, and k=0.4 meV/atom
-# (including the shape anisotropy, the effective anisotropy is
-# 0.276 meV/atom, in good agreement with literature).
+{-1, 0} 0, 0
+{-1, 0} 1, 1
+{0, 0} 0, 1
+{0, -1} 0, 1
+{-1, 0} 0, 1
+{-1, -1} 0, 1
 [dipole]
-# μ_B = 5.7883818066(38)×10^{−5} eV·T^{−1}
-# site-to-site distance a = 2.51 Å = 2.51 * 10^{-10} m
-# 2.1 * 5.7883818066×10^{−5} / ()^3
-#0.007483327
-0
+0.007483327 # meV
+#0
 [external field]
-# Vector of external magnetic field H=(<H_x>,<H_y>,<H_z>)
-# <H_x> <H_y> <H_z>
-# muB = 5.788e-5 eV/T = 5.788e-2 meV/T
-# muS = 2.1 * muB * T, T=0.25
-0 0 -0.0303890044815
-#0 0 0
+{0, 0, -2.1*0.05788*0.25}
+#{0, 0, 0}
 [magnetic anisotropy]
-# Magnetic anisotropy vector K=(<K_x>, <K_y>, <_z>)
-# <absolute value> <K_x> <K_y> <K_z>
-#0.4 0 0 1
-0.293 0 0 1
+#0.4 {0, 0, 1} # meV
+0.293 {0, 0, 1}
 [exchange constant]
-# Echange constants J_{sd} for every pair of atoms stated in [neighborhood]
-# <J>
-29
+29 # meV
 29 
 29
 29
 29
 29
 [dzyaloshinskii moriya vector]
-# Dzyaloshinskii Moriya vector for every pair of atoms stated in [neighborhood]
-# <D_x> <D_y> <D_z>
--1.5  0.        -1.         0.
--1.5  0.        -1.         0.
--1.5 -0.8660254  0.5        0.
--1.5  0.8660254  0.5       -0.
--1.5 -0.8660254 -0.5        0.
--1.5  0.8660254 -0.5        0.  
+-1.5 {0, -1} # meV
+-1.5 {0, -1}
+-1.5 {-cos(pi/6), sin(pi/6)}
+-1.5 {cos(pi/6), sin(pi/6)}
+-1.5 {-cos(pi/6), -sin(pi/6)}
+-1.5 {cos(pi/6), -sin(pi/6)}  
 [positions]
-../magskyr/rohart/Atom_position.dat
+"../magskyr/tmp/rohart/Atom_position.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_00.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_00.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_01.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_01.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_02.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_02.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_03.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_03.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_04.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_04.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_05.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_05.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_06.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_06.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_07.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_07.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_08.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_08.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_09.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_09.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_10.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_10.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_11.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_11.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_12.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_12.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_13.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_13.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_14.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_14.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_15.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_15.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_16.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_16.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_17.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_17.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_18.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_18.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_19.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_19.dat"
 [load image]
-../magskyr/rohart/Path1/EndConfig_20.dat
+"../magskyr/tmp/rohart/Path1/EndConfig_20.dat"

@@ -1,58 +1,45 @@
 [size]
-# <x> <y> <z>
-11 5 1
+11, 5
 [boundary conditions]
-# <BC along x> <BC along y> <BC along z>
-0 0 0
+free free
 [translation vectors]
-# <X_x> <X_y> <X_z>
-# <Y_x> <Y_y> <Y_z>
-# <Z_x> <Z_y> <Z_z>
-1 0 0
-0 1 0
-0 0 1
+{1, 0}
+{0, 1}
 [unit cell]
-# <x_u> <y_u> <z_u>
-0.5 0. 0
-0.0 0.5 0
+{0.5, 0.}
+{0.0, 0.5}
 [neigborood]
-# <x> <y> <z> <s> <d>
-0 0 0 1 0
--1 0 0 1 0
--1 1 0 1 0
-0 1 0 1 0
+{0, 0} 1, 0
+{-1, 0} 1, 0
+{-1, 1} 1, 0
+{0, 1} 1, 0
 [dipole]
 0
 [external field]
-# <H_x> <H_y> <H_z>
-0 0 0
+{0, 0, 0}
 [magnetic anisotropy]
-# <absolute value> <K_x> <K_y> <K_z> (in meV)
-1.2 0 1 0
--3.0 0 0 1
+1.2 {0, 1, 0}
+-3.0 {0, 0, 1}
 [exchange constant]
-# <J>
 25.6
 25.6
 25.6
 25.6
 [dzyaloshinskii moriya vector]
-# <D_x> <D_y> <D_z>
-0 0 0 0
-0 0 0 0
-0 0 0 0
-0 0 0 0
-[cut by plane]
-# <point x> <point y> <point z> <normal x> <normal y> <normal z>
-10 0 0 -1 0 0
-0 4 0 0 -1 0
+0 {0, 0, 0}
+0 {0, 0, 0}
+0 {0, 0, 0}
+0 {0, 0, 0}
+[cut]
+plane {10, 0} {-1, 0}
+plane {0, 4} {0, -1}
 [image]
-uniform 0 1 0
+uniform {0, 1, 0}
 [image]
 random
-#uniform 1 0 0
+#uniform {1, 0, 0}
 [image]
-uniform 0 -1 0
+uniform {0, -1, 0}
 
 # barrier 90.52587869 meV
 # Pre-exponential factor  8.1637E13 s^{-1}

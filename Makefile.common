@@ -3,13 +3,12 @@ MAKEFLAGS += --no-builtin-rules
 
 LIB:=-lm
 LIBGL:=-lglut -lGLU -lGL -pthread -lpng
+LIBQUAD:=-lquadmath
 
 OBJDIR:=obj
 BINDIR:=bin
 SRCDIR:=src
-vpath %.c  $(SRCDIR)
-vpath %.h  $(SRCDIR)
-SRC:=parse.c vector.c skyrmion.c plot.c optim.c debug.c cmd.c octave.c integra.c
+SRC:=parser.tab.c parser.lex.c vector.c skyrmion.c plot.c optim.c debug.c cmd.c octave.c integra.c magopt.c
 SRCGL:=display.c bitmap.c
 
 all:
@@ -24,20 +23,39 @@ $(BINDIR)/$(1)d: $(addprefix $(OBJDIR)/,$(2:.c=.d.o)) $(OBJDIR)/$(1).d.o
 	$(CC) $$^ $$(OPT) $(3) -o $$@
 
 $(BINDIR)/$(1)q: $(addprefix $(OBJDIR)/,$(2:.c=.q.o)) $(OBJDIR)/$(1).q.o
-	$(CC) $$^ $$(OPT) $(3) -o $$@
+	$(CC) $$^ $$(OPT) $(3) $$(LIBQUAD) -o $$@
+endef
+
+define object
+$(OBJDIR)/$(1).f.o: $(SRCDIR)/$(1).c $(addprefix $(SRCDIR)/,$(2)) $(SRCDIR)/*.h
+	$(CC) $$< $$(OPT) -I $$(SRCDIR) -c -o $$@
+
+$(OBJDIR)/$(1).d.o: $(SRCDIR)/$(1).c $(addprefix $(SRCDIR)/,$(2)) $(SRCDIR)/*.h
+	$(CC) $$< $$(OPT) -I $$(SRCDIR) -c -DDOUBLE -o $$@
+
+$(OBJDIR)/$(1).q.o: $(SRCDIR)/$(1).c $(addprefix $(SRCDIR)/,$(2)) $(SRCDIR)/*.h
+	$(CC) $$< $$(OPT) -I $$(SRCDIR) -c -DQUAD -o $$@
 endef
 
 %.html: %.md
 	pandoc $^ -t html -f markdown -s -o $@
 
-$(OBJDIR)/%.f.o: %.c $(SRCDIR)/*.h
+$(SRCDIR)/%.lex.c: $(SRCDIR)/%.l
+	flex -o $@ $<
+
+$(SRCDIR)/%.tab.c: $(SRCDIR)/%.y
+	bison -r states -o $@ -d $<
+
+$(OBJDIR)/%.f.o: $(SRCDIR)/%.c $(SRCDIR)/*.h
 	$(CC) $< $(OPT) -I $(SRCDIR) -c -o $@	
 
-$(OBJDIR)/%.d.o: %.c $(SRCDIR)/*.h
+$(OBJDIR)/%.d.o: $(SRCDIR)/%.c $(SRCDIR)/*.h
 	$(CC) $< $(OPT) -I $(SRCDIR) -c -DDOUBLE -o $@	
 
-$(OBJDIR)/%.q.o: %.c $(SRCDIR)/*.h
+$(OBJDIR)/%.q.o: $(SRCDIR)/%.c $(SRCDIR)/*.h
 	$(CC) $< $(OPT) -I $(SRCDIR) -c -DQUAD -o $@	
+
+$(eval $(call object,parser.lex,parser.tab.c))
 
 $(eval $(call binary,mc,$(SRC),$(LIB)))
 $(eval $(call binary,min,$(SRC),$(LIB)))

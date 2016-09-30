@@ -16,14 +16,15 @@ free free
 {-1, 0} 0, 1
 {-1, -1} 0, 1
 [dipole]
-0.007483327
+#0.007483327
+0
 [external field]
 # muB = 5.788e-5 eV/T = 5.788e-2 meV/T
 {0, 0, -2.1*0.25*-0.05788}
 #{0, 0, 0}
 [magnetic anisotropy]
-0.4 {0, 0, 1}
-#0.293 {0, 0, 1}
+#0.4 {0, 0, 1}
+0.293 {0, 0, 1}
 #0.276 {0, 0, 1}
 [exchange constant]
 29
@@ -39,19 +40,7 @@ free free
 -1.5 {cos(pi/6), sin(pi/6)}
 -1.5 {-cos(pi/6), -sin(pi/6)}
 -1.5 {cos(pi/6), -sin(pi/6)}
-[positions]
-"../magskyr/tmp/rohart/Atom_position.dat"
-[load image]
-"../magskyr/tmp/rohart/Path1/EndConfig_00.dat"
-[load image]
-"../magskyr/tmp/rohart/Path1/EndConfig_05.dat"
-[load image]
-"../magskyr/tmp/rohart/Path1/EndConfig_08.dat"
-[load image]
-"../magskyr/tmp/rohart/Path1/EndConfig_11.dat"
-[load image]
-"../magskyr/tmp/rohart/Path1/EndConfig_14.dat"
-[load image]
-"../magskyr/tmp/rohart/Path1/EndConfig_17.dat"
-[load image]
-"../magskyr/tmp/rohart/Path1/EndConfig_20.dat"
+[cut]
+sphere {100, 116*cos(pi/6)} 100
+[image]
+uniform {0,0,1}

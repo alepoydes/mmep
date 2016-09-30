@@ -2,7 +2,6 @@
 #include "skyrmion.h"
 #include "optim.h"
 #include "plot.h"
-#include "parse.h"
 #include "debug.h"
 #include "display.h"
 #include "bitmap.h"
@@ -21,7 +20,7 @@ int frame=0; // current frame
 int sizef=0; // Number of loaded frames
 int sizea=0; // Number of frames allocated in memory
 real* mep=NULL;
-real* energy=NULL;
+real* ergy=NULL;
 
 int play_mode=0;
 int speed=1;
@@ -35,10 +34,12 @@ void parseMEP(FILE* file) {
     line++;
     if(sizef>=sizea) { // Allocating buffer
       sizea=sizea*2+1;
-      mep=realloc(mep,sizeof(real)*SIZE*3*sizea);
+      mep=(real*)realloc(mep,sizeof(real)*SIZE*3*sizea);
     };
-    real p[3],v[3];
-    int c=sscanf(buf,"%"RF"g %"RF"g %"RF"g %"RF"g %"RF"g %"RF"g",p,p+1,p+2,v,v+1,v+2);
+    long double pd[3],vd[3];
+    int c=sscanf(buf,"%Lg %Lg %Lg %Lg %Lg %Lg",pd,pd+1,pd+2,vd,vd+1,vd+2);
+    //real p[3]={pd[0],pd[1],pd[2]};
+    real v[3]={vd[0],vd[1],vd[2]};
     if(c!=6) {
       if(pos==0) { // skipping head
         continue;
@@ -68,15 +69,15 @@ void parseMEP(FILE* file) {
 };
 
 void evaluateEnergy() {
-  real* g=malloc(sizeof(real)*SIZE*3); assert(g);
+  real* g=ralloc(SIZE*3); 
   for(int f=0; f<sizef; f++) {
     real* spins=mep+3*SIZE*f;
     hamiltonian_hessian(spins, g);
-    energy[f]=-dot(3*SIZE,spins,g)/2;
+    ergy[f]=-dot(3*SIZE,spins,g)/2;
     subtract_field(g);
-    energy[f]+=dot(3*SIZE,spins,g);
-    //energy[f]=NAN;
-    fprintf(stderr, "Frame %d Energy %"RF"g\n",f,energy[f]);
+    ergy[f]+=dot(3*SIZE,spins,g);
+    //ergy[f]=NAN;
+    fprintf(stderr, "Frame %d Energy %" RF "g\n",f,RT(ergy[f]));
   };
   free(g);
 };
@@ -152,11 +153,11 @@ int main(int argc, char** argv) {
   };
   assert(mep);
   if(i<argc) {
-    fprintf(stderr, COLOR_RED"There are unused parameters:"COLOR_RESET"\n");
+    fprintf(stderr, COLOR_RED "There are unused parameters:" COLOR_RESET "\n");
     while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
   };
 
-  energy=malloc(sizeof(real)*sizef);
+  ergy=ralloc(sizef);
   evaluateEnergy();
   // Initialize graphics
   is_aborting=initDisplay(&argc, argv);
@@ -182,7 +183,7 @@ int main(int argc, char** argv) {
   while(!is_aborting) { 
     usleep(100);
     if(is_new_frame) {
-      fprintf(stderr, "Frame %d/%d Energy %"RF"g       \r", frame, sizef,energy[frame]);
+      fprintf(stderr, "Frame %d/%d Energy %" RF "g       \r", frame, sizef,RT(ergy[frame]));
       if(play_mode==1) {
         if(step%abs(speed)==0) {
           frame=(frame+1)%sizef;
@@ -203,6 +204,6 @@ int main(int argc, char** argv) {
   };
   // Deinitialization
   deinitDisplay();
-  free(mep); free(energy);
+  free(mep); free(ergy);
   return 0;
 };

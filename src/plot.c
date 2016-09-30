@@ -17,13 +17,13 @@ void plot_bounds(real bounds[3][2]) {
 	};
 };
 
-void plot_field3(FILE* file, const real* restrict a) {
+void plot_field3(FILE* file, const real* __restrict__ a) {
 	//printf("set term pngcairo\n");
 	//printf("set output '%s.png'\n","output");
 	fprintf(file,"unset key\nunset tics\nunset colorbox\nset border 0\n");
 	real bounds[3][2]; plot_bounds(bounds);
-	fprintf(file,"set xrange [%"RF"g:%"RF"g]\nset yrange [%"RF"g:%"RF"g]\nset zrange [%"RF"g:%"RF"g]\n"
-			,bounds[0][0]-0.5,bounds[0][1]+0.5,bounds[1][0]-0.5,bounds[1][1]+0.5,bounds[2][0]-0.5,bounds[2][1]+0.5);
+	fprintf(file,"set xrange [%" RF "g:%" RF "g]\nset yrange [%" RF "g:%" RF "g]\nset zrange [%" RF "g:%" RF "g]\n"
+			,RT(bounds[0][0]-0.5),RT(bounds[0][1]+0.5),RT(bounds[1][0]-0.5),RT(bounds[1][1]+0.5),RT(bounds[2][0]-0.5),RT(bounds[2][1]+0.5));
 	fprintf(file,"load 'moreland.pal'\nset cbrange [-1:1]\n");
 	if(sizez==1) {
 		fprintf(file,"plot '-' using ($1-($4)/2):($2-($5)/2):(($4)):(($5)):($6) ");
@@ -42,20 +42,20 @@ void plot_field3(FILE* file, const real* restrict a) {
 	{
 		real vec[3]; COORDS(u,x,y,z,vec);
 		int i=INDEX(u,x,y,z);
-		fprintf(file,"%"RF"g %"RF"g %"RF"g %.3"RF"f %.3"RF"f %.3"RF"f\n"
-			,vec[0],vec[1],vec[2]
-			,a[3*i+0],a[3*i+1],a[3*i+2]
+		fprintf(file,"%" RF "g %" RF "g %" RF "g %.3" RF "f %.3" RF "f %.3" RF "f\n"
+			,RT(vec[0]),RT(vec[1]),RT(vec[2])
+			,RT(a[3*i+0]),RT(a[3*i+1]),RT(a[3*i+2])
 			);
 	};
 	fprintf(file,"EOF\n\n");
 	fflush(file);
 }
 
-void plot_path(FILE* file, int sizep, const real* restrict mep) {
+void plot_path(FILE* file, int sizep, const real* __restrict__ mep) {
 	fprintf(file,"unset key\nunset tics\nunset colorbox\nset border 0\n");
 	real bounds[3][2]; plot_bounds(bounds);
-	fprintf(file,"set xrange [%"RF"g:%"RF"g]\nset yrange [%"RF"g:%"RF"g]\nset zrange [%"RF"g:%"RF"g]\n"
-		,bounds[0][0]-0.5,bounds[0][1]+0.5,bounds[1][0]-0.5,bounds[1][1]+0.5,bounds[2][0]-0.5,bounds[2][1]+0.5);	
+	fprintf(file,"set xrange [%" RF "g:%" RF "g]\nset yrange [%" RF "g:%" RF "g]\nset zrange [%" RF "g:%" RF "g]\n"
+		,RT(bounds[0][0]-0.5),RT(bounds[0][1]+0.5),RT(bounds[1][0]-0.5),RT(bounds[1][1]+0.5),RT(bounds[2][0]-0.5),RT(bounds[2][1]+0.5));	
 	if(sizez==1) {
 		fprintf(file,"plot '-' using ($1-($4)/2):($2-($5)/2):(($4)):(($5)):($7) ");
 		fprintf(file,"with vectors head size 0.1,20,60 filled lc palette\n");
@@ -66,9 +66,9 @@ void plot_path(FILE* file, int sizep, const real* restrict mep) {
 	for(int p=0; p<sizep; p++) forall(u,x,y,z) {
 		real vec[3]; COORDS(u,x,y,z,vec);
 		int i=3*INDEX(u,x,y,z)+p*size;
-		fprintf(file,"%"RF"g %"RF"g %"RF"g %.3"RF"f %.3"RF"f %.3"RF"f %d\n"
-			,vec[0],vec[1],vec[2]
-			,mep[i+0],mep[i+1],mep[i+2]
+		fprintf(file,"%" RF "g %" RF "g %" RF "g %.3" RF "f %.3" RF "f %.3" RF "f %d\n"
+			,RT(vec[0]),RT(vec[1]),RT(vec[2])
+			,RT(mep[i+0]),RT(mep[i+1]),RT(mep[i+2])
 			,p
 			);
 	}
@@ -77,7 +77,7 @@ void plot_path(FILE* file, int sizep, const real* restrict mep) {
 }
 
 
-void animate_path(FILE* file, int sizep, const real* restrict mep) {
+void animate_path(FILE* file, int sizep, const real* __restrict__ mep) {
 	int size=3*sizeu*sizex*sizey*sizez;
 	for(int n=0; n<sizep; n++) 
 		plot_field3(file,mep+n*size);

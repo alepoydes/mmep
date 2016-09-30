@@ -5,14 +5,14 @@
 #include <getopt.h>
 #include <string.h>
 
-#include "parse.h"
+#include "parser.h"
 #include "debug.h"
 #include "skyrmion.h"
 #include "octave.h"
 
-real epsilon=1e-6;
-int long max_iter=1000;
-real mode_param=0.2;
+real epsilon=1e-9;
+int long max_iter=10000;
+real mode_param=0.1;
 real param2=NAN;
 int mode=2;
 int integrator=0;
@@ -58,6 +58,7 @@ const char* optstr, char (*handle)(char opt, const char* arg)
   while(1) {
     static struct option long_options[] = {      
       {"help", no_argument, 0, 'h'},
+      {"debug", no_argument, 0, 1000},
       {0, 0, 0, 0}
     };
     int option_index = 0;
@@ -77,10 +78,11 @@ const char* optstr, char (*handle)(char opt, const char* arg)
       case 'o': save_octave=1; break;      
       case 'O': save_octave=2; break;      
       case 'D': outdir=strdup(optarg); break;
+      case 1000: yydebug=1; break;
       case '?': break;
       default: 
         if(!handle || !handle(c, optarg)) {
-      	  fprintf(stderr,COLOR_RED"Unprocessed option"COLOR_RESET" '%c'\n", c); 
+      	  fprintf(stderr,COLOR_RED "Unprocessed option" COLOR_RESET " '%c'\n", c); 
       	  exit(1);
       	};
     };
@@ -111,9 +113,10 @@ const char* optstr, char (*handle)(char opt, const char* arg)
 };
 
 void print_settings() {
+  fprintf(stderr, "Machine epsilon: %"RF"g (%zd bytes per real)\n", RT(EPSILON), sizeof(real));
+  fprintf(stderr,"Using lattice %dx%dx%dx%d with %d bonds\n",sizeu,sizex,sizey,sizez,sizen);
   if(active) fprintf(stderr, "Active spins: %d / %d\n", number_of_active, SIZE);
-    else fprintf(stderr, "Active spins: all / %d\n", SIZE);
-  fprintf(stderr, "Size of real: %zd\n", sizeof(real));
+  else fprintf(stderr, "Active spins: all / %d\n", SIZE);
 };
 
 void oct_save_lattice(FILE* file) {

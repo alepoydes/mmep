@@ -1,6 +1,5 @@
-#OPT=-std=c99 -g -Wall -DDEBUG -fopenmp
-OPT=-std=gnu99 -g -Wall -DDEBUG -Wno-unknown-pragmas
-#OPT=-std=gnu99 -pg -Wall -DDEBUG -Wno-unknown-pragmas
+OPT=-std=gnu99 -g -Wall -DDEBUG -Wno-unknown-pragmas -Wno-sign-compare
+#OPT=-std=gnu99 -pg -Wall -DDEBUG -Wno-unknown-pragmas -Wno-sign-compare
 CC=gcc
 
 include Makefile.common

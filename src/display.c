@@ -7,12 +7,12 @@
 //#include <GL/glew.h>
 #include <GL/freeglut.h>
 
+void (*print_screen)(int width, int height, void* buffer);
 
 // extern variables in header
 real* display_buffer=NULL;
 int is_aborting=0;
 int is_new_frame=0;
-void (*print_screen)(int width, int height, void* buffer);
 
 // constants
 char window_title[]="Skyrmion simulation";  // Window title
@@ -104,9 +104,9 @@ void zToVector(real* vec) {
 	real b[3]; cross3(c,a,b);
 	
 	GLfloat m[16]={
-		a[0],a[1],a[2],0.0f,
-		b[0],b[1],b[2],0.0f,
-		c[0],c[1],c[2],0.0f,
+		(GLfloat)a[0],(GLfloat)a[1],(GLfloat)a[2],0.0f,
+		(GLfloat)b[0],(GLfloat)b[1],(GLfloat)b[2],0.0f,
+		(GLfloat)c[0],(GLfloat)c[1],(GLfloat)c[2],0.0f,
 		0.0f,0.0f,0.0f,1.0f
 	};
 	glMultMatrixf(m);
@@ -126,8 +126,8 @@ void drawField(real* field) {
 	};
 	real magn[3]; copy3(magnetic_field, magn); normalize3(magn);
 	//if(arrow_mode>=2) glEnable(GL_CULL_FACE);
-	dist=malloc(sizeof(real)*SIZE); assert(dist);
-	int* idx=malloc(sizeof(int)*SIZE); assert(idx);	
+	dist=ralloc(SIZE);
+	int* idx=(int*)malloc(sizeof(int)*SIZE); assert(idx);	
 	real normal[3]; sub3(eye,center,normal); normalize3(normal);
 	forall(u,x,y,z) {
 		real vec[3]; COORDS(u,x,y,z,vec);
@@ -273,7 +273,7 @@ void drawBackground() {
 };
 
 void displayFunction() {
-	//fprintf(stderr, "draw (%"RF"g %"RF"g %"RF"g) (%"RF"g %"RF"g %"RF"g) (%"RF"g %"RF"g %"RF"g)\n",eye[0],eye[1],eye[2],center[0],center[1],center[2],dir[0],dir[1],dir[2]);
+	//fprintf(stderr, "draw (%" RF "g %" RF "g %" RF "g) (%" RF "g %" RF "g %" RF "g) (%" RF "g %" RF "g %" RF "g)\n",eye[0],eye[1],eye[2],center[0],center[1],center[2],dir[0],dir[1],dir[2]);
 	// Drawing
 	// Set background (clear) color to black
 	if(night_mode==1) glClearColor(0.0, 0.0, 0.0, 1.0); 

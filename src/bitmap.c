@@ -6,7 +6,7 @@
 #include "bitmap.h"
 
 void write_png(FILE* file, int width, int height, unsigned char* buffer) {
-	png_bytep* row_pointers=malloc(sizeof(png_bytep)*height);
+	png_bytep* row_pointers=(png_bytep*)malloc(height);
 	for(int c=0;c<height;c++) row_pointers[c]=buffer+4*width*(height-c-1);
     /* initialize stuff */
     png_structp png_ptr=png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
