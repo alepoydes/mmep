@@ -16,9 +16,6 @@ int mode, real mode_param, real epsilon, int max_iter);
 
 extern int sizep; // Number of nodes on path
 extern int debug_plot_path;
-extern int skip_projection;
-extern int use_ftt;
-extern int use_first_order_repar;
 extern int remove_zero_modes;
 extern int flat_distance;
 extern int post_optimization;

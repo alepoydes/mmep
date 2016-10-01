@@ -9,12 +9,13 @@
 #include "debug.h"
 #include "skyrmion.h"
 #include "octave.h"
+#include "optim.h"
 
 real epsilon=1e-9;
 int long max_iter=10000;
-real mode_param=0.1;
+real mode_param=0.2;
 real param2=NAN;
-int mode=2;
+int mode=SDM_PROGR;
 int integrator=0;
 int debug_plot=0;
 int debug_every=1000;

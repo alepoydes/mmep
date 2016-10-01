@@ -55,11 +55,13 @@ int steepest_descend(
   realp last_f=-INFINITY, f=NAN;
   real constres=NAN, res=NAN, last_res=0;
 
+  fprintf(stderr, "Mode: "COLOR_BLUE"%d"COLOR_RESET"\n", mode);
+
   real init_alpha() {
     switch(mode) {
   	  case SDM_CONSTANT: return mode_param;
-      case SDM_INERTIAL: return (real)(NAN); 
-      case SDM_PROGR: return res>1?1/res:1;
+      case SDM_INERTIAL: return (res>1?1/res:1)*0.1; 
+      case SDM_PROGR: return (res>1?1/res:1)*0.1;
     };
     fprintf(stderr,"Unknown optimization mode: " COLOR_RED "%d" COLOR_RESET "\n", mode);
     exit(1);
@@ -68,7 +70,7 @@ int steepest_descend(
   real update_alpha(real alpha) {
     switch(mode) {
       case SDM_CONSTANT: return alpha;
-      case SDM_INERTIAL: return alpha+mode_param*last_res; 
+      case SDM_INERTIAL: return alpha*(1+mode_param); 
       case SDM_PROGR: return alpha*(1+mode_param); 
     };
     assert(0);
@@ -76,8 +78,8 @@ int steepest_descend(
 
   real decrease_alpha(real alpha) {
     switch(mode) {
-      case SDM_CONSTANT: return alpha/2;
-      case SDM_INERTIAL: return alpha/2;
+      case SDM_CONSTANT: return alpha;
+      case SDM_INERTIAL: return alpha/(1+mode_param);
       case SDM_PROGR: return alpha/2;
     };
     assert(0);
@@ -104,10 +106,10 @@ int steepest_descend(
       fprintf(stderr, COLOR_YELLOW "Optimization aborted\n" COLOR_RESET);
       stop_signal=0;
       break;
-    };
-    if(display) display(iter,a,grad,f,res,constres,alpha,last_f,last_res); 
-    //alpha=(res<=last_res)?update_alpha():decrease_alpha();
-    alpha=update_alpha(rabs(alpha));
+    };      
+    //if(display) display(iter,a,grad,f,res,constres,alpha,last_f,last_res); 
+    //alpha=(res<=last_res)?update_alpha(alpha):decrease_alpha(alpha);
+    //alpha=update_alpha(rabs(alpha));
     last_res=res;
     last_f=f;
     // update minimum
@@ -118,22 +120,28 @@ int steepest_descend(
       //print_vector(n, bufa);
       //print_vector(n, bufgrad);
       res2=normsq(n,bufgrad); res=rsqrt(res2/n); assert(!isnan(res));
-      /*if(rpabs(last_f-f)*1e2<EPSILON) { 
+      if(last_f==f) { 
         fprintf(stderr, "Maximum precision is reached\n");
         status=2; break; 
-      }; */
-      if(f<last_f) break;
+      }; 
       if(display) display(iter,bufa,bufgrad,f,res,constres,alpha,last_f,last_res);
-      if(alpha<0) { 
+      if(stop_signal>0) break;  
+      if(f<last_f || mode==SDM_CONSTANT) {
+        alpha=update_alpha(rabs(alpha));  
+        break;
+      };
+      /*if(alpha<0) { 
         fprintf(stderr, "Minimum with non-zero gradient\n");
         status=2; break; 
-      };
+      };*/
       if(rabs(alpha)<1e-5) {
         fprintf(stderr, "Gradient error is too large\n");
         status=2; break;
       };
-      // { alpha=-alpha; } 
-      alpha=decrease_alpha(alpha);  
+      if(mode==SDM_INERTIAL) {
+        alpha=-decrease_alpha(alpha);
+        //break;
+      } else alpha=decrease_alpha(alpha);
       // step was too large
       mult_sub_ext(n,alpha,grad,a,bufa);
       if(P) constres=P(bufa);

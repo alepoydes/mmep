@@ -80,12 +80,9 @@ int mode, real mode_param, real epsilon, int max_iter)
 
 int sizep=0; // Number of nodes on path
 int debug_plot_path=0;
-int skip_projection=0;
-int use_ftt=0;
-int use_first_order_repar=0;
 int remove_zero_modes=0;
 int flat_distance=1;
-int post_optimization=1;
+int post_optimization=0;
 int single_maximum=1;
 
 realp *distance=NULL, *energy=NULL, *diff=NULL, *tdiff=NULL, *inflation=NULL;
@@ -111,8 +108,8 @@ void energy_evaluate_neb(real* path) {
   real* u=(real*)malloc(sizeof(real)*3*SIZE); assert(u);
   for(int p=0; p<sizep; p++) {
     if(flat_distance)
-      distance[p]=(p<=0)?0:distance[p-1]+rpsqrt(distsq(3*SIZE,path+3*SIZE*(p-1),path+3*SIZE*p)/SIZE);
-    else distance[p]=(p<=0)?0:distance[p-1]+rpsqrt(dist_sphere_sq(SIZE,path+3*SIZE*(p-1),path+3*SIZE*p)/SIZE);
+      distance[p]=(p<=0)?0:distance[p-1]+rpsqrt(distsq(3*SIZE,path+3*SIZE*(p-1),path+3*SIZE*p));
+    else distance[p]=(p<=0)?0:distance[p-1]+rpsqrt(dist_sphere_sq(SIZE,path+3*SIZE*(p-1),path+3*SIZE*p));
     hamiltonian_hessian(path+3*SIZE*p, q);
     energy[p]=-dot(3*SIZE,path+3*SIZE*p, q)/2;
     subtract_field(q);
@@ -135,59 +132,8 @@ void energy_evaluate_neb(real* path) {
   free(u); free(q);
 };
 
-#define circperm(a,b,c) { real t=a; a=b; b=c; c=t; }
-void energy_evaluate_ftt(real* path) {
-  real* q=(real*)malloc(sizeof(real)*3*SIZE*sizep); assert(q);
-  real* u=(real*)malloc(sizeof(real)*3*SIZE*sizep); assert(u);
-  real* v=(real*)malloc(sizeof(real)*3*SIZE); assert(v);
-  for(int p=0; p<sizep; p++) {
-    if(flat_distance)
-      distance[p]=(p<=0)?0:distance[p-1]+rpsqrt(distsq(3*SIZE,path+3*SIZE*(p-1),path+3*SIZE*p)/SIZE);
-    else distance[p]=(p<=0)?0:distance[p-1]+rpsqrt(dist_sphere_sq(SIZE,path+3*SIZE*(p-1),path+3*SIZE*p)/SIZE);
-    hamiltonian_hessian(path+3*SIZE*p, q+3*SIZE*p);
-    energy[p]=-dot(3*SIZE,path+3*SIZE*p, q+3*SIZE*p)/2;
-    subtract_field(q+3*SIZE*p);
-    energy[p]+=dot(3*SIZE,path+3*SIZE*p, q+3*SIZE*p);
-    // gradient of energy is in q
-    project_to_tangent(path+3*SIZE*p,q+3*SIZE*p);
-    // q is orthogonal to normales to all spheres
-    tdiff[p]=diff[p]=rpsqrt(normsq(3*SIZE,q+3*SIZE*p)/3*SIZE);
-  };
-  for(int p=0; p<sizep; p++) {
-    if(p>0 && p<sizep-1) {
-      three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],path+3*SIZE*(p-1),path+3*SIZE*p,path+3*SIZE*(p+1),u+3*SIZE*p);
-      //three_point_tangent(path+3*SIZE*(p-1),path+3*SIZE*p,path+3*SIZE*(p+1),u+3*SIZE*p);
-    } else if (p==0) {
-      two_point_tangent0(path+3*SIZE*p,path+3*SIZE*(p+1),u+3*SIZE*p);
-    } else {
-      two_point_tangent1(path+3*SIZE*(p-1),path+3*SIZE*p,u+3*SIZE*p);
-    };
-    real unorm=rpsqrt(dot(3*SIZE,u+3*SIZE*p,u+3*SIZE*p));
-    real proj=dot(3*SIZE,u+3*SIZE*p,q+3*SIZE*p)/unorm;
-    copy_vector(3*SIZE,q+3*SIZE*p,v);
-    mult_sub(3*SIZE, proj/unorm, u+3*SIZE*p, v);
-    // v is orthogonal to the tangent to MEP at p
-    tdiff[p]=rpsqrt(normsq(3*SIZE,v)/3*SIZE);
-    if(p>0 && p<sizep-1) {
-      sub(3*SIZE,q+(p+1)*3*SIZE,q+(p-1)*3*SIZE,v);
-      inflation[p]=-dot(3*SIZE,v,u+p*3*SIZE)/2/unorm;
-    } else if(p==0) {
-      sub(3*SIZE,q+(p+1)*3*SIZE,q+(p)*3*SIZE,v);
-      inflation[p]=-dot(3*SIZE,v,u+p*3*SIZE)/unorm;
-    } else {
-      sub(3*SIZE,q+(p)*3*SIZE,q+(p-1)*3*SIZE,v);
-      inflation[p]=-dot(3*SIZE,v,u+p*3*SIZE)/unorm;
-    };
-  };
-
-  //for(int p=1; p<sizep; p++)
-  //  fprintf(stderr,"%d: %" RF "g %" RF "g %" RF "g\n",p,distance[p]-distance[p-1], inflation[p],energy[p]);
-  free(v); free(u); free(q); 
-};
-
 void energy_evaluate(real* path) {
-  if(use_ftt) energy_evaluate_ftt(path);
-  else energy_evaluate_neb(path);
+  energy_evaluate_neb(path);
 }
 
 void path_gradient(const real* __restrict__ arg, real* __restrict__ out, realp* __restrict__ E) {
@@ -212,7 +158,7 @@ void energy_display(FILE* file) {
 
 void path_display(int iter, real* __restrict__ mep, real* __restrict__ grad_f
 , realp f, real res, real constres, real alpha, realp last_f, real last_res) {
-  if(!post_optimization && res<10*epsilon) {
+  if(!post_optimization && (res<100*epsilon || iter>max_iter/2)) {
       //fprintf(stderr,COLOR_YELLOW "Climbing is on." COLOR_RESET " Residue %" RF "g\n",res);
       post_optimization=1;
   }; 
@@ -324,10 +270,8 @@ void path_equilize(real* mep) {
 };
 
 real path_normalize(real* mep) {
-  if(!use_ftt || !use_first_order_repar) {
-    energy_evaluate(mep);
-    path_equilize(mep);
-  };
+  energy_evaluate(mep);
+  path_equilize(mep);
   real sum=0;
   for(int p=0; p<sizep; p++) sum+=normalize(mep+3*SIZE*p);  
   //energy_evaluate(mep);
@@ -352,10 +296,6 @@ void path_tangent_rec(const real* __restrict__ mep, real* __restrict__ grad, int
       //three_point_tangent(mep+3*SIZE*(p-1), mep+p*3*SIZE, mep+3*SIZE*(p+1), u);
       real normu=rsqrt(normsq(3*SIZE,u));
       real proj=(l[p-from]/l[C-1]*q[C-1]-q[p-from]);// inflation compensation
-      //proj=dot(3*SIZE,u,grad+p*3*SIZE)/normu; // gradient tangential projection
-      if(use_first_order_repar)
-        proj+=(l[C-1]*(p-from)/(C-1)-l[p-from])*rsqrt(3*SIZE);
-      //fprintf(stderr,"%d$ %" RF "g %" RF "g %" RF "g %" RF "g %" RF "g\n",p,proj,l[p],q[p],distance[p],inflation[p]);
       mult_add(3*SIZE, -proj/normu, u, grad+p*3*SIZE);
     } else if(
         post_optimization 
@@ -372,35 +312,6 @@ void path_tangent_rec(const real* __restrict__ mep, real* __restrict__ grad, int
   };
   free(u); free(q); free(l);
 }
-
-void path_tangent_ftt(const real* __restrict__ mep, real* __restrict__ grad) {
-  // Project to the tangent subspaces
-  for(int p=0; p<sizep; p++) 
-    project_to_tangent(mep+3*SIZE*p,grad+3*SIZE*p);
-  // Apply spring forces on every monotone segment of MEP
-  if(sizep<2) return;
-  if(post_optimization) {
-    if(single_maximum) {
-      realp max=-INFINITY; int f=-1;
-      for(int p=sizep-1; p>=0; p--) 
-        if(energy[p]>max) { max=energy[p]; f=p; };
-      if(f>0 && f<sizep-1) {
-        path_tangent_rec(mep, grad, 0, f);
-        path_tangent_rec(mep, grad, f, sizep-1);
-      } else path_tangent_rec(mep, grad, 0, sizep-1);
-    } else {
-      int end=sizep-1;
-      for(int p=end-1; p>0; p--) 
-        if((energy[p]<energy[p-1] && energy[p]<energy[p+1]) 
-          || (energy[p]>energy[p-1] && energy[p]>energy[p+1]))
-        { // Found a stationary point. Let it move to the extremum 
-          path_tangent_rec(mep, grad, p, end);
-          end=p;
-        };
-      path_tangent_rec(mep, grad, 0, end);
-    };
-  } else path_tangent_rec(mep, grad, 0, sizep-1);  
-};
 
 // INVALID
 void path_tangent_rohart(const real* __restrict__ mep, real* __restrict__ grad) {
@@ -454,7 +365,7 @@ void path_tangent_neb(const real* __restrict__ mep, real* __restrict__ grad) {
           group_generator(mep+3*SIZE*p, 2, g3);
           real* basis[5]={g1,g2,g3,u,grad+p*3*SIZE};
           gram_schmidt(3*SIZE, 5, basis);
-        } else if(!skip_projection) {
+        } else {
           three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+3*SIZE*(p-1), mep+p*3*SIZE, mep+3*SIZE*(p+1), u);
           real* basis[2]={u,grad+p*3*SIZE};
           gram_schmidt(3*SIZE, 2, basis);
@@ -471,8 +382,7 @@ void path_tangent_neb(const real* __restrict__ mep, real* __restrict__ grad) {
 void path_tangent(const real* __restrict__ mep, real* __restrict__ grad) {
   // Rohart way
   //path_tangent_rohart(mep, grad); return;
-  if(use_ftt) path_tangent_ftt(mep, grad);
-  else path_tangent_neb(mep, grad);
+  path_tangent_neb(mep, grad);
 }  
 
 void projected_path_gradient(const real* __restrict__ arg, real* __restrict__ out, realp* __restrict__ E) {
@@ -484,11 +394,12 @@ int path_steepest_descent(real* __restrict__ path, int mode,
   real mode_param, real epsilon, int max_iter) 
 {
   real updated_param=mode_param;
-  if(mode==2 || mode==0) updated_param=mode_param/sizep;
+  //if(mode==SDM_CONSTANT) updated_param=mode_param/sizep;
   return steepest_descend(
     3*SIZE*sizep, (real*)path, 
     projected_path_gradient,
-    mode, updated_param, epsilon, max_iter,
+    mode, 
+    updated_param, epsilon, max_iter,
     path_display, 
     path_normalize
   );

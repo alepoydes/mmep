@@ -5,6 +5,7 @@ from matplotlib import animation, rc
 from IPython.display import HTML
 import scipy.sparse as sparse
 import scipy.sparse.linalg
+import functools
 
 # Operation on vector fields.
 def normalize(A):
@@ -599,13 +600,13 @@ class Lattice(object):
     def generator_fourier(self,vec,S):
         x=map(lambda v, s: -2j*np.pi*v*np.fft.fftfreq(s), vec, self.size)
         x=np.ix_(*x)
-        m=reduce(lambda acc, x: acc+x, x, 0)
+        m=functools.reduce(lambda acc, x: acc+x, x, 0)
         return S*m.reshape(self.size+(1,1))
 
     def igenerator_fourier(self,vec,S):
         x=map(lambda v, s: -2j*np.pi*v*np.fft.fftfreq(s), vec, self.size)
         x=np.ix_(*x)
-        m=reduce(lambda acc, x: acc+x, x, 0)
+        m=functools.reduce(lambda acc, x: acc+x, x, 0)
         R=S/m.reshape(self.size+(1,1))
         R[np.isnan(R)]=0;
         return R
@@ -613,7 +614,7 @@ class Lattice(object):
     def generator(self,vec,S):
         return self.ifourier(self.generator_fourier(vec,self.fourier(S)))
 
-    def restricted_harmonic(self, S, hessian=None):
+    def restricted_harmonic(self, S, hessian=None, threshold=1e-3):
         if hessian is None: 
             hessian=self.lambda_hessian()
         oper, N, embed, project, ergy, grad=self.lambda_restricted_hessian(S, hessian=hessian)
@@ -622,14 +623,25 @@ class Lattice(object):
         idx=np.argsort(ei)
         ei=ei[idx]
         ev=ev[:,idx]
+        # extract zero modes
+        msk=np.abs(ei)<threshold
+        if np.any(msk):
+            zei=ei[msk]
+            zev=ev[:,msk]
+            msk=np.logical_not(msk)
+            ei=ei[msk]
+            ev=ev[:,msk]
+        else:
+            zei=None
+            zev=None
         # check if minimum
-        if ei[0]>0: return (ergy, 1., ei, None, None)
-        assert ei[1]>0, "Too many negative eigenvalues"
+        if ei[0]>0: return (ergy, 1., ei, None, None, zei, zev)
+        assert ei[1]>0, "Too many negative eigenvalues {}...".format(ei[:5])
         pei=ei[1:]; pev=ev[:,1:]
         nei=ei[0]; nev=ev[:,0]
         a=project(np.cross(embed(nev),S))
         c=np.dot(a, pev)
-        return (ergy, 1., pei, nei, c)
+        return (ergy, 1., pei, nei, c, zei, zev)
 
 
     # def harmonic(self, hes, state, remove_translations=False, debug=False, zero_tol=1e-5, log=True):
@@ -713,8 +725,8 @@ class Lattice(object):
     #     return (ergy, area, pei, nei, c)
 
 def rate(initial, transition, kT=0.48, threegammaovermu=7.1e12):
-    ergy0, area0, pei0, nei0, a0=initial
-    ergy1, area1, pei1, nei1, a1=transition
+    ergy0, area0, pei0, nei0, a0, zei0, zev0=initial
+    ergy1, area1, pei1, nei1, a1, zei1, zev1=transition
     assert nei0==None, "Initial state is not a minimum"
     assert nei1!=None, "Transition state is not first order saddle point"
     assert ergy0<=ergy1, "Energy of initial state larger than of transition state"
