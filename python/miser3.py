@@ -24,6 +24,16 @@ def norm(x): return np.sqrt(np.sum(x**2))
 
 def dot(x,y): return np.sum(x*y)
 
+def spher_distance(a,b,flat=False):
+    if flat: return np.sqrt(np.sum((a-b)**2))
+    else: 
+        phi=np.sum(a*b,axis=-1)
+        phi[phi<-1]=-1; phi[phi>1]=1
+        return np.sqrt(np.sum(np.arccos(phi)**2))
+
+def path_length(path,flat=False):
+    return np.sum([spher_distance(a,b,flat=flat) for a,b in zip(path[1:],path[:-1])])
+
 #def projector(state):
 #    state=state.reshape((-1,3))
 #    n=state.shape[0]
@@ -591,7 +601,7 @@ class Lattice(object):
     def translate_fourier(self,vec,S):
         x=map(lambda v, s: np.exp(-2j*np.pi*v*np.fft.fftfreq(s)), vec, self.size)
         x=np.ix_(*x)
-        m=reduce(lambda acc, x: acc*x, x, 1)
+        m=functools.reduce(lambda acc, x: acc*x, x, 1)
         return S*m.reshape(self.size+(1,1))
 
     def translate(self,vec,S):
@@ -635,130 +645,35 @@ class Lattice(object):
             zei=None
             zev=None
         # check if minimum
-        if ei[0]>0: return (ergy, 1., ei, None, None, zei, zev)
-        assert ei[1]>0, "Too many negative eigenvalues {}...".format(ei[:5])
-        pei=ei[1:]; pev=ev[:,1:]
-        nei=ei[0]; nev=ev[:,0]
-        a=project(np.cross(embed(nev),S))
-        c=np.dot(a, pev)
-        return (ergy, 1., pei, nei, c, zei, zev)
+        msk=ei<0
+        if np.any(msk):
+            nei=ei[msk]; nev=ev[:,msk]
+            msk=np.logical_not(msk)
+            pei=ei[msk]; pev=ev[:,msk]
+            c=np.array([np.dot(project(np.cross(embed(nev[:,n]),S)), pev) for n in range(nev.shape[1])])
+        else:
+            pei=ei
+            nei=None
+            c=None
+        return (ergy, pei, nei, c, zei, zev)
 
-
-    # def harmonic(self, hes, state, remove_translations=False, debug=False, zero_tol=1e-5, log=True):
-    #     """Return (energy, zero-modes area, positive eigenvalues, negative eigenvalues)
-    #     for the given 'state' and the magnetic crystal 'sys' with Hessian 'hes' of energy function."""
-    #     if log: print("Energy")
-    #     ergy, grad=self.energy(state)
-    #     # lagrange multipliers
-    #     if log: print("Lagrange multipliers")
-    #     MU=np.sum(state*grad, axis=-1)
-    #     # correct curvature
-    #     hes=hes-np.kron(np.diag(MU.reshape((-1))),np.eye(3))
-
-    #     if log: print("Projector")
-    #     proj=projector(state);
-    
-    #     if remove_translations:
-    #         if log: print("Translations generators")
-    #         # tangent space to the orbifold
-    #         g0=self.generator(np.array([1,0]),state).reshape((-1))
-    #         g1=self.generator(np.array([0,1]),state).reshape((-1))
-    #         # Gramm-Schmidt
-    #         if log: print("Orthogonalization")
-    #         n0=norm(g0); p0=g0/n0;
-    #         p1=g1-p0*dot(p0,g1)
-    #         n1=norm(p1); p1/=n1
-    #         # Element of area
-    #         area=n0*n1
-    #         # Making orthogonal basis. 
-    #         # Project to tangent to every spin sphere
-    #         g0=np.dot(proj,g0)
-    #         g1=np.dot(proj,g1)
-    #         m0=norm(g0); g0/=m0
-    #         g1-=g0*dot(g0,g1) 
-    #         m1=norm(g1); g1/=m1
-    #         g0=g0.reshape((-1,1))
-    #         g1=g1.reshape((-1,1))
-    #         proj1=np.eye(g0.shape[0])-g0*g0.T-g1*g1.T
-    #     else: area=None
-
-    #     if debug:
-    #         if log: print("Invariants")
-    #         np.testing.assert_almost_equal(norm((np.dot(proj,proj)-proj).reshape((-1))),0)
-    #         np.testing.assert_almost_equal(norm(np.dot(proj,state.reshape((-1)))),0)
-    #         if remove_translations:
-    #             np.testing.assert_almost_equal(norm(g0),1.)
-    #             np.testing.assert_almost_equal(norm(g1),1)
-    #             np.testing.assert_almost_equal(dot(g0,g1),0)
-    #             np.testing.assert_almost_equal(norm((np.dot(proj1,proj1)-proj1).reshape((-1))),0)
-    #             np.testing.assert_almost_equal(norm(np.dot(proj1,g0)),0)
-    #             np.testing.assert_almost_equal(norm(np.dot(proj1,g1)),0)
-    #             np.testing.assert_almost_equal(norm((np.dot(proj1,proj)-np.dot(proj,proj1)).reshape((-1))),0)
-    
-    #     if remove_translations: 
-    #         if log: print("Updating projector")
-    #         proj=np.dot(proj,proj1)
-    
-    #     if log: print("Projected Hessian")
-    #     hes=np.dot(proj,np.dot(hes,proj))
-    #     # Compute eigenvalues
-    #     if log: print("Eigendecomposition")
-    #     ei, ev=np.linalg.eigh(hes)
-    #     idx=np.argsort(ei)
-    #     ei=ei[idx]
-    #     ev=ev[:,idx]
-    #     # remove zero-modes
-    #     msk=np.abs(ei)>zero_tol
-    #     ei=ei[msk]; ev=ev[:,msk]
-    #     # check if parabolic approximation is valid
-    #     zero_modes=hes.shape[0]-msk.sum()-np.prod(np.array(self.size))*self.card
-    #     assert zero_modes==(2 if remove_translations else 0), "Harmonic approximation is invalid, there is/are %d zero-mode(s)" % zero_modes
-    #     # extract negative eigenvalues
-    #     if ei[0]>0: return (ergy, area, ei, None, None)
-    #     assert ei[1]>0, "Too many negative eigenvalues"
-    #     # 
-    #     pei=ei[1:]; pev=ev[:,1:]
-    #     nei=ei[0]; nev=ev[:,0]
-    #     if log: print("Saddle")
-    #     a=np.cross(nev.reshape((-1,3)),state.reshape((-1,3))).reshape((-1))  
-    #     c=np.dot(a, pev)
-    #     return (ergy, area, pei, nei, c)
-
-def rate(initial, transition, kT=0.48, threegammaovermu=7.1e12):
-    ergy0, area0, pei0, nei0, a0, zei0, zev0=initial
-    ergy1, area1, pei1, nei1, a1, zei1, zev1=transition
-    assert nei0==None, "Initial state is not a minimum"
-    assert nei1!=None, "Transition state is not first order saddle point"
+def rate(initial, transition, kT=1, threegammaovermu=1):
+    ergy0, pei0, nei0, a0, zei0, zev0=initial
+    ergy1, pei1, nei1, a1, zei1, zev1=transition
+    assert nei0 is None, "Initial state is not a minimum"
+    assert not nei1 is None, "Transition state is saddle point"
+    assert nei1.shape[0]==1, "Transition state must be of first order"
     assert ergy0<=ergy1, "Energy of initial state larger than of transition state"
     exp=np.exp(-(ergy1-ergy0)/kT)
     n=min(pei0.shape[0],pei1.shape[0])
     detr=np.sqrt(np.prod(pei0[:n]/pei1[:n])*np.prod(pei0[n:])/np.prod(pei1[n:]))
     qin=np.sqrt(np.sum(a1*a1*pei1))
     pre=threegammaovermu*detr*qin/2/np.pi
-    if area0 is not None: pre/=area0*kT
-    if area1 is not None: pre*=area1*kT
     return (pre, exp)
-
-
-# def rateinv(initial, transition, kT=0.48, threegammaovermu=7.1e12):
-#     ergy0, area0, pei0, nei0, a0=initial
-#     ergy1, area1, pei1, nei1, a1=transition
-#     assert nei0==None, "Initial state is not a minimum"
-#     assert nei1!=None, "Transition state is not first order saddle point"
-#     assert ergy0<=ergy1, "Energy of initial state larger than of transition state"
-#     exp=np.exp(-(ergy1-ergy0)/kT)
-#     n=min(pei0.shape[0],pei1.shape[0])
-#     detr=np.sqrt(np.prod(pei0[:n]/pei1[:n])*np.prod(pei0[n:])/np.prod(pei1[n:]))
-#     qin=np.sqrt(np.sum(a1*a1/pei1))
-#     pre=threegammaovermu*detr*qin/2/np.pi
-#     if area0 is not None: pre/=area0*kT
-#     if area1 is not None: pre*=area1*kT
-#     return (pre, exp)
-
 
 class LatticeRohart(Lattice):
     """Geometry and parameters of magnetic crystal with triagonal lattice"""
-    def __init__(self, size=(30,30), H=0., K=0., J=1., D=0., gamma=1, mu=0.):
+    def __init__(self, size=(30,30), H=0., K=0., J=1., D=0., gamma=1, mu=0.,bc=(0,0)):
         if(len(size)!=2): raise Exception("Lattice should be 2D")
         # number of cells along each axis
         self.size=size
@@ -782,6 +697,7 @@ class LatticeRohart(Lattice):
         self.mu=mu
         # gyromagetic ratio
         self.gamma=gamma
+        self.bc=bc  
 
 class LatticeTriagonal(Lattice):
     """Geometry and parameters of magnetic crystal with triagonal lattice"""

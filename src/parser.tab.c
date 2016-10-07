@@ -2139,7 +2139,7 @@ void load_positions(const char* posfilename) {
 		int l=sscanf(buf, "%Lg %Lg %Lg", posd, posd+1, posd+2);
 		if(l<2 || l>3) { fprintf(stderr, "Position has wrong number of coordinates at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", posfilename, line+2); exit(1); };
 		if(l<3) posd[2]=0;
-		real pos[3]={pos[0],pos[1],pos[2]};
+		real pos[3]={posd[0],posd[1],posd[2]};
 		int x,y,z,u;
 		if(get_nearest((real*)invtrans, pos, &u, &x, &y, &z)>0.01) {
 			fprintf(stderr, "Position %" RF "g %" RF "g %" RF "g at '" COLOR_RED "%s line %d" COLOR_RESET "' is too far from lattice\n", RT(pos[0]), RT(pos[1]), RT(pos[2]), posfilename, line+2); 

@@ -15,8 +15,8 @@ real* ralloc(int n) {
 
 real normalize3(real* x) { 
 	real t=normsq3(x); 
-	real e=rabs(t-1);
 	if(t==0) return 0;
+	real e=rabs(t-1);
 	if (e>NORMEPS2) { 
 		real f=rsqrt(t); 
 		(x)[0]/=f; (x)[1]/=f; (x)[2]/=f; 
@@ -71,6 +71,13 @@ realp dist_sphere_sq(int n, const real* a, const real* b) {
 	for(int k=0; k<n; k++) nrm+=dist_sphere_sq3(a+3*k,b+3*k);
 	return nrm;	
 };
+
+real dist_sphere_sq3(const real* a,const real* b) {
+	real p=dot3(a,b);
+	if(p>1) p=1; else if(p<-1) p=-1;
+	real d=racos(p);
+	return d*d;
+}; 
 
 realp dot(int n, const real* a, const real* b) {
 	realp nrm=0;

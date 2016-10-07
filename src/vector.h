@@ -113,7 +113,7 @@ void cross3(const real* a,const real* b,real* c);
 #define scale3(a,b,c) { (c)[0]=a*(c)[0]+(1-a)*(b)[0]; (c)[1]=a*(c)[1]+(1-a)*(b)[1]; (c)[2]=a*(c)[2]+(1-a)*(b)[2]; }
 // calculate great-circle distance  on the sphere between points a and b given by decard coordinates.
 // a and b assumed to have unit length.
-#define dist_sphere_sq3(a,b) (racos(dot3(a,b)))
+realp dist_sphere_sq3(const real* a, const real* b);
 #define for3(j) for(int j=0;j<3;j++)
 #define random_real() ((real)rand()/(real)(RAND_MAX))
 #define add_random_vector3(alpha, a, b) { (b)[0]=(a)[0]+(alpha)*(random_real()-0.5); (b)[1]=(a)[1]+(alpha)*(random_real()-0.5); (b)[2]=(a)[2]+(alpha)*(random_real()-0.5);  }

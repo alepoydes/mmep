@@ -104,8 +104,8 @@ void path_steepest_descent_deinit() {
 };
 
 void energy_evaluate_neb(real* path) {
-  real* q=(real*)malloc(sizeof(real)*3*SIZE); assert(q);
-  real* u=(real*)malloc(sizeof(real)*3*SIZE); assert(u);
+  real* q=ralloc(3*SIZE);
+  real* u=ralloc(3*SIZE); 
   for(int p=0; p<sizep; p++) {
     if(flat_distance)
       distance[p]=(p<=0)?0:distance[p-1]+rpsqrt(distsq(3*SIZE,path+3*SIZE*(p-1),path+3*SIZE*p));
