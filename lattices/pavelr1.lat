@@ -39,5 +39,5 @@ free periodic
 -1.5567671 {-cos(pi/6), -sin(pi/6)}
 -1.5567671 {cos(pi/6), -sin(pi/6)}
 [image]
-vertex {50, 40} 20, 0, -1
+vertex {50, 40} 10, 0, -1
 [image]

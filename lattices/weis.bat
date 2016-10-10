@@ -1,5 +1,5 @@
 [size]
-SZ, SZ
+30, 30
 [boundary conditions]
 periodic periodic
 [translation vectors]
@@ -12,21 +12,25 @@ periodic periodic
 {0, 1} 0, 0
 {-1, 1} 0, 0
 [external field]
-{0, 0, B}
+# mu=3*mu_B
+{0, 0, B} # (J)
+[dipole]
+# lattice constant a=2.7 Å of Fe/Ir(111)
+0
 [magnetic anisotropy]
-0.07 {0, 0, 1}
+0.07 {0, 0, 1} # (J)
 [exchange constant]
-1
+# J=7.1 ± 0.2 meV.
+1 # (J)
 1
 1
 [dzyaloshinskii moriya vector]
-0.32 {0, -1, 0}
+# 2.2 meV
+0.32 {0, -1, 0}  # (J)
 0.32 {cos(pi/6), -sin(pi/6)}
 0.32 {cos(pi/6), sin(pi/6)}
 [temperature]
-kT
+kT # (J)
 [image]
-vertex {15, 12} 7, 0, -1
+vertex {30*(1+sin(pi/6))/2, 30*cos(pi/6)/2} 7, 0, -1
 [image]
-#vertex {21, 15} 7, 0, -1
-#vertex {20.5, 15.8660254} 7, 0, -1

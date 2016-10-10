@@ -39,17 +39,19 @@ free periodic
 -1.5567671 {-cos(pi/6), -sin(pi/6)}
 -1.5567671 {cos(pi/6), -sin(pi/6)}
 [image]
-vertex {50, 20} 20, 0, -1
+vertex {50, 15} 10, 0, -1
 [image]
-vertex {50, 17} 20, 0, -1
+vertex {50, 13} 10, 0, -1
 [image]
-vertex {50, 14} 20, 0, -1
+vertex {50, 11} 10, 0, -1
 [image]
-vertex {50, 11} 20, 0, -1
+vertex {50, 09} 10, 0, -1
 [image]
-vertex {50, 08} 20, 0, -1
+vertex {50, 07} 10, 0, -1
 [image]
-vertex {50, 05} 20, 0, -1
+vertex {50, 05} 10, 0, -1
 [image]
-vertex {50, 02} 20, 0, -1
+vertex {50, 03} 10, 0, -1
+[image]
+vertex {50, 01} 10, 0, -1
 [image]

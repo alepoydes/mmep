@@ -98,6 +98,7 @@ int steepest_descend(
   alpha=init_alpha();
 
   int iter=1;
+  int count_constant_f=0;
   while(iter<max_iter && status!=2) {
     if(res+constres<epsilon) { // If solution is found
       status=0; break; 
@@ -120,10 +121,12 @@ int steepest_descend(
       //print_vector(n, bufa);
       //print_vector(n, bufgrad);
       res2=normsq(n,bufgrad); res=rsqrt(res2/n); assert(!isnan(res));
-      if(last_f==f) { 
-        fprintf(stderr, "Maximum precision is reached\n");
-        status=2; break; 
-      }; 
+      if(last_f==f) {
+        if(count_constant_f++>10) { 
+          fprintf(stderr, "Maximum precision is reached\n");
+          status=2; break; 
+        };
+      } else count_constant_f=0; 
       if(display) display(iter,bufa,bufgrad,f,res,constres,alpha,last_f,last_res);
       if(stop_signal>0) break;  
       if(f<last_f || mode==SDM_CONSTANT) {

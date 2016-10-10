@@ -493,49 +493,9 @@ class Lattice(object):
         E+=np.sum(dE*s)
         return (E,dE.reshape(S.shape))
     
-    def gradient(self,S,hessian=None):
+    def gradient(self,S,hess):
         """Compute energy gradient for the <system> on the state S."""
-        if hessian is None: hessian=self.hessian(S)
         return hessian-self.H.reshape((1,)*self.dim+(1,3))
-
-    # def energy_contributions_names(self):   
-    #     return energy_contributions_names()
-
-    # def energy_contributions(self, S):
-    #     if(self.size+(self.card,3)!=S.shape): raise Exception("Wrong vector field dimensions")
-    #     K0=self.K0.reshape((self.K0.shape[0],)+(1,)*self.dim+(1,3))
-    #     Anisotropy=0
-    #     for n in range(self.K0.shape[0]):
-    #         Anisotropy-=self.K[n]*np.sum(np.sum(K0[n]*S,axis=-1)**2)
-    #     Zeeman=-np.sum(self.H.reshape((1,3)) * S.reshape((-1,3)))
-    #     HeisenbergExchange=0
-    #     DzyaloshinkiiMoriyaInteraction=0
-    #     for bond, D, J in zip(self.bonds, self.D, self.J):
-    #         ia=np.ix_(*self.translated_axes(bond[0]))
-    #         D=D.reshape((1,)*self.dim+(3,))
-    #         HeisenbergExchange-=J*np.sum(S[ia][...,bond[1],:]*S[...,bond[2],:])
-    #         DzyaloshinkiiMoriyaInteraction-=np.sum(np.cross(S[...,bond[2],:],S[ia][...,bond[1],:])*D)
-    #     if self.mu!=0.:
-    #         np.seterr(divide='ignore')
-    #         pos=self.atoms().reshape((-1,self.dim))
-    #         s=S.reshape((-1,3))
-    #         d=0
-    #         for i in range(s.shape[0]):
-    #             if np.sum(s[i]**2)<0.1: continue
-    #             u=pos[i]-pos
-    #             r=1./np.sqrt(np.sum(u**2,axis=-1))
-    #             r[i]=0
-    #             u*=np.expand_dims(r,-1)
-    #             r=r**3
-    #             wi=np.sum(np.expand_dims(s[i,:self.dim],0)*u,axis=-1)
-    #             wj=np.sum(s[:,:self.dim]*u,axis=-1)
-    #             d+=np.sum(r*(3*wi*wj-np.sum(np.expand_dims(s[i],0)*s,axis=-1)),axis=0)
-    #         DipolarCoupling=-self.mu*d
-    #     else:
-    #         DipolarCoupling=0.
-    #     TotalEnergy=Anisotropy+HeisenbergExchange+DzyaloshinkiiMoriyaInteraction+DipolarCoupling+Zeeman
-    #     result=np.array([Anisotropy,Zeeman,HeisenbergExchange,DzyaloshinkiiMoriyaInteraction,DipolarCoupling,TotalEnergy])
-    #     return result
 
     def lambda_restricted_hessian(self, S, hessian=None):
         shp=S.shape[:-1]
@@ -657,19 +617,21 @@ class Lattice(object):
             c=None
         return (ergy, pei, nei, c, zei, zev)
 
-def rate(initial, transition, kT=1, threegammaovermu=1):
+def rate(initial, transition, kT=1, gammaovermu=1):
     ergy0, pei0, nei0, a0, zei0, zev0=initial
     ergy1, pei1, nei1, a1, zei1, zev1=transition
     assert nei0 is None, "Initial state is not a minimum"
-    assert not nei1 is None, "Transition state is saddle point"
+    assert not nei1 is None, "Transition state is not a saddle point"
     assert nei1.shape[0]==1, "Transition state must be of first order"
     assert ergy0<=ergy1, "Energy of initial state larger than of transition state"
     exp=np.exp(-(ergy1-ergy0)/kT)
     n=min(pei0.shape[0],pei1.shape[0])
     detr=np.sqrt(np.prod(pei0[:n]/pei1[:n])*np.prod(pei0[n:])/np.prod(pei1[n:]))
     qin=np.sqrt(np.sum(a1*a1*pei1))
-    pre=threegammaovermu*detr*qin/2/np.pi
-    return (pre, exp)
+    nzei0=0 if zei0 is None else zei0.shape[0]
+    nzei1=0 if zei1 is None else zei1.shape[0]
+    zeromodes=(2*np.pi*kT)**((nzei0-nzei1)/2.)
+    return np.array([gammaovermu/2/np.pi, zeromodes, detr, qin, exp])
 
 class LatticeRohart(Lattice):
     """Geometry and parameters of magnetic crystal with triagonal lattice"""
