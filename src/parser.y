@@ -69,7 +69,7 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 %type <sz> bc sz
 %type <vec> vector
 %type <r> exp 
-%type <i> integer
+%type <i> integer 
 
 %%
 
@@ -206,16 +206,20 @@ imagelist:
 		skyrmion_random(image);
 		}
 
-sz: SZ
-	| ID { 
-		int n=get_var_int($1); 
-		if(n<0) yyerror("Variable " COLOR_RED "'%s'" COLOR_RESET " value " COLOR_RED "%d" COLOR_RESET " is negative\n", $1, n);
-		$$=n;
-		}
-
 integer: INTEGER { $$=$1; }
 	| SZ { $$=(int)$1; } 
 	| ID { $$=get_var_int($1); }
+	| integer '+' integer { $$=$1+$3; }
+	| integer '-' integer { $$=$1-$3; }
+	| integer '*' integer { $$=$1*$3; }
+	| integer '/' integer { $$=$1/$3; }
+	| '-' integer %prec NEG { $$=-$2; }
+	| '(' integer ')' { $$=$2; }
+
+sz: integer {
+		if($1<=0) yyerror("Value " COLOR_RED "%d" COLOR_RESET " is not positive\n", $1);
+		$$=$1;
+	}
 
 exp:  ID '(' exp ')' { $$=apply($1, $3); }
 	| ID { $$=get_var($1); }

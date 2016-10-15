@@ -29,8 +29,6 @@ periodic periodic
 0.32 {0, -1, 0}  # (J)
 0.32 {cos(pi/6), -sin(pi/6)}
 0.32 {cos(pi/6), sin(pi/6)}
-[temperature]
-kT # (J)
 [image]
 vertex {30*(1+sin(pi/6))/2, 30*cos(pi/6)/2} 7, 0, -1
 [image]

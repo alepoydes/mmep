@@ -6,6 +6,9 @@ from IPython.display import HTML
 import scipy.sparse as sparse
 import scipy.sparse.linalg
 import functools
+import warnings
+import re
+#from scipy.sparse import csc_matrix
 
 # Operation on vector fields.
 def normalize(A):
@@ -228,61 +231,6 @@ class Lattice(object):
             return Q
         def frame(i): return path[i]
         return animate(init, update, path.shape[0], interval)
-
-    # def hessian(self,S):
-    #     """
-    #     Compute A(S) for the <system> having energy E=<S|A(S)>/2+<B|S>.
-    #     Hamiltonian of the crystal has the form:
-    #     $$H[S]=-\sum_n B_n\cdot S_n-K_0\sum_{n}|K\cdot S_n|^2-\sum_{<n,m>}J_{n,m}S_n\cdot S_m-\sum_{<n,m>}D_{n,m}\cdot(S_n\times S_m),$$
-    #     where the double sums are taken over all pairs of atoms, 
-    #     $B_n\in\mathbb R^3$ is external magnetic field, 
-    #     $J_n\in\mathbb R$ is the effective nearest-neighbour exchange integral,
-    #     $D_{n,m}\in\mathbb R^3$ is an effective Dzyaloshinskii-Moriya (DM) coupling,
-    #     $K_0\in\mathbb R$ is magnetic anysotpropy
-    #     and $K\in\mathbb R^3$ is unit magnetic anytropy vector.
-    #     We deal only with uniform magnetic field $B_n=B_0$ and periodic systems, that is
-    #     $$J_{n_1,n_2,k}=J_{n_1+j_1,n_2+j_2,k},\quad
-    #     D_{(n_1,n_2,k),(n_1',n_2',k')}=D_{(n_1+j_1,n_2+j_2,k),(n_1'+j_1,n_2'+j_2,k')}
-    #     \;\forall j_1\forall j_2,$$
-    #     and so on.
-    #     The Hamiltonian is a quadratic form with matrix $A$ and linear part $B$:
-    #     $$H[S]=\frac12 S\cdot AS-S\cdot B,$$
-    #     where $B$ is the magnetic field as above, and $A$ is known explicitly:
-    #     $$AS_n=-2K_0 K(K\cdot S_n)-\sum_{n,m\in \Lambda}J_{n,m}S_m-\sum_{n,m\in \Lambda}S_m\times D_{n,m}.$$
-    #     Then the gradient of Hamiltonian is easily obtained as follows:
-    #     $$\nabla H[S]=AS_n-B_n.$$
-    #     """
-    #     if(self.size+(self.card,3)!=S.shape): raise Exception("Wrong vector field dimensions")
-    #     K0=self.K0.reshape((self.K0.shape[0],)+(1,)*self.dim+(1,3))
-    #     dE=np.zeros(S.shape)
-    #     for n in range(self.K0.shape[0]):
-    #         dE-=2*self.K[n]*K0[n]*np.expand_dims(np.sum(K0[n]*S,axis=-1),-1)
-    #     for bond, D, J in zip(self.bonds, self.D, self.J):
-    #         ia=np.ix_(*self.translated_axes(bond[0]))
-    #         ib=np.ix_(*self.translated_axes(-np.array(bond[0])))
-    #         dE[...,bond[2],:]-=J*S[ia][...,bond[1],:]
-    #         dE[...,bond[1],:]-=J*S[ib][...,bond[2],:]
-    #         D=D.reshape((1,)*self.dim+(3,))
-    #         dE[...,bond[2],:]-=np.cross(S[ia][...,bond[1],:],D)
-    #         dE[...,bond[1],:]+=np.cross(S[ib][...,bond[2],:],D)
-    #     if self.mu!=0.:
-    #         pos=self.atoms().reshape((-1,self.dim))
-    #         s=S.reshape((-1,3))
-    #         d=np.empty(s.shape)
-    #         for i in range(s.shape[0]):
-    #             u=pos[i,:]-pos
-    #             np.seterr(divide='ignore')
-    #             r=1./np.sqrt(np.sum(u**2,axis=-1))
-    #             r[i]=0.
-    #             u*=np.expand_dims(r,-1)
-    #             r=r**3
-    #             # (S+dS)'*R*(S+dS) = S'*R*S + dS'*R*S+S'*R*dS + o(dS^2)
-    #             # d/dS S'*R*S = 2*R*S
-    #             d[i,:]=np.sum(s*np.expand_dims(r,-1),axis=0)
-    #             # ((S+dS).U)'*R*((S+dS).U) = (S.U)'*R*(S.U) + (dS.U)'*R*(S.U)+(S.U)'*R*(dS.U) + o(dS^2)
-    #             d[i,:self.dim]-=3*np.sum(u*np.expand_dims(r*np.sum(s[:,:self.dim]*u,axis=-1),-1),axis=0)
-    #         dE+=2*self.mu*d.reshape(dE.shape)
-    #     return dE
 
     def lambda_hessian(self, radius=None):
         if(self.dim!=2): raise Exception("Only 2D lattices are supported")
@@ -620,10 +568,14 @@ class Lattice(object):
 def rate(initial, transition, kT=1, gammaovermu=1):
     ergy0, pei0, nei0, a0, zei0, zev0=initial
     ergy1, pei1, nei1, a1, zei1, zev1=transition
-    assert nei0 is None, "Initial state is not a minimum"
-    assert not nei1 is None, "Transition state is not a saddle point"
-    assert nei1.shape[0]==1, "Transition state must be of first order"
-    assert ergy0<=ergy1, "Energy of initial state larger than of transition state"
+    if not nei0 is None:
+        warnings.warn("Initial state is not a minimum")
+    if nei1 is None:    
+        warnings.warn("Transition state is not a saddle point")
+    if nei1.shape[0]!=1:
+        warnings.warn("Transition state must be of first order")
+    if ergy0>ergy1:
+        warnings.warn("Energy of initial state larger than of transition state")
     exp=np.exp(-(ergy1-ergy0)/kT)
     n=min(pei0.shape[0],pei1.shape[0])
     detr=np.sqrt(np.prod(pei0[:n]/pei1[:n])*np.prod(pei0[n:])/np.prod(pei1[n:]))
@@ -724,9 +676,6 @@ class LatticeHexagonal(Lattice):
         self.bc=bc
 
 # Loading data from octave files
-import re
-#from scipy.sparse import csc_matrix
-
 class LatticeFromOct(Lattice):
     """Geometry and parameters of magnetic crystal"""
     def __init__(self, octdata, gamma=1):
@@ -770,7 +719,7 @@ def read_array(fileobj):
     s=fileobj.readline()
     if not s: return None
     m=re.match(r"# name: (\w+)", s); assert(m); name=m.group(1)
-    print(name,end=" ")
+    #print(name,end=" ")
     m=re.match(r"# type: (.+)", fileobj.readline()); assert(m); tp=m.group(1)
     if tp=='matrix':
         m=re.match(r"# ndims: ([0-9]+)", fileobj.readline()); assert(m); dims=int(m.group(1))
@@ -789,8 +738,9 @@ def read_array(fileobj):
     assert(re.match(r"\s*", fileobj.readline()))
     return (name, data)
 
-def read_oct(filename):
-    fileobj=open(filename, 'r')
+def read_oct(fileobj):
+    if isinstance(fileobj, str):
+        fileobj=open(fileobj, 'r')
     m=re.match(r"# Created by (.*)", fileobj.readline())
     res={'created':m.group(1)}
     while True:
@@ -798,7 +748,7 @@ def read_oct(filename):
         if not d: break
         res[d[0]]=d[1]
     fileobj.close()
-    print()
+    #print()
     return res
 
 def load_results(filename):
