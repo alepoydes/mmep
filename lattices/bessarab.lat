@@ -35,6 +35,7 @@ plane {10, 0} {-1, 0}
 plane {0, 4} {0, -1}
 [image]
 uniform {0, 1, 0}
+#random
 [image]
 random
 #uniform {1, 0, 0}

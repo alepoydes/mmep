@@ -5,6 +5,11 @@ from matplotlib import animation, rc
 from IPython.display import HTML
 import scipy.sparse as sparse
 import scipy.sparse.linalg
+import functools
+import warnings
+import re
+import os
+#from scipy.sparse import csc_matrix
 
 # Operation on vector fields.
 def normalize(A):
@@ -22,6 +27,16 @@ def project_to_tangent_space(state, grad):
 def norm(x): return np.sqrt(np.sum(x**2))
 
 def dot(x,y): return np.sum(x*y)
+
+def spher_distance(a,b,flat=False):
+    if flat: return np.sqrt(np.sum((a-b)**2))
+    else: 
+        phi=np.sum(a*b,axis=-1)
+        phi[phi<-1]=-1; phi[phi>1]=1
+        return np.sqrt(np.sum(np.arccos(phi)**2))
+
+def path_length(path,flat=False):
+    return np.sum([spher_distance(a,b,flat=flat) for a,b in zip(path[1:],path[:-1])])
 
 #def projector(state):
 #    state=state.reshape((-1,3))
@@ -104,6 +119,10 @@ class Lattice(object):
     @property
     def shape(self): return self.size+(self.card, 3)
 
+    @property
+    def number_of_atoms(self): return np.prod(self.size)*self.card
+
+
     def random(self):
         """Returns random vector field on the lattice"""
         return normalize(np.random.randn(*(self.size+(self.card,3))))
@@ -178,24 +197,28 @@ class Lattice(object):
         plt.quiver(origin(linex),origin(liney),vecx,vecy,angles='xy',units='xy',scale=1.)
         plt.plot(linex.T,liney.T)   
 
-    def plot_angles(self, path, rscale=1., highlight=None, ax=None, origin=None, highlightlw=4):
+    def plot_angles(self, path, rscale=1., ax=None, style='-', lw=1, origin=None, highlight=None, highlightlw=4, threshold=0.5):
         points=self.atoms()
         if origin is None:
-            directions=path[0,:,:,:,:2]
-            origin=center(points, directions)
+            mask=np.logical_and(path[0,:,:,:,2]>-threshold,path[0,:,:,:,2]<threshold)
+            origin=center(points[mask], path[0,mask,:2])
         else:
             origin=np.array(origin)
         dist=distance(points, origin)
         distidx=np.argsort(dist)
         dist=dist[distidx]*rscale
+        states=[path[k,:,:,:,2].flatten()[distidx] for k in range(path.shape[0])]
         if ax is None: fig, ax=plt.subplots(1,1)
-        for k in range(path.shape[0]):
-            ax.plot(dist, path[k,:,:,:,2].flatten()[distidx], '-')
+        for state in states:
+            ax.plot(dist, state, style, lw=lw)
         if highlight is not None:
-            ax.plot(dist, highlight[:,:,:,2].flatten()[distidx], '-k', lw=highlightlw)
+            self.plot_angles(highlight, rscale=rscale, ax=ax, style='-k', lw=highlightlw)
+        ax.set_ylim([-1,1])
+        return dist, states          
 
-    def plot_field(self,S,scale=1):
-        fig,axis=plt.subplots()
+    def plot_field(self,S,scale=1,axis=None,fig=None):
+        if axis is None:
+            fig,axis=plt.subplots()
         axis.set_aspect('equal')
         plt.axis("off")
         s=S.reshape((-1,3))
@@ -217,61 +240,6 @@ class Lattice(object):
             return Q
         def frame(i): return path[i]
         return animate(init, update, path.shape[0], interval)
-
-    # def hessian(self,S):
-    #     """
-    #     Compute A(S) for the <system> having energy E=<S|A(S)>/2+<B|S>.
-    #     Hamiltonian of the crystal has the form:
-    #     $$H[S]=-\sum_n B_n\cdot S_n-K_0\sum_{n}|K\cdot S_n|^2-\sum_{<n,m>}J_{n,m}S_n\cdot S_m-\sum_{<n,m>}D_{n,m}\cdot(S_n\times S_m),$$
-    #     where the double sums are taken over all pairs of atoms, 
-    #     $B_n\in\mathbb R^3$ is external magnetic field, 
-    #     $J_n\in\mathbb R$ is the effective nearest-neighbour exchange integral,
-    #     $D_{n,m}\in\mathbb R^3$ is an effective Dzyaloshinskii-Moriya (DM) coupling,
-    #     $K_0\in\mathbb R$ is magnetic anysotpropy
-    #     and $K\in\mathbb R^3$ is unit magnetic anytropy vector.
-    #     We deal only with uniform magnetic field $B_n=B_0$ and periodic systems, that is
-    #     $$J_{n_1,n_2,k}=J_{n_1+j_1,n_2+j_2,k},\quad
-    #     D_{(n_1,n_2,k),(n_1',n_2',k')}=D_{(n_1+j_1,n_2+j_2,k),(n_1'+j_1,n_2'+j_2,k')}
-    #     \;\forall j_1\forall j_2,$$
-    #     and so on.
-    #     The Hamiltonian is a quadratic form with matrix $A$ and linear part $B$:
-    #     $$H[S]=\frac12 S\cdot AS-S\cdot B,$$
-    #     where $B$ is the magnetic field as above, and $A$ is known explicitly:
-    #     $$AS_n=-2K_0 K(K\cdot S_n)-\sum_{n,m\in \Lambda}J_{n,m}S_m-\sum_{n,m\in \Lambda}S_m\times D_{n,m}.$$
-    #     Then the gradient of Hamiltonian is easily obtained as follows:
-    #     $$\nabla H[S]=AS_n-B_n.$$
-    #     """
-    #     if(self.size+(self.card,3)!=S.shape): raise Exception("Wrong vector field dimensions")
-    #     K0=self.K0.reshape((self.K0.shape[0],)+(1,)*self.dim+(1,3))
-    #     dE=np.zeros(S.shape)
-    #     for n in range(self.K0.shape[0]):
-    #         dE-=2*self.K[n]*K0[n]*np.expand_dims(np.sum(K0[n]*S,axis=-1),-1)
-    #     for bond, D, J in zip(self.bonds, self.D, self.J):
-    #         ia=np.ix_(*self.translated_axes(bond[0]))
-    #         ib=np.ix_(*self.translated_axes(-np.array(bond[0])))
-    #         dE[...,bond[2],:]-=J*S[ia][...,bond[1],:]
-    #         dE[...,bond[1],:]-=J*S[ib][...,bond[2],:]
-    #         D=D.reshape((1,)*self.dim+(3,))
-    #         dE[...,bond[2],:]-=np.cross(S[ia][...,bond[1],:],D)
-    #         dE[...,bond[1],:]+=np.cross(S[ib][...,bond[2],:],D)
-    #     if self.mu!=0.:
-    #         pos=self.atoms().reshape((-1,self.dim))
-    #         s=S.reshape((-1,3))
-    #         d=np.empty(s.shape)
-    #         for i in range(s.shape[0]):
-    #             u=pos[i,:]-pos
-    #             np.seterr(divide='ignore')
-    #             r=1./np.sqrt(np.sum(u**2,axis=-1))
-    #             r[i]=0.
-    #             u*=np.expand_dims(r,-1)
-    #             r=r**3
-    #             # (S+dS)'*R*(S+dS) = S'*R*S + dS'*R*S+S'*R*dS + o(dS^2)
-    #             # d/dS S'*R*S = 2*R*S
-    #             d[i,:]=np.sum(s*np.expand_dims(r,-1),axis=0)
-    #             # ((S+dS).U)'*R*((S+dS).U) = (S.U)'*R*(S.U) + (dS.U)'*R*(S.U)+(S.U)'*R*(dS.U) + o(dS^2)
-    #             d[i,:self.dim]-=3*np.sum(u*np.expand_dims(r*np.sum(s[:,:self.dim]*u,axis=-1),-1),axis=0)
-    #         dE+=2*self.mu*d.reshape(dE.shape)
-    #     return dE
 
     def lambda_hessian(self, radius=None):
         if(self.dim!=2): raise Exception("Only 2D lattices are supported")
@@ -482,49 +450,9 @@ class Lattice(object):
         E+=np.sum(dE*s)
         return (E,dE.reshape(S.shape))
     
-    def gradient(self,S,hessian=None):
+    def gradient(self,S,hess):
         """Compute energy gradient for the <system> on the state S."""
-        if hessian is None: hessian=self.hessian(S)
         return hessian-self.H.reshape((1,)*self.dim+(1,3))
-
-    # def energy_contributions_names(self):   
-    #     return energy_contributions_names()
-
-    # def energy_contributions(self, S):
-    #     if(self.size+(self.card,3)!=S.shape): raise Exception("Wrong vector field dimensions")
-    #     K0=self.K0.reshape((self.K0.shape[0],)+(1,)*self.dim+(1,3))
-    #     Anisotropy=0
-    #     for n in range(self.K0.shape[0]):
-    #         Anisotropy-=self.K[n]*np.sum(np.sum(K0[n]*S,axis=-1)**2)
-    #     Zeeman=-np.sum(self.H.reshape((1,3)) * S.reshape((-1,3)))
-    #     HeisenbergExchange=0
-    #     DzyaloshinkiiMoriyaInteraction=0
-    #     for bond, D, J in zip(self.bonds, self.D, self.J):
-    #         ia=np.ix_(*self.translated_axes(bond[0]))
-    #         D=D.reshape((1,)*self.dim+(3,))
-    #         HeisenbergExchange-=J*np.sum(S[ia][...,bond[1],:]*S[...,bond[2],:])
-    #         DzyaloshinkiiMoriyaInteraction-=np.sum(np.cross(S[...,bond[2],:],S[ia][...,bond[1],:])*D)
-    #     if self.mu!=0.:
-    #         np.seterr(divide='ignore')
-    #         pos=self.atoms().reshape((-1,self.dim))
-    #         s=S.reshape((-1,3))
-    #         d=0
-    #         for i in range(s.shape[0]):
-    #             if np.sum(s[i]**2)<0.1: continue
-    #             u=pos[i]-pos
-    #             r=1./np.sqrt(np.sum(u**2,axis=-1))
-    #             r[i]=0
-    #             u*=np.expand_dims(r,-1)
-    #             r=r**3
-    #             wi=np.sum(np.expand_dims(s[i,:self.dim],0)*u,axis=-1)
-    #             wj=np.sum(s[:,:self.dim]*u,axis=-1)
-    #             d+=np.sum(r*(3*wi*wj-np.sum(np.expand_dims(s[i],0)*s,axis=-1)),axis=0)
-    #         DipolarCoupling=-self.mu*d
-    #     else:
-    #         DipolarCoupling=0.
-    #     TotalEnergy=Anisotropy+HeisenbergExchange+DzyaloshinkiiMoriyaInteraction+DipolarCoupling+Zeeman
-    #     result=np.array([Anisotropy,Zeeman,HeisenbergExchange,DzyaloshinkiiMoriyaInteraction,DipolarCoupling,TotalEnergy])
-    #     return result
 
     def lambda_restricted_hessian(self, S, hessian=None):
         shp=S.shape[:-1]
@@ -590,7 +518,7 @@ class Lattice(object):
     def translate_fourier(self,vec,S):
         x=map(lambda v, s: np.exp(-2j*np.pi*v*np.fft.fftfreq(s)), vec, self.size)
         x=np.ix_(*x)
-        m=reduce(lambda acc, x: acc*x, x, 1)
+        m=functools.reduce(lambda acc, x: acc*x, x, 1)
         return S*m.reshape(self.size+(1,1))
 
     def translate(self,vec,S):
@@ -599,13 +527,13 @@ class Lattice(object):
     def generator_fourier(self,vec,S):
         x=map(lambda v, s: -2j*np.pi*v*np.fft.fftfreq(s), vec, self.size)
         x=np.ix_(*x)
-        m=reduce(lambda acc, x: acc+x, x, 0)
+        m=functools.reduce(lambda acc, x: acc+x, x, 0)
         return S*m.reshape(self.size+(1,1))
 
     def igenerator_fourier(self,vec,S):
         x=map(lambda v, s: -2j*np.pi*v*np.fft.fftfreq(s), vec, self.size)
         x=np.ix_(*x)
-        m=reduce(lambda acc, x: acc+x, x, 0)
+        m=functools.reduce(lambda acc, x: acc+x, x, 0)
         R=S/m.reshape(self.size+(1,1))
         R[np.isnan(R)]=0;
         return R
@@ -613,7 +541,7 @@ class Lattice(object):
     def generator(self,vec,S):
         return self.ifourier(self.generator_fourier(vec,self.fourier(S)))
 
-    def restricted_harmonic(self, S, hessian=None):
+    def restricted_harmonic(self, S, hessian=None, threshold=1e-3):
         if hessian is None: 
             hessian=self.lambda_hessian()
         oper, N, embed, project, ergy, grad=self.lambda_restricted_hessian(S, hessian=hessian)
@@ -622,131 +550,53 @@ class Lattice(object):
         idx=np.argsort(ei)
         ei=ei[idx]
         ev=ev[:,idx]
+        # extract zero modes
+        msk=np.abs(ei)<threshold
+        if np.any(msk):
+            zei=ei[msk]
+            zev=ev[:,msk]
+            msk=np.logical_not(msk)
+            ei=ei[msk]
+            ev=ev[:,msk]
+        else:
+            zei=None
+            zev=None
         # check if minimum
-        if ei[0]>0: return (ergy, 1., ei, None, None)
-        assert ei[1]>0, "Too many negative eigenvalues"
-        pei=ei[1:]; pev=ev[:,1:]
-        nei=ei[0]; nev=ev[:,0]
-        a=project(np.cross(embed(nev),S))
-        c=np.dot(a, pev)
-        return (ergy, 1., pei, nei, c)
+        msk=ei<0
+        if np.any(msk):
+            nei=ei[msk]; nev=ev[:,msk]
+            msk=np.logical_not(msk)
+            pei=ei[msk]; pev=ev[:,msk]
+            c=np.array([np.dot(project(np.cross(embed(nev[:,n]),S)), pev) for n in range(nev.shape[1])])
+        else:
+            pei=ei
+            nei=None
+            c=None
+        return (ergy, pei, nei, c, zei, zev)
 
-
-    # def harmonic(self, hes, state, remove_translations=False, debug=False, zero_tol=1e-5, log=True):
-    #     """Return (energy, zero-modes area, positive eigenvalues, negative eigenvalues)
-    #     for the given 'state' and the magnetic crystal 'sys' with Hessian 'hes' of energy function."""
-    #     if log: print("Energy")
-    #     ergy, grad=self.energy(state)
-    #     # lagrange multipliers
-    #     if log: print("Lagrange multipliers")
-    #     MU=np.sum(state*grad, axis=-1)
-    #     # correct curvature
-    #     hes=hes-np.kron(np.diag(MU.reshape((-1))),np.eye(3))
-
-    #     if log: print("Projector")
-    #     proj=projector(state);
-    
-    #     if remove_translations:
-    #         if log: print("Translations generators")
-    #         # tangent space to the orbifold
-    #         g0=self.generator(np.array([1,0]),state).reshape((-1))
-    #         g1=self.generator(np.array([0,1]),state).reshape((-1))
-    #         # Gramm-Schmidt
-    #         if log: print("Orthogonalization")
-    #         n0=norm(g0); p0=g0/n0;
-    #         p1=g1-p0*dot(p0,g1)
-    #         n1=norm(p1); p1/=n1
-    #         # Element of area
-    #         area=n0*n1
-    #         # Making orthogonal basis. 
-    #         # Project to tangent to every spin sphere
-    #         g0=np.dot(proj,g0)
-    #         g1=np.dot(proj,g1)
-    #         m0=norm(g0); g0/=m0
-    #         g1-=g0*dot(g0,g1) 
-    #         m1=norm(g1); g1/=m1
-    #         g0=g0.reshape((-1,1))
-    #         g1=g1.reshape((-1,1))
-    #         proj1=np.eye(g0.shape[0])-g0*g0.T-g1*g1.T
-    #     else: area=None
-
-    #     if debug:
-    #         if log: print("Invariants")
-    #         np.testing.assert_almost_equal(norm((np.dot(proj,proj)-proj).reshape((-1))),0)
-    #         np.testing.assert_almost_equal(norm(np.dot(proj,state.reshape((-1)))),0)
-    #         if remove_translations:
-    #             np.testing.assert_almost_equal(norm(g0),1.)
-    #             np.testing.assert_almost_equal(norm(g1),1)
-    #             np.testing.assert_almost_equal(dot(g0,g1),0)
-    #             np.testing.assert_almost_equal(norm((np.dot(proj1,proj1)-proj1).reshape((-1))),0)
-    #             np.testing.assert_almost_equal(norm(np.dot(proj1,g0)),0)
-    #             np.testing.assert_almost_equal(norm(np.dot(proj1,g1)),0)
-    #             np.testing.assert_almost_equal(norm((np.dot(proj1,proj)-np.dot(proj,proj1)).reshape((-1))),0)
-    
-    #     if remove_translations: 
-    #         if log: print("Updating projector")
-    #         proj=np.dot(proj,proj1)
-    
-    #     if log: print("Projected Hessian")
-    #     hes=np.dot(proj,np.dot(hes,proj))
-    #     # Compute eigenvalues
-    #     if log: print("Eigendecomposition")
-    #     ei, ev=np.linalg.eigh(hes)
-    #     idx=np.argsort(ei)
-    #     ei=ei[idx]
-    #     ev=ev[:,idx]
-    #     # remove zero-modes
-    #     msk=np.abs(ei)>zero_tol
-    #     ei=ei[msk]; ev=ev[:,msk]
-    #     # check if parabolic approximation is valid
-    #     zero_modes=hes.shape[0]-msk.sum()-np.prod(np.array(self.size))*self.card
-    #     assert zero_modes==(2 if remove_translations else 0), "Harmonic approximation is invalid, there is/are %d zero-mode(s)" % zero_modes
-    #     # extract negative eigenvalues
-    #     if ei[0]>0: return (ergy, area, ei, None, None)
-    #     assert ei[1]>0, "Too many negative eigenvalues"
-    #     # 
-    #     pei=ei[1:]; pev=ev[:,1:]
-    #     nei=ei[0]; nev=ev[:,0]
-    #     if log: print("Saddle")
-    #     a=np.cross(nev.reshape((-1,3)),state.reshape((-1,3))).reshape((-1))  
-    #     c=np.dot(a, pev)
-    #     return (ergy, area, pei, nei, c)
-
-def rate(initial, transition, kT=0.48, threegammaovermu=7.1e12):
-    ergy0, area0, pei0, nei0, a0=initial
-    ergy1, area1, pei1, nei1, a1=transition
-    assert nei0==None, "Initial state is not a minimum"
-    assert nei1!=None, "Transition state is not first order saddle point"
-    assert ergy0<=ergy1, "Energy of initial state larger than of transition state"
+def rate(initial, transition, kT=1, gammaovermu=1):
+    ergy0, pei0, nei0, a0, zei0, zev0=initial
+    ergy1, pei1, nei1, a1, zei1, zev1=transition
+    if not nei0 is None:
+        warnings.warn("Initial state is not a minimum")
+    if nei1 is None:    
+        warnings.warn("Transition state is not a saddle point")
+    if nei1.shape[0]!=1:
+        warnings.warn("Transition state must be of first order")
+    if ergy0>ergy1:
+        warnings.warn("Energy of initial state larger than of transition state")
     exp=np.exp(-(ergy1-ergy0)/kT)
     n=min(pei0.shape[0],pei1.shape[0])
     detr=np.sqrt(np.prod(pei0[:n]/pei1[:n])*np.prod(pei0[n:])/np.prod(pei1[n:]))
     qin=np.sqrt(np.sum(a1*a1*pei1))
-    pre=threegammaovermu*detr*qin/2/np.pi
-    if area0 is not None: pre/=area0*kT
-    if area1 is not None: pre*=area1*kT
-    return (pre, exp)
-
-
-# def rateinv(initial, transition, kT=0.48, threegammaovermu=7.1e12):
-#     ergy0, area0, pei0, nei0, a0=initial
-#     ergy1, area1, pei1, nei1, a1=transition
-#     assert nei0==None, "Initial state is not a minimum"
-#     assert nei1!=None, "Transition state is not first order saddle point"
-#     assert ergy0<=ergy1, "Energy of initial state larger than of transition state"
-#     exp=np.exp(-(ergy1-ergy0)/kT)
-#     n=min(pei0.shape[0],pei1.shape[0])
-#     detr=np.sqrt(np.prod(pei0[:n]/pei1[:n])*np.prod(pei0[n:])/np.prod(pei1[n:]))
-#     qin=np.sqrt(np.sum(a1*a1/pei1))
-#     pre=threegammaovermu*detr*qin/2/np.pi
-#     if area0 is not None: pre/=area0*kT
-#     if area1 is not None: pre*=area1*kT
-#     return (pre, exp)
-
+    nzei0=0 if zei0 is None else zei0.shape[0]
+    nzei1=0 if zei1 is None else zei1.shape[0]
+    zeromodes=(2*np.pi*kT)**((nzei0-nzei1)/2.)
+    return np.array([gammaovermu/2/np.pi, zeromodes, detr, qin, exp])
 
 class LatticeRohart(Lattice):
     """Geometry and parameters of magnetic crystal with triagonal lattice"""
-    def __init__(self, size=(30,30), H=0., K=0., J=1., D=0., gamma=1, mu=0.):
+    def __init__(self, size=(30,30), H=0., K=0., J=1., D=0., gamma=1, mu=0.,bc=(0,0)):
         if(len(size)!=2): raise Exception("Lattice should be 2D")
         # number of cells along each axis
         self.size=size
@@ -770,6 +620,7 @@ class LatticeRohart(Lattice):
         self.mu=mu
         # gyromagetic ratio
         self.gamma=gamma
+        self.bc=bc  
 
 class LatticeTriagonal(Lattice):
     """Geometry and parameters of magnetic crystal with triagonal lattice"""
@@ -834,9 +685,6 @@ class LatticeHexagonal(Lattice):
         self.bc=bc
 
 # Loading data from octave files
-import re
-#from scipy.sparse import csc_matrix
-
 class LatticeFromOct(Lattice):
     """Geometry and parameters of magnetic crystal"""
     def __init__(self, octdata, gamma=1):
@@ -880,7 +728,7 @@ def read_array(fileobj):
     s=fileobj.readline()
     if not s: return None
     m=re.match(r"# name: (\w+)", s); assert(m); name=m.group(1)
-    print(name,end=" ")
+    #print(name,end=" ")
     m=re.match(r"# type: (.+)", fileobj.readline()); assert(m); tp=m.group(1)
     if tp=='matrix':
         m=re.match(r"# ndims: ([0-9]+)", fileobj.readline()); assert(m); dims=int(m.group(1))
@@ -899,8 +747,9 @@ def read_array(fileobj):
     assert(re.match(r"\s*", fileobj.readline()))
     return (name, data)
 
-def read_oct(filename):
-    fileobj=open(filename, 'r')
+def read_oct(fileobj):
+    if isinstance(fileobj, str):
+        fileobj=open(fileobj, 'r')
     m=re.match(r"# Created by (.*)", fileobj.readline())
     res={'created':m.group(1)}
     while True:
@@ -908,7 +757,7 @@ def read_oct(filename):
         if not d: break
         res[d[0]]=d[1]
     fileobj.close()
-    print()
+    #print()
     return res
 
 def load_results(filename):
@@ -941,3 +790,18 @@ def plot_against(data):
                 if n>m: yticklabels.append(a.get_yticklabels())
     plt.setp(xticklabels, visible=False)
     plt.setp(yticklabels, visible=False)
+
+def load_dataset(folder, return_distance=False, suffix='/mep.oct'):
+    systems=[]; paths=[]; energies=[]; distances=[]
+    folders=next(os.walk(folder))[1]
+    folders.sort()
+    print(folders)
+    for dirname in folders:
+        sys, path, ergy, distance=load_results(folder+'/'+dirname+suffix)
+        systems.append(sys) 
+        paths.append(path) 
+        energies.append(ergy)
+        distances.append(distance)
+    if return_distance: 
+        return systems, paths, energies, distances
+    return systems, paths, energies

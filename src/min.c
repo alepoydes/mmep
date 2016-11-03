@@ -15,6 +15,7 @@
 #include <getopt.h>
 
 int main(int argc, char** argv) {
+  mode=SDM_PROGR;
   int i=init_program(argc,argv,
     "Compute stable states.", "",
     NULL,NULL);

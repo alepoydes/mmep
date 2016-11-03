@@ -14,12 +14,15 @@ SRCGL:=display.c bitmap.c
 all:
 
 define binary
-BIN+=$(1)f $(1)d $(1)q
+BIN+=$(1)f $(1)d $(1)l $(1)q
 
 $(BINDIR)/$(1)f: $(addprefix $(OBJDIR)/,$(2:.c=.f.o)) $(OBJDIR)/$(1).f.o
 	$(CC) $$^ $$(OPT) $(3) -o $$@
 
 $(BINDIR)/$(1)d: $(addprefix $(OBJDIR)/,$(2:.c=.d.o)) $(OBJDIR)/$(1).d.o
+	$(CC) $$^ $$(OPT) $(3) -o $$@
+
+$(BINDIR)/$(1)l: $(addprefix $(OBJDIR)/,$(2:.c=.l.o)) $(OBJDIR)/$(1).l.o
 	$(CC) $$^ $$(OPT) $(3) -o $$@
 
 $(BINDIR)/$(1)q: $(addprefix $(OBJDIR)/,$(2:.c=.q.o)) $(OBJDIR)/$(1).q.o
@@ -32,6 +35,9 @@ $(OBJDIR)/$(1).f.o: $(SRCDIR)/$(1).c $(addprefix $(SRCDIR)/,$(2)) $(SRCDIR)/*.h
 
 $(OBJDIR)/$(1).d.o: $(SRCDIR)/$(1).c $(addprefix $(SRCDIR)/,$(2)) $(SRCDIR)/*.h
 	$(CC) $$< $$(OPT) -I $$(SRCDIR) -c -DDOUBLE -o $$@
+
+$(OBJDIR)/$(1).l.o: $(SRCDIR)/$(1).c $(addprefix $(SRCDIR)/,$(2)) $(SRCDIR)/*.h
+	$(CC) $$< $$(OPT) -I $$(SRCDIR) -c -DLONGDOUBLE -o $$@
 
 $(OBJDIR)/$(1).q.o: $(SRCDIR)/$(1).c $(addprefix $(SRCDIR)/,$(2)) $(SRCDIR)/*.h
 	$(CC) $$< $$(OPT) -I $$(SRCDIR) -c -DQUAD -o $$@
@@ -51,6 +57,9 @@ $(OBJDIR)/%.f.o: $(SRCDIR)/%.c $(SRCDIR)/*.h
 
 $(OBJDIR)/%.d.o: $(SRCDIR)/%.c $(SRCDIR)/*.h
 	$(CC) $< $(OPT) -I $(SRCDIR) -c -DDOUBLE -o $@	
+
+$(OBJDIR)/%.l.o: $(SRCDIR)/%.c $(SRCDIR)/*.h
+	$(CC) $< $(OPT) -I $(SRCDIR) -c -DLONGDOUBLE -o $@	
 
 $(OBJDIR)/%.q.o: $(SRCDIR)/%.c $(SRCDIR)/*.h
 	$(CC) $< $(OPT) -I $(SRCDIR) -c -DQUAD -o $@	

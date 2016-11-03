@@ -24,6 +24,8 @@ real* allocate_image();
 real apply(const char* name, real arg);
 real get_var(const char* name);
 int get_var_int(const char* name);
+void set_uniform_field(const real vec[3]);
+
 
 int capacityu, capacityn, dmv_size, ec_size, capacity_anisotropy;
 
@@ -62,13 +64,14 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 %token SECDMV SECIMAGE SECLOADIMAGE SECPOSITIONS SECDIPOLE
 %token SECTEMP SECCUT
 
+%token TIP
 %token PLANE SPHERE
 %token VERTEX UNIFORM RANDOM
 %token BCFREE BCPERIODIC
 
 %type <sz> bc sz
 %type <vec> vector
-%type <r> exp 
+%type <r> exp
 %type <i> integer
 
 %%
@@ -83,7 +86,7 @@ section:
 	| SECS EOL sz ',' sz  EOL { 
 	  	sizex=$3; sizey=$5; sizez=1; 
 	  	}
-	| SECEF EOL vector EOL { copy3($3, magnetic_field); }
+	| SECEF EOL eflist
 	| SECMA EOL malist
 	| SECBC EOL bc bc bc EOL { 
 		boundary_conditions[0]=$3; 
@@ -134,6 +137,18 @@ section:
 
 bc: BCFREE { $$=0; }
 	| BCPERIODIC { $$=1; }
+
+eflist: 
+	| eflist vector EOL { 
+		fprintf(stderr, COLOR_RED "Warning" COLOR_RESET ": Definition of uniform magnetic field should be of the form:\n  uniform {exp,exp,exp}\n");
+		set_uniform_field($2);
+		}
+	| eflist UNIFORM vector EOL { 
+		set_uniform_field($3);
+		}
+	| eflist TIP vector vector EOL {
+		set_tip_field($3, $4);
+		}
 
 malist: 
 	| malist exp vector EOL { 
@@ -206,16 +221,20 @@ imagelist:
 		skyrmion_random(image);
 		}
 
-sz: SZ
-	| ID { 
-		int n=get_var_int($1); 
-		if(n<0) yyerror("Variable " COLOR_RED "'%s'" COLOR_RESET " value " COLOR_RED "%d" COLOR_RESET " is negative\n", $1, n);
-		$$=n;
-		}
-
 integer: INTEGER { $$=$1; }
 	| SZ { $$=(int)$1; } 
 	| ID { $$=get_var_int($1); }
+	| integer '+' integer { $$=$1+$3; }
+	| integer '-' integer { $$=$1-$3; }
+	| integer '*' integer { $$=$1*$3; }
+	| integer '/' integer { $$=$1/$3; }
+	| '-' integer %prec NEG { $$=-$2; }
+	| '(' integer ')' { $$=$2; }
+
+sz: integer {
+		if($1<=0) yyerror("Value " COLOR_RED "%d" COLOR_RESET " is not positive\n", $1);
+		$$=$1;
+	}
 
 exp:  ID '(' exp ')' { $$=apply($1, $3); }
 	| ID { $$=get_var($1); }
@@ -246,7 +265,6 @@ static void yyprint(FILE* file, int type, YYSTYPE value) {
   else if(type==REAL)
     fprintf(file, COLOR_BLUE "%" RF "g" COLOR_RESET, RT(value.r));
 }
-
 
 void yyerror(const char *s, ...) {
  va_list ap;
@@ -298,6 +316,17 @@ real get_var(const char* name) {
 	};
 	yyerror("Undefined variable " COLOR_RED "'%s'" COLOR_RESET "\n", name);
 	exit(1);	
+};
+
+void set_uniform_field(const real vec[3]) {
+	if(nonuniform_field) {
+		yyerror(COLOR_RED "Error" COLOR_RESET ": Uniform field should be given first\n");
+		exit(1);
+	};
+	if(normsq3(magnetic_field)>0) {
+		yyerror(COLOR_RED "Warning" COLOR_RESET ": magnetic field reset\n");
+	};
+	copy3(vec, magnetic_field); 
 };
 
 real* allocate_image() {
@@ -428,7 +457,7 @@ void load_positions(const char* posfilename) {
 		int l=sscanf(buf, "%Lg %Lg %Lg", posd, posd+1, posd+2);
 		if(l<2 || l>3) { fprintf(stderr, "Position has wrong number of coordinates at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", posfilename, line+2); exit(1); };
 		if(l<3) posd[2]=0;
-		real pos[3]={pos[0],pos[1],pos[2]};
+		real pos[3]={posd[0],posd[1],posd[2]};
 		int x,y,z,u;
 		if(get_nearest((real*)invtrans, pos, &u, &x, &y, &z)>0.01) {
 			fprintf(stderr, "Position %" RF "g %" RF "g %" RF "g at '" COLOR_RED "%s line %d" COLOR_RESET "' is too far from lattice\n", RT(pos[0]), RT(pos[1]), RT(pos[2]), posfilename, line+2); 

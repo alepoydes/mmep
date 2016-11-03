@@ -22,7 +22,6 @@ const char options_desc[]="\
 \n   -P      Enable GNUPlot output of MEP\
 \n   -n INT  Minimum number of images on MEP\
 \n   -N INT  Maximum number of images on MEP\
-\n   -0      Use FTT instead of NEB method\
 \n   -z      Disable translations preserving energy\
 \n   -R REAL Noise amplitude for initial path\
 \n   -q      Skip ends relaxation\
@@ -36,16 +35,16 @@ char handle_option(char opt, const char* arg) {
     case 'z': remove_zero_modes=1; break;
     case 'R': random_noise=atof(optarg); break;
     case 'q': do_not_relax_ends=1; break;
-    case '0': use_ftt=1; break;
     default: return FALSE;
   };
   return TRUE;
 };
 
 int main(int argc, char** argv) {
+  mode=SDM_CONSTANT;
   int i=init_program(argc,argv,
     "Calculate MEP for magnetic systems.", options_desc,
-    "zPN:n:R:q0", handle_option);
+    "zPN:n:R:q", handle_option);
   if(i<argc) {
     fprintf(stderr, COLOR_RED "There are unused parameters:" COLOR_RESET "\n");
     while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
@@ -53,7 +52,6 @@ int main(int argc, char** argv) {
 
   // Initializaton
   print_settings();
-  fprintf(stderr, "%s method in use\n", use_ftt?"FTT":"NEB");
   if(remove_zero_modes)
     fprintf(stderr, "Zero modes (translations) are removed\n");
   if(random_noise>0) 
@@ -92,14 +90,14 @@ int main(int argc, char** argv) {
   
   if(!do_not_relax_ends) {
     fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing initial state\n" COLOR_RESET);
-    skyrmion_steepest_descent(path, mode, mode_param, epsilon, max_iter*max_sizep);
+    skyrmion_steepest_descent(path, SDM_PROGR, 0.1, epsilon, max_iter*sizep);
     fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing final state\n" COLOR_RESET);
-    skyrmion_steepest_descent(path+size*(sizep-1), mode, mode_param, epsilon, max_iter*max_sizep);
+    skyrmion_steepest_descent(path+size*(sizep-1), SDM_PROGR, 0.1, epsilon, max_iter*sizep);
   };
 
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP\n" COLOR_RESET);
   // MEP calculation
-  post_optimization=1;
+  post_optimization=0;
   path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   while(2*(sizep-1)+1<=max_sizep) {
     // interpolating path
@@ -116,6 +114,7 @@ int main(int argc, char** argv) {
     path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   };
   // Ouput result
+  flat_distance=0;
   energy_evaluate(path);
   realp max_energy=energy[0];
   realp min_energy=energy[0];  

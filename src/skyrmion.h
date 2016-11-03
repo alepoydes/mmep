@@ -74,6 +74,9 @@ extern int number_of_active;
 
 extern int* positions;
 
+void allocate_nonuniform_field();
+void set_tip_field(const real dir[3], const real pos[3]);
+
 void skyrmion_energy(const real* __restrict__ arg, realp energy[6]);
 void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real energy[6]);
 
