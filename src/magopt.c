@@ -117,7 +117,7 @@ void energy_evaluate_neb(real* path) {
     // gradient of energy is in q
     project_to_tangent(path+3*SIZE*p,q);
     // q is orthogonal to normales to all spheres
-    diff[p]=rpsqrt(normsq(3*SIZE,q)/3*SIZE);
+    diff[p]=rpsqrt(normsq(3*SIZE,q)/(SIZE));
     tdiff[p]=diff[p];
     if(p>0 && p<sizep-1) {
       three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],path+3*SIZE*(p-1),path+3*SIZE*p,path+3*SIZE*(p+1),u);
@@ -125,7 +125,7 @@ void energy_evaluate_neb(real* path) {
       real proj=dot(3*SIZE,u,q)/dot(3*SIZE,u,u);
       mult_sub(3*SIZE, proj, u, q);
       // q is orthogonal to tangent to MEP
-      tdiff[p]=rpsqrt(normsq(3*SIZE,q)/3*SIZE);
+      tdiff[p]=rpsqrt(normsq(3*SIZE,q)/(SIZE));
     };
     inflation[p]=NAN;
   };

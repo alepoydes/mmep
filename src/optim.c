@@ -126,7 +126,7 @@ int steepest_descend(
           fprintf(stderr, "Maximum precision is reached\n");
           status=2; break; 
         };
-      } else count_constant_f=0; 
+      };// else count_constant_f=0; 
       if(display) display(iter,bufa,bufgrad,f,res,constres,alpha,last_f,last_res);
       if(stop_signal>0) break;  
       if(f<last_f || mode==SDM_CONSTANT) {

@@ -8,6 +8,7 @@ import scipy.sparse.linalg
 import functools
 import warnings
 import re
+import os
 #from scipy.sparse import csc_matrix
 
 # Operation on vector fields.
@@ -118,6 +119,10 @@ class Lattice(object):
     @property
     def shape(self): return self.size+(self.card, 3)
 
+    @property
+    def number_of_atoms(self): return np.prod(self.size)*self.card
+
+
     def random(self):
         """Returns random vector field on the lattice"""
         return normalize(np.random.randn(*(self.size+(self.card,3))))
@@ -192,24 +197,28 @@ class Lattice(object):
         plt.quiver(origin(linex),origin(liney),vecx,vecy,angles='xy',units='xy',scale=1.)
         plt.plot(linex.T,liney.T)   
 
-    def plot_angles(self, path, rscale=1., highlight=None, ax=None, origin=None, highlightlw=4):
+    def plot_angles(self, path, rscale=1., ax=None, style='-', lw=1, origin=None, highlight=None, highlightlw=4, threshold=0.5):
         points=self.atoms()
         if origin is None:
-            directions=path[0,:,:,:,:2]
-            origin=center(points, directions)
+            mask=np.logical_and(path[0,:,:,:,2]>-threshold,path[0,:,:,:,2]<threshold)
+            origin=center(points[mask], path[0,mask,:2])
         else:
             origin=np.array(origin)
         dist=distance(points, origin)
         distidx=np.argsort(dist)
         dist=dist[distidx]*rscale
+        states=[path[k,:,:,:,2].flatten()[distidx] for k in range(path.shape[0])]
         if ax is None: fig, ax=plt.subplots(1,1)
-        for k in range(path.shape[0]):
-            ax.plot(dist, path[k,:,:,:,2].flatten()[distidx], '-')
+        for state in states:
+            ax.plot(dist, state, style, lw=lw)
         if highlight is not None:
-            ax.plot(dist, highlight[:,:,:,2].flatten()[distidx], '-k', lw=highlightlw)
+            self.plot_angles(highlight, rscale=rscale, ax=ax, style='-k', lw=highlightlw)
+        ax.set_ylim([-1,1])
+        return dist, states          
 
-    def plot_field(self,S,scale=1):
-        fig,axis=plt.subplots()
+    def plot_field(self,S,scale=1,axis=None,fig=None):
+        if axis is None:
+            fig,axis=plt.subplots()
         axis.set_aspect('equal')
         plt.axis("off")
         s=S.reshape((-1,3))
@@ -781,3 +790,18 @@ def plot_against(data):
                 if n>m: yticklabels.append(a.get_yticklabels())
     plt.setp(xticklabels, visible=False)
     plt.setp(yticklabels, visible=False)
+
+def load_dataset(folder, return_distance=False, suffix='/mep.oct'):
+    systems=[]; paths=[]; energies=[]; distances=[]
+    folders=next(os.walk(folder))[1]
+    folders.sort()
+    print(folders)
+    for dirname in folders:
+        sys, path, ergy, distance=load_results(folder+'/'+dirname+suffix)
+        systems.append(sys) 
+        paths.append(path) 
+        energies.append(ergy)
+        distances.append(distance)
+    if return_distance: 
+        return systems, paths, energies, distances
+    return systems, paths, energies

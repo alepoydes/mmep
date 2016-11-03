@@ -6,7 +6,6 @@
 #include <float.h>
 
 #ifdef DOUBLE
-
 	#define real double
 	#define rsqrt(x) sqrt(x)
 	#define rabs(x) fabs(x)
@@ -24,6 +23,28 @@
 	#define RT(x) (x)
 	#define EPSILON DBL_EPSILON
 	#define DIGITS DBL_DIG
+	#define R_PI M_PI
+	#define SPRINTF(...) sprintf(__VA_ARGS__)
+
+#elif defined LONGDOUBLE
+
+	#define real long double
+	#define rsqrt(x) sqrtl(x)
+	#define rabs(x) fabsl(x)
+	#define racos(x) acosl(x)
+	#define rexp(x) expl(x)
+#if defined(__clang__)
+	#define rsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
+#elif defined(__GNUC__) || defined(__GNUG__)
+	#define rsincos(x,y,z) sincosl(x,y,z)
+#elif defined(_MSC_VER)
+	#define rsincos(x,y,z) { *(y)=sinl(x); *(z)=cosl(x); }
+#endif
+	#define RF "L"
+	#define SRF "L"
+	#define RT(x) (long double)(x)
+	#define EPSILON LDBL_EPSILON
+	#define DIGITS LDBL_DIG
 	#define R_PI M_PI
 	#define SPRINTF(...) sprintf(__VA_ARGS__)
 

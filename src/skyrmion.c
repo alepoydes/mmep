@@ -7,7 +7,7 @@
 #include <assert.h>
 
 // Physical parameters
-real magnetic_field[3]={NAN,NAN,NAN};
+real magnetic_field[3]={0,0,0};
 real* nonuniform_field=NULL;
 // Structure of crystal lattice
 int sizex=0; // Width in unit cells
@@ -55,6 +55,29 @@ real temperature=0;
 
 int INDEX(int u, int x, int y, int z) {
 	return ((u*sizex+x)*sizey+y)*sizez+z;
+};
+
+void allocate_nonuniform_field() {
+	if(nonuniform_field) return;
+	nonuniform_field=ralloc(SIZE*3);
+	for(int i=0; i<SIZE; i++) for3(j) 
+		nonuniform_field[i*3+j]=magnetic_field[j];
+};
+
+void set_tip_field(const real dir[3], const real pos[3]) {
+	allocate_nonuniform_field();
+	forall(u,x,y,z) {
+		real coord[3]; 
+		COORDS(u,x,y,z,coord);
+		sub3(coord, pos, coord);
+		real r=normsq3(coord);
+		if(r<1e-8) continue;
+		multinv3(r,coord,coord);
+		real vec[3];
+		cross3(coord, dir, vec);
+		int i=INDEX(u,x,y,z);
+		for3(j) nonuniform_field[i*3+j]+=vec[j];
+	};
 };
 
 void prepare_dipole_table(real negligible) {

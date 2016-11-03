@@ -90,9 +90,9 @@ int main(int argc, char** argv) {
   
   if(!do_not_relax_ends) {
     fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing initial state\n" COLOR_RESET);
-    skyrmion_steepest_descent(path, SDM_PROGR, 0.1, epsilon, max_iter*max_sizep);
+    skyrmion_steepest_descent(path, SDM_PROGR, 0.1, epsilon, max_iter*sizep);
     fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing final state\n" COLOR_RESET);
-    skyrmion_steepest_descent(path+size*(sizep-1), SDM_PROGR, 0.1, epsilon, max_iter*max_sizep);
+    skyrmion_steepest_descent(path+size*(sizep-1), SDM_PROGR, 0.1, epsilon, max_iter*sizep);
   };
 
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP\n" COLOR_RESET);

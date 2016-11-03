@@ -37,6 +37,7 @@ EXP ([Ee][-+]?[0-9]+)
 "[temperature]" { return SECTEMP; }
 "[cut]" { return SECCUT; }
 
+"tip" { return TIP; }
 "sphere" { return SPHERE; }
 "plane" { return PLANE; }
 "vertex" { return VERTEX; }
@@ -57,14 +58,15 @@ EXP ([Ee][-+]?[0-9]+)
 "}" | 
 "+" | 
 "-" | 
-"*" | 
+"*" |
 "/" | 
-"(" | 
+"(" |
 ")" |
 "," { return yytext[0]; }
 
 -?[0-9]+"."[0-9]*{EXP}? |
 "."[0-9]+{EXP}? { yylval.r = atof(yytext); return REAL; }
+-?[0-9]+{EXP} { yylval.r = atof(yytext); return REAL; }
 
 [0-9]+ { yylval.sz = atoi(yytext); return SZ; }
 

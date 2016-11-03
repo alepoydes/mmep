@@ -50,17 +50,12 @@ char handle_option(char opt, const char* arg) {
 };
 
 int is_to_reject(real denergy) {
-    // exp(denergy) = P_new/P_current
-    // P_new>P_current <=> exp(denergy)>1 <=> denergy>0
-    // check if to reject state
-    // state is accepted if
-    // 1. definitely if P_new>P_current
-    // 2. with probability P_new/P_current
-    // If alpha is uniformly distributed in [0,1].
-    // then accept if alpha<P_new/P_old.  
+    real acceptence;
     denergy/=temperature;
     switch(rejection_rule) {
-      case 0: return rexp(denergy)<random_real();
+      case 0: 
+        acceptence=rexp(denergy);
+        return acceptence<random_real();
       case 1: return  1./(1.+rexp(denergy))>random_real();
       default: fprintf(stderr, "Unknown rejection rule: %d\n", rejection_rule); exit(1);
     };

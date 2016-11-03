@@ -27,6 +27,8 @@ int iter=0;
 realp E=NAN;
 real L=NAN;
 
+real* external_field=NULL;
+
 void screen() {
   static real E0=NAN;
   static real sim_time0=0;
@@ -154,21 +156,24 @@ void mouse_function(int button, int state, real p[3]) {
     powered=1;
   } else {
     powered=0;
-    set_to_field(nonuniform_field);
   };
+  motion_function(p);
 };
 
 void motion_function(real p[3]) {
+  copy_vector(3*SIZE, external_field, nonuniform_field);
   if(powered) {
     //fprintf(stderr, "%" RF "g %" RF "g %" RF "g \n", p[0], p[1], p[2]);
-    forall(u,x,y,z) {
+    real dir[3]={0,0,power};
+    set_tip_field(dir, p);
+    /*forall(u,x,y,z) {
       int i=INDEX(u,x,y,z)*3;
       real vec[3]; COORDS(u,x,y,z,vec);
       vec[0]-=p[0]; vec[1]-=p[1]; 
       real dist=rsqrt(vec[0]*vec[0]+vec[1]*vec[1]);
       dist=1+power/(1+dist);
       for3(c) nonuniform_field[i+c]=magnetic_field[c]*dist;
-    };
+    };*/
   };
 };
 
@@ -204,8 +209,9 @@ int main(int argc, char** argv) {
   is_aborting=initDisplay(&argc, argv);
 
   // initialize magnetic field
-  nonuniform_field=ralloc(SIZE*3);
-  set_to_field(nonuniform_field);
+  allocate_nonuniform_field();
+  external_field=ralloc(SIZE*3);
+  copy_vector(SIZE*3,nonuniform_field,external_field);
   // Main loop
   fprintf(stderr, CLEAR_SCREEN);
   display_buffer=ralloc(SIZE*3); 
@@ -222,5 +228,6 @@ int main(int argc, char** argv) {
   // Deinitialization
   deinitDisplay();
   free(spins); free(nonuniform_field); free(display_buffer);
+  free(external_field);
   return 0;
 };

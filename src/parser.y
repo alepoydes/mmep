@@ -24,6 +24,8 @@ real* allocate_image();
 real apply(const char* name, real arg);
 real get_var(const char* name);
 int get_var_int(const char* name);
+void set_uniform_field(const real vec[3]);
+
 
 int capacityu, capacityn, dmv_size, ec_size, capacity_anisotropy;
 
@@ -62,14 +64,15 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 %token SECDMV SECIMAGE SECLOADIMAGE SECPOSITIONS SECDIPOLE
 %token SECTEMP SECCUT
 
+%token TIP
 %token PLANE SPHERE
 %token VERTEX UNIFORM RANDOM
 %token BCFREE BCPERIODIC
 
 %type <sz> bc sz
 %type <vec> vector
-%type <r> exp 
-%type <i> integer 
+%type <r> exp
+%type <i> integer
 
 %%
 
@@ -83,7 +86,7 @@ section:
 	| SECS EOL sz ',' sz  EOL { 
 	  	sizex=$3; sizey=$5; sizez=1; 
 	  	}
-	| SECEF EOL vector EOL { copy3($3, magnetic_field); }
+	| SECEF EOL eflist
 	| SECMA EOL malist
 	| SECBC EOL bc bc bc EOL { 
 		boundary_conditions[0]=$3; 
@@ -134,6 +137,18 @@ section:
 
 bc: BCFREE { $$=0; }
 	| BCPERIODIC { $$=1; }
+
+eflist: 
+	| eflist vector EOL { 
+		fprintf(stderr, COLOR_RED "Warning" COLOR_RESET ": Definition of uniform magnetic field should be of the form:\n  uniform {exp,exp,exp}\n");
+		set_uniform_field($2);
+		}
+	| eflist UNIFORM vector EOL { 
+		set_uniform_field($3);
+		}
+	| eflist TIP vector vector EOL {
+		set_tip_field($3, $4);
+		}
 
 malist: 
 	| malist exp vector EOL { 
@@ -251,7 +266,6 @@ static void yyprint(FILE* file, int type, YYSTYPE value) {
     fprintf(file, COLOR_BLUE "%" RF "g" COLOR_RESET, RT(value.r));
 }
 
-
 void yyerror(const char *s, ...) {
  va_list ap;
  va_start(ap, s);
@@ -302,6 +316,17 @@ real get_var(const char* name) {
 	};
 	yyerror("Undefined variable " COLOR_RED "'%s'" COLOR_RESET "\n", name);
 	exit(1);	
+};
+
+void set_uniform_field(const real vec[3]) {
+	if(nonuniform_field) {
+		yyerror(COLOR_RED "Error" COLOR_RESET ": Uniform field should be given first\n");
+		exit(1);
+	};
+	if(normsq3(magnetic_field)>0) {
+		yyerror(COLOR_RED "Warning" COLOR_RESET ": magnetic field reset\n");
+	};
+	copy3(vec, magnetic_field); 
 };
 
 real* allocate_image() {
