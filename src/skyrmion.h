@@ -50,6 +50,7 @@ extern real* dzyaloshinskii_moriya_vector;
 // Initial path approximation
 extern int initial_states_count;
 extern real* initial_state;
+extern int* relax_state;
 
 extern real temperature;
 

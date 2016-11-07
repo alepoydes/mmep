@@ -35,6 +35,7 @@ int main(int argc, char** argv) {
     skyrmion_random(spins); 
   };
 
+  fprintf(stderr,COLOR_YELLOW COLOR_BOLD "Minimizing image 0" COLOR_RESET "\n");  
   skyrmion_steepest_descent(spins, mode, mode_param, epsilon, max_iter);
 
   // Saving result

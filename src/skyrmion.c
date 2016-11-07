@@ -41,6 +41,7 @@ real dipole=0;
 real* dzyaloshinskii_moriya_vector=NULL;
 real* initial_state=NULL;
 int initial_states_count=0;
+int* relax_state=NULL;
 
 char* active=NULL;
 int number_of_active=0;

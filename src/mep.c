@@ -57,22 +57,39 @@ int main(int argc, char** argv) {
   if(random_noise>0) 
     fprintf(stderr, "Initial path noise amplitude: %" RF "g\n", RT(random_noise));
 
-  int size=3*SIZE; // Dimension of vector containing skyrmionic solutions
-  real* path=ralloc(size*max_sizep); 
-  path_steepest_descent_init(max_sizep);
-
   // Set initial path size
   sizep=min_sizep; 
   if(sizep<initial_states_count) sizep=initial_states_count;
   if(max_sizep<sizep) sizep=max_sizep;
 
   fprintf(stderr, "Images on path: %d in [%d, %d]\n", sizep, min_sizep, max_sizep);  
-  // find two minima
-  fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Initializing path\n" COLOR_RESET);
+
+  // relax initial images if requested
+  int size=3*SIZE; // Dimension of vector containing skyrmionic solutions
   if(initial_states_count<2) {
     fprintf(stderr, COLOR_RED COLOR_BOLD "There should be at least two images in the path\n" COLOR_RESET);
     exit(1);
   };
+  if(do_not_relax_ends) {
+    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Skiping minima relaxation\n" COLOR_RESET);
+  } else {
+    if(!relax_state[0] || !relax_state[initial_states_count-1]) 
+      fprintf(stderr, COLOR_RED "Warning:" COLOR_RESET "New syntaxis to relax images:\n  [image] " COLOR_BOLD "relax" COLOR_RESET "\n");
+    for(int p=0; p<initial_states_count; p++) {
+      if(relax_state[p]) {
+        fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing image" COLOR_RESET " %d\n", p);
+        skyrmion_steepest_descent(initial_state+size*i, SDM_PROGR, 0.1, epsilon, max_iter);
+      };
+    };
+  };
+
+  // find two minima
+  fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Initializing path\n" COLOR_RESET);
+
+  real* path=ralloc(size*max_sizep); 
+  path_steepest_descent_init(max_sizep);
+
+  // opying initial images and interpolation
   copy_vector(size, initial_state, path);
   int last_image=0;
   for (int n=1; n<initial_states_count; n++) {
@@ -86,16 +103,7 @@ int main(int argc, char** argv) {
   };
   assert(last_image==sizep-1);
 
-  // minimize initial and final states
-  
-  if(!do_not_relax_ends) {
-    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing initial state\n" COLOR_RESET);
-    skyrmion_steepest_descent(path, SDM_PROGR, 0.1, epsilon, max_iter*sizep);
-    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing final state\n" COLOR_RESET);
-    skyrmion_steepest_descent(path+size*(sizep-1), SDM_PROGR, 0.1, epsilon, max_iter*sizep);
-  };
-
-  fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP\n" COLOR_RESET);
+  fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP" COLOR_RESET " for %d images\n", sizep);
   // MEP calculation
   post_optimization=0;
   path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
@@ -109,7 +117,7 @@ int main(int argc, char** argv) {
       //skyrmion_middle(path+2*size*(p-1), path+2*size*p, path+size*(2*p-1));
     };
     sizep=2*(sizep-1)+1;
-    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Increasing number of images to %d\n" COLOR_RESET, sizep);
+    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Increasing number of images" COLOR_RESET " to %d\n", sizep);
     //post_optimization=0;    
     path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
   };

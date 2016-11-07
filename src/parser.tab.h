@@ -73,8 +73,9 @@ extern int yydebug;
     VERTEX = 283,
     UNIFORM = 284,
     RANDOM = 285,
-    BCFREE = 286,
-    BCPERIODIC = 287
+    RELAX = 286,
+    BCFREE = 287,
+    BCPERIODIC = 288
   };
 #endif
 
@@ -91,7 +92,7 @@ union YYSTYPE
  real vec[3];
  char* fn;
 
-#line 95 "src/parser.tab.h" /* yacc.c:1909  */
+#line 96 "src/parser.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

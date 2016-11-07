@@ -20,7 +20,7 @@ void set_uniform(real* dir, real* spin);
 void cut_by_plane(real* o, real* n);
 void cut_sphere(real* o, real r);
 void append_anisotropy(real scalar, real k[3]);
-real* allocate_image();
+real* allocate_image(int);
 real apply(const char* name, real arg);
 real get_var(const char* name);
 int get_var_int(const char* name);
@@ -66,13 +66,13 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 
 %token TIP
 %token PLANE SPHERE
-%token VERTEX UNIFORM RANDOM
+%token VERTEX UNIFORM RANDOM RELAX
 %token BCFREE BCPERIODIC
 
 %type <sz> bc sz
 %type <vec> vector
 %type <r> exp
-%type <i> integer
+%type <i> integer is_to_relax
 
 %%
 
@@ -113,15 +113,15 @@ section:
 	| SECN EOL nlist
 	| SECEC EOL eclist
 	| SECDMV EOL dmvlist
-	| SECIMAGE EOL { 
-		real* image=allocate_image(); 
+	| SECIMAGE is_to_relax EOL { 
+		real* image=allocate_image($2); 
 		set_to_field(image); normalize(image);
 		} imagelist
-	| SECLOADIMAGE EOL FILENAME EOL {
+	| SECLOADIMAGE is_to_relax EOL FILENAME EOL {
 		if(!positions) yyerror("Atom positions should be loaded befor image\n"); 
-		real* image=allocate_image(); 
-		load_skyrmion($3, image);
-		free($3);
+		real* image=allocate_image($2); 
+		load_skyrmion($4, image);
+		free($4);
 		}
 	| SECPOSITIONS EOL FILENAME EOL {
 		if(positions) yyerror("Not unique atom positions definition\n"); 
@@ -135,12 +135,15 @@ section:
 		}
 	| SECCUT EOL cutlist
 
+is_to_relax: { $$=0; }
+	| RELAX { $$=1; }
+
 bc: BCFREE { $$=0; }
 	| BCPERIODIC { $$=1; }
 
 eflist: 
 	| eflist vector EOL { 
-		fprintf(stderr, COLOR_RED "Warning" COLOR_RESET ": Definition of uniform magnetic field should be of the form:\n  uniform {exp,exp,exp}\n");
+		fprintf(stderr, COLOR_RED "Warning" COLOR_RESET ": Definition of uniform magnetic field should be of the form:\n  " COLOR_BOLD "uniform" COLOR_RESET " {exp,exp,exp}\n");
 		set_uniform_field($2);
 		}
 	| eflist UNIFORM vector EOL { 
@@ -329,15 +332,20 @@ void set_uniform_field(const real vec[3]) {
 	copy3(vec, magnetic_field); 
 };
 
-real* allocate_image() {
+real* allocate_image(int relax_flag) {
 	if(!initial_state) {
-		initial_state=(real*)malloc(sizeof(real)*SIZE*3);				
+		assert(!relax_state);
+		initial_state=(real*)malloc(sizeof(real)*SIZE*3);
 		initial_states_count=1;
+		relax_state=(int*)malloc(sizeof(int));
 	} else {
+		assert(relax_state);
 		initial_states_count++;
-		initial_state=(real*)realloc(initial_state, sizeof(real)*SIZE*3*initial_states_count);			
+		initial_state=(real*)realloc(initial_state, sizeof(real)*SIZE*3*initial_states_count);	
+		relax_state=(int*)realloc(relax_state, sizeof(int)*initial_states_count);	
 	};
-	assert(initial_state);
+	assert(initial_state); assert(relax_state); 
+	relax_state[initial_states_count-1]=relax_flag;
 	real* image=initial_state+SIZE*3*(initial_states_count-1);
 	return image;
 };
