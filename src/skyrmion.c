@@ -145,7 +145,7 @@ void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
 		for3(j) out[3*i+j]=0.;
-		if(!ISACTIVE(i)) {
+		if(!ISACTIVE(active, i)) {
 			continue;
 		};
 		i*=3;
@@ -175,7 +175,7 @@ void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(i1) || !ISACTIVE(i2)) continue;
+			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
 			i1*=3; i2*=3;
 			cross_minus3(dzyaloshinskii_moriya_vector+3*n,arg+i1,out+i2);
 			mult_minus3(exchange_constant[n],arg+i1,out+i2);
@@ -184,7 +184,7 @@ void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(i1) || !ISACTIVE(i2)) continue;
+			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
 			i1*=3; i2*=3;
 			//fprintf(stderr, "%d@ %d %d %d %d -> %d\n",n,d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez,i1);
 			cross_plus3(dzyaloshinskii_moriya_vector+3*n,arg+i2,out+i1);
@@ -214,7 +214,7 @@ void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(i1) || !ISACTIVE(i2)) continue;
+			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
 			i1*=3; i2*=3;
 			mult_minus3(alpha*dot3(arg+i1,U),U,out+i2);
 			mult_minus3(-alpha,arg+i1,out+i2);
@@ -223,7 +223,7 @@ void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(i1) || !ISACTIVE(i2)) continue;
+			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
 			i1*=3; i2*=3;
 			mult_minus3(alpha*dot3(arg+i2,U),U,out+i1);
 			mult_minus3(-alpha,arg+i2,out+i1);
@@ -235,7 +235,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 	real anisotropy_energy=0;
 	real zeeman_energy=0;
 	int i=INDEX(u,x,y,z);
-	if(!ISACTIVE(i)) {
+	if(!ISACTIVE(active, i)) {
 		for(int k=0; k<6; k++) energy[k]=0.;
 		return;
 	};
@@ -261,7 +261,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 				&& (boundary_conditions[2]==BC_PERIODIC || (z+sz<sizez && z+sz>=0)) ) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=i; // INDEX(s,x,y,z);
-			if(!ISACTIVE(i1)) continue;
+			if(!ISACTIVE(active, i1)) continue;
 			i1*=3; 
 			real t[3]; 
 			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
@@ -273,7 +273,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 				&& (boundary_conditions[2]==BC_PERIODIC || (z-sz<sizez && z-sz>=0)) ) {
 			int i1=i; // INDEX(d,x,y,z);
 			int i2=INDEX(s,(x-sx+sizex)%sizex,(y-sy+sizey)%sizey,(z-sz+sizez)%sizez);
-			if(!ISACTIVE(i2)) continue;
+			if(!ISACTIVE(active, i2)) continue;
 			i2*=3; 
 			real t[3]; 
 			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
@@ -298,7 +298,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 				&& (boundary_conditions[2]==BC_PERIODIC || (z+sz<sizez && z+sz>=0)) ) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=i;
-			if(!ISACTIVE(i1)) continue;
+			if(!ISACTIVE(active, i1)) continue;
 			i1*=3; 
 			dipole_energy-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
 		};
@@ -307,7 +307,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 				&& (boundary_conditions[2]==BC_PERIODIC || (z-sz<sizez && z-sz>=0)) ) {
 			int i1=i; //INDEX(d,x,y,z);
 			int i2=INDEX(s,(x-sx+sizex)%sizex,(y-sy+sizey)%sizey,(z-sz+sizez)%sizez);
-			if(!ISACTIVE(i2)) continue;
+			if(!ISACTIVE(active, i2)) continue;
 			i2*=3;
 			dipole_energy-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
 		};
@@ -330,7 +330,7 @@ void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 	#pragma omp parallel for collapse(3) reduction(+:anisotropy_energy,zeeman_energy)
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(i)) continue;
+		if(!ISACTIVE(active, i)) continue;
 		i*=3;
 		for(int n=0; n<magnetic_anisotropy_count; n++) {
 			real m=dot3(magnetic_anisotropy[n].unit,arg+i);
@@ -364,7 +364,7 @@ void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(i1) || !ISACTIVE(i2)) continue;
+			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
 			i1*=3; i2*=3;
 			real t[3]; 
 			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
@@ -398,7 +398,7 @@ void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(i1) || !ISACTIVE(i2)) continue;
+			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
 			i1*=3; i2*=3;
 			dipole_energy-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
 		};
@@ -412,7 +412,7 @@ void subtract_field(real* __restrict__ inout) {
 		#pragma omp parallel for collapse(4)
 		forall(u,x,y,z) {
 			int i=INDEX(u,x,y,z);
-			if(!ISACTIVE(i)) continue;
+			if(!ISACTIVE(active, i)) continue;
 			i*=3;
 			for3(j) inout[i+j]-=nonuniform_field[i+j];
 			};
@@ -420,7 +420,7 @@ void subtract_field(real* __restrict__ inout) {
 		#pragma omp parallel for collapse(4)
 		forall(u,x,y,z) for3(j) {
 			int i=INDEX(u,x,y,z);
-			if(!ISACTIVE(i)) continue;
+			if(!ISACTIVE(active, i)) continue;
 			inout[i*3+j]-=magnetic_field[j];
 		}
 	};
@@ -431,7 +431,7 @@ void set_to_field(real* __restrict__ out) {
 	#pragma omp parallel for collapse(4)
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(i)) for3(j) out[i*3+j]=0;
+		if(!ISACTIVE(active, i)) for3(j) out[i*3+j]=0;
 		else for3(j) out[i*3+j]=field[j];
 	};
 };
@@ -442,7 +442,7 @@ real normalize(real* __restrict__ a) {
 	#pragma omp parallel for collapse(4) reduction(+:sum)
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(i)) continue;
+		if(!ISACTIVE(active, i)) continue;
 		sum+=normalize3(a+i*3);
 	};
 	return sum;
@@ -453,7 +453,7 @@ realp seminormalize(real factor, real* __restrict__ a) {
 	#pragma omp parallel for collapse(4) reduction(+:sum)
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(i)) continue;
+		if(!ISACTIVE(active, i)) continue;
 		sum+=seminormalize3(factor,a+i*3);
 	};
 	return sum;
@@ -464,7 +464,7 @@ void project_to_tangent(const real* __restrict__ a, real* __restrict__ b) {
 	#pragma omp parallel for collapse(4)
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(i)) { for3(j) b[3*i+j]=0; continue; };
+		if(!ISACTIVE(active, i)) { for3(j) b[3*i+j]=0; continue; };
 		i*=3; tangent3(a+i,b+i);
 	};
 };
@@ -474,7 +474,7 @@ void skyrmion_constrain(const real* __restrict__ a, real* __restrict__ r) {
 	#pragma omp parallel for collapse(4)	
   	forall(u,x,y,z) {
   		int i=INDEX(u,x,y,z);
-  		r[i]=ISACTIVE(i)?(normsq3(a+3*i)-1.)/2.:0.;
+  		r[i]=ISACTIVE(active, i)?(normsq3(a+3*i)-1.)/2.:0.;
   	};
 };
 
@@ -483,7 +483,7 @@ void skyrmion_constrain_gradient(const real* __restrict__ a, const real* __restr
 	#pragma omp parallel for collapse(4)
   	forall(u,x,y,z) {
 	  	int i=INDEX(u,x,y,z);
-	  	if(!ISACTIVE(i)) continue;
+	  	if(!ISACTIVE(active, i)) continue;
 	  	mult_plus3(lambda[i],a+3*i,r+3*i);
   	};
 };
@@ -493,7 +493,7 @@ void skyrmion_constrain_adjucent(const real* __restrict__ a, const real* __restr
 	#pragma omp parallel for collapse(4)	
   	forall(u,x,y,z) {
 	  	int i=INDEX(u,x,y,z);
-	  	r[i]=ISACTIVE(i)?dot3(a+3*i,b+3*i):0.;
+	  	r[i]=ISACTIVE(active, i)?dot3(a+3*i,b+3*i):0.;
   	};
 };
 
@@ -501,7 +501,7 @@ void skyrmion_middle(const real* __restrict__ a, const real* __restrict__ b, rea
 	#pragma omp parallel for collapse(4)	
   	forall(u,x,y,z) {
 	  	int i=INDEX(u,x,y,z);
-	  	if(!ISACTIVE(i))  { for3(j) r[3*i+j]=0; continue; };
+	  	if(!ISACTIVE(active, i))  { for3(j) r[3*i+j]=0; continue; };
 	  	middle3(a+3*i,b+3*i,r+3*i);
   	};
 };
@@ -512,7 +512,7 @@ void skyrmion_middle_fourth_order(const real* __restrict__ a, const real* __rest
 	#pragma omp parallel for collapse(4)	
   	forall(u,x,y,z) {
 	  	int i=INDEX(u,x,y,z);
-	  	if(!ISACTIVE(i))  { for3(j) r[3*i+j]=0; continue; };
+	  	if(!ISACTIVE(active, i))  { for3(j) r[3*i+j]=0; continue; };
 	  	middle_fourth_order3(a+3*i,b+3*i,c+3*i,d+3*i,r+3*i);
   	};
 };
@@ -521,7 +521,7 @@ void skyrmion_middle_third_order(const real* __restrict__ a, const real* __restr
 	#pragma omp parallel for collapse(4)	
   	forall(u,x,y,z) {
 	  	int i=INDEX(u,x,y,z);
-	  	if(!ISACTIVE(i))  { for3(j) r[3*i+j]=0; continue; };
+	  	if(!ISACTIVE(active, i))  { for3(j) r[3*i+j]=0; continue; };
 	  	middle_third_order3(a+3*i,b+3*i,c+3*i,r+3*i);
   	};
 };
@@ -549,7 +549,7 @@ void two_point_tangent0(const real* __restrict__ a, const real* __restrict__ b, 
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(i))  { for3(j) r[3*i+j]=0; continue; };
+		if(!ISACTIVE(active, i))  { for3(j) r[3*i+j]=0; continue; };
 		i*=3;
 		sub3(b+i,a+i,r+i); 
 		tangent3(a+i,r+i); 
@@ -561,7 +561,7 @@ void two_point_tangent1(const real* __restrict__ a, const real* __restrict__ b, 
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(i))  { for3(j) r[3*i+j]=0; continue; };
+		if(!ISACTIVE(active, i))  { for3(j) r[3*i+j]=0; continue; };
 		i*=3;
 		sub3(b+i,a+i,r+i); 
 		tangent3(b+i,r+i); 
@@ -574,7 +574,7 @@ void three_point_tangent(const real* __restrict__ a, const real* __restrict__ b,
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(i))  { for3(j) r[3*i+j]=0; continue; };
+		if(!ISACTIVE(active, i))  { for3(j) r[3*i+j]=0; continue; };
 		i*=3;
 		sub3(c+i,a+i,r+i); 
 		tangent3(b+i,r+i); 
@@ -587,7 +587,7 @@ void three_point_tangent_stable(real ea, real eb, real ec, const real* __restric
 		#pragma omp parallel for collapse(4)	
 		forall(u,x,y,z) {	
 			int i=INDEX(u,x,y,z);
-			if(!ISACTIVE(i))  { for3(j) r[3*i+j]=0; continue; };
+			if(!ISACTIVE(active, i))  { for3(j) r[3*i+j]=0; continue; };
 			i*=3;
 			sub3(c+i,b+i,r+i); 
 			tangent3(b+i,r+i); 
@@ -596,7 +596,7 @@ void three_point_tangent_stable(real ea, real eb, real ec, const real* __restric
 		#pragma omp parallel for collapse(4)	
 		forall(u,x,y,z) {	
 			int i=INDEX(u,x,y,z);
-			if(!ISACTIVE(i))  { for3(j) r[3*i+j]=0; continue; };
+			if(!ISACTIVE(active, i))  { for3(j) r[3*i+j]=0; continue; };
 			i*=3;
 			sub3(b+i,a+i,r+i); 
 			tangent3(b+i,r+i); 
@@ -608,7 +608,7 @@ void three_point_tangent_stable(real ea, real eb, real ec, const real* __restric
 		#pragma omp parallel for collapse(4)	
 		forall(u,x,y,z) {	
 			int i=INDEX(u,x,y,z);
-			if(!ISACTIVE(i))  { for3(j) r[3*i+j]=0; continue; };
+			if(!ISACTIVE(active, i))  { for3(j) r[3*i+j]=0; continue; };
 			i*=3;
 			real t1[3],t2[3];
 			sub3(b+i,a+i,t1); 
@@ -625,7 +625,7 @@ void three_point_tangent_mean(const real* __restrict__ a, const real* __restrict
 	forall(u,x,y,z) {	
 		real t1[3],t2[3];
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(i))  { for3(j) r[3*i+j]=0; continue; };
+		if(!ISACTIVE(active, i))  { for3(j) r[3*i+j]=0; continue; };
 		i*=3;
 		sub3(b+i,a+i,t1); 
 		sub3(c+i,b+i,t2); 
@@ -675,7 +675,7 @@ void append_skyrmion(const real center[3], real distance, real winding,
 	#pragma omp parallel for collapse(4)	
 	forall(u,x,y,z) {	
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(i)) continue;
+		if(!ISACTIVE(active, i)) continue;
 		i*=3;
 		real vec[3]; COORDS(u,x,y,z,vec);
 		sub3(vec,center,vec);
@@ -763,7 +763,7 @@ int axis, real* __restrict__ gen) {
 void skyrmion_random(real* __restrict__ a) {
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
-		if(ISACTIVE(i)) {
+		if(ISACTIVE(active, i)) {
 			i*=3;
 			for3(j) a[i+j]=random_real()*2-1;
 		} else {

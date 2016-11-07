@@ -501,8 +501,8 @@ void load_skyrmion(const char* spinsfilename, real* image) {
 		count++;
 		normalize3(spin);
 		int id=positions[line];
-		if(empty_mask) SETACTIVE(id)
-		else if(!ISACTIVE(id)) { fprintf(stderr, "An attempt to set not active spin at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", spinsfilename, line+2); exit(1); };
+		if(empty_mask) SETACTIVE(active, id)
+		else if(!ISACTIVE(active, id)) { fprintf(stderr, "An attempt to set not active spin at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", spinsfilename, line+2); exit(1); };
 		id*=3;
 		for3(j) image[id+j]=spin[j];
 	};
@@ -521,7 +521,7 @@ void set_uniform(real* dir, real* spin) {
 	int count=0;
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
-		if(ISACTIVE(i)) {
+		if(ISACTIVE(active, i)) {
 			count++;
 			i*=3; for3(j) spin[i+j]=dir[j];
 		} else {
@@ -541,11 +541,11 @@ void cut_by_plane(real* o, real* n) {
 		real a=dot3(vec,n)-d;
 		int i=INDEX(u,x,y,z);	
 		if(first) {
-			if(a>=0) { SETACTIVE(i); count++; }
-			else { SETPASSIVE(i); };
+			if(a>=0) { SETACTIVE(active, i); count++; }
+			else { SETPASSIVE(active, i); };
 		} else {
 			if(a>=0) { count++; }
-			else { SETPASSIVE(i); };
+			else { SETPASSIVE(active, i); };
 		};
 	};
 	number_of_active=count;
@@ -563,11 +563,11 @@ void cut_sphere(real* o, real r) {
 		if(r<0) a=-a;
 		int i=INDEX(u,x,y,z);	
 		if(first) {
-			if(a<=0) { SETACTIVE(i); count++; }
-			else { SETPASSIVE(i); };
+			if(a<=0) { SETACTIVE(active, i); count++; }
+			else { SETPASSIVE(active, i); };
 		} else {
 			if(a<=0) { count++; }
-			else { SETPASSIVE(i); };
+			else { SETPASSIVE(active, i); };
 		};
 	};
 	number_of_active=count;	

@@ -7,6 +7,8 @@ DESC=$1
 SUFF=$2
 shift 2
 
+mkdir -p tmp/
+
 while IFS='' read -r line || [[ -n "$line" ]]; do
 	IFS=';' read -ra components <<< "${line}" 
 	filename="tmp/"

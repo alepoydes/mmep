@@ -67,9 +67,11 @@ int INDEX(int u, int x, int y, int z);
 // Spins in the domain may be in use or not.
 // If a spin is not active then boundary conditions on the atom is free.
 extern char* active;
-#define ISACTIVE(id) (!(active) || ((active)[(id)>>3] & (1<<((id) & 7))))
-#define SETACTIVE(id) { if(!(active)) (active)=(char*)calloc(1+(SIZE>>3), sizeof(char)); assert(active); (active)[(id)>>3]|=1<<((id) & 7); }
-#define SETPASSIVE(id) { if(!(active)) (active)=(char*)calloc(1+(SIZE>>3), sizeof(char)); assert(active); (active)[(id)>>3]&=~(1<<((id) & 7)); }
+
+#define ALLOCATEMASK(mask) { if(!(mask)) { (mask)=(char*)calloc(1+(SIZE>>3), sizeof(char)); assert(mask);}; }
+#define ISACTIVE(mask, id) (!(mask) || ((mask)[(id)>>3] & (1<<((id) & 7))))
+#define SETACTIVE(mask, id) { ALLOCATEMASK(mask); (mask)[(id)>>3]|=1<<((id) & 7); }
+#define SETPASSIVE(mask, id) { ALLOCATEMASK(mask); (mask)[(id)>>3]&=~(1<<((id) & 7)); }
 extern int number_of_active;
 
 extern int* positions;

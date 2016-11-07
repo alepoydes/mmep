@@ -9,6 +9,8 @@ DESC=$1
 SUFF=$2
 shift 2
 
+mkdir -p tmp/
+
 echo -n "" > ${ENERGYFILE}
 echo -n "" > ${DISTANCEFILE}
 echo 'set title "Energy variation"' >> ${OUTPUT}

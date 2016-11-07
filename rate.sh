@@ -1,5 +1,6 @@
 #!/bin/sh
 basedir=$1
+mkdir -p ${basedir}
 shift 1
 output=${basedir}/rate.txt
 echo "Transition rates" > "${output}"

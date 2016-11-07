@@ -40,8 +40,9 @@ void plot_field3(FILE* file, const real* __restrict__ a) {
 	};
 	forall(u,x,y,z) //if(x==0 || y==0 || z==0 || x==sizex-1 || y==sizey-1 || z==sizez-1)
 	{
-		real vec[3]; COORDS(u,x,y,z,vec);
 		int i=INDEX(u,x,y,z);
+		if(!ISACTIVE(active, i)) continue;
+		real vec[3]; COORDS(u,x,y,z,vec);
 		fprintf(file,"%" RF "g %" RF "g %" RF "g %.3" RF "f %.3" RF "f %.3" RF "f\n"
 			,RT(vec[0]),RT(vec[1]),RT(vec[2])
 			,RT(a[3*i+0]),RT(a[3*i+1]),RT(a[3*i+2])
@@ -64,8 +65,10 @@ void plot_path(FILE* file, int sizep, const real* __restrict__ mep) {
 	};
 	int size=3*sizeu*sizex*sizey*sizez;
 	for(int p=0; p<sizep; p++) forall(u,x,y,z) {
+		int i=INDEX(u,x,y,z);
+		if(!ISACTIVE(active, i)) continue;
 		real vec[3]; COORDS(u,x,y,z,vec);
-		int i=3*INDEX(u,x,y,z)+p*size;
+		i=3*i+p*size;
 		fprintf(file,"%" RF "g %" RF "g %" RF "g %.3" RF "f %.3" RF "f %.3" RF "f %d\n"
 			,RT(vec[0]),RT(vec[1]),RT(vec[2])
 			,RT(mep[i+0]),RT(mep[i+1]),RT(mep[i+2])

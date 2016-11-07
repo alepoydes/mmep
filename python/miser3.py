@@ -99,6 +99,8 @@ def makeind(idx, delta, bc):
             k2=k-delta
             idx[k]=k2 if k2>=0 and k2<idx.shape[0] else -1
 
+def distinct_spins(a,b,tol=1e-6):
+    return np.sum((a-b)**2,axis=-1)>tol*tol
 
 # Magnetic crystalls
 class Lattice(object):
@@ -420,7 +422,6 @@ class Lattice(object):
             return result
         return fun
 
-
     def lambda_energy(self):
         if(self.H[0]!=0. or self.H[1]!=0.): 
             raise Exception("Magnetic field must be parallel to Oz axis")
@@ -454,16 +455,18 @@ class Lattice(object):
         """Compute energy gradient for the <system> on the state S."""
         return hessian-self.H.reshape((1,)*self.dim+(1,3))
 
-    def lambda_restricted_hessian(self, S, hessian=None):
-        shp=S.shape[:-1]
-        if hessian is None: 
+    def lambda_restricted_hessian(self, S, hessian=None, mask=None):
+        shp=S.shape[:-1]; shp0=S.shape
+        if hessian is None:
             #print('Compiling Hessian')
             hessian=self.lambda_hessian()
         #print('Mark active spins')
         l=np.sqrt(np.sum(S**2, axis=-1)) 
+        if not mask is None: mask=np.logical_and(mask, l!=0)
+        else: mask=l!=0
         #S/=np.expand_dims(l,-1)
-        #S[l==0]=0
-        idx=np.nonzero(l)
+        #S=S.copy(); S[~mask]=0
+        idx=np.nonzero(mask)
         N=idx[0].shape[0]
         #print('compute Hessian on the state')
         hess=hessian(S)
@@ -471,30 +474,29 @@ class Lattice(object):
         ergy, grad=self.energy(S, hess)
         MU=np.expand_dims(np.sum(grad*S,axis=-1), -1)
         #print('compute basis in the tangent space')
-        e0=np.empty(S.shape); e0[...,0]=-S[...,1]; e0[...,1]=S[...,0]; e0[...,2]=S[...,2]
+        e0=np.empty(shp0); e0[...,0]=-S[...,1]; e0[...,1]=S[...,0]; e0[...,2]=S[...,2]
         e1=np.cross(e0, S); 
-        l=np.sum(e1**2,axis=-1)
-        e0[l==0,0]=S[l==0,0]; e0[l==0,1]=-S[l==0,2]; e0[l==0,2]=S[l==0,1]
-        e1=np.cross(e0, S); 
+        l=np.sum(e1**2,axis=-1)==0
+        e0[l,0]=S[l,0]; e0[l,1]=-S[l,2]; e0[l,2]=S[l,1]
+        e1=np.cross(e0, S)
         l=np.sqrt(np.sum(e1**2,axis=-1))
-        assert(N==np.sum(l!=0))
+        #assert(N==np.sum(l!=0))
         l[l==0]=1.
         e1/=np.expand_dims(l,-1)
         e2=np.cross(e1, S)
+        e1=e1[idx]; e2=e2[idx]
 
         def embed(P):
             P=P.reshape((-1,2))
-            V=np.zeros(shp)
-            V[idx]=P[:,0]
-            S=np.expand_dims(V,-1)*e1
-            V[idx]=P[:,1]
-            S+=np.expand_dims(V,-1)*e2
+            S=np.zeros(shp0)
+            S[idx]=P[:,0:1]*e1+P[:,1:]*e2
             return S
 
         def project(S2):
+            S=S2[idx]
             Q=np.empty((N,2))
-            Q[:,0]=np.sum(S2*e1, axis=-1)[idx]
-            Q[:,1]=np.sum(S2*e2, axis=-1)[idx]
+            Q[:,0]=np.sum(S*e1, axis=-1)
+            Q[:,1]=np.sum(S*e2, axis=-1)
             return Q.flatten()
 
         def restricted_hessian(P):
@@ -541,10 +543,10 @@ class Lattice(object):
     def generator(self,vec,S):
         return self.ifourier(self.generator_fourier(vec,self.fourier(S)))
 
-    def restricted_harmonic(self, S, hessian=None, threshold=1e-3):
+    def restricted_harmonic(self, S, hessian=None, threshold=1e-3, mask=None):
         if hessian is None: 
             hessian=self.lambda_hessian()
-        oper, N, embed, project, ergy, grad=self.lambda_restricted_hessian(S, hessian=hessian)
+        oper, N, embed, project, ergy, grad=self.lambda_restricted_hessian(S, hessian=hessian, mask=mask)
         hes=matrix(oper)
         ei, ev=np.linalg.eigh(hes)
         idx=np.argsort(ei)
