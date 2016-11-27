@@ -20,7 +20,7 @@ touch "${lock}"
 
 while IFS='' read -r line || [[ -n "$line" ]]; do
 	IFS=';' read -ra components <<< "${line}" 
-	path=$PREFIX
+	path="${PREFIX}"
 	for comp in "${components[@]}"; do
 		IFS='=' read var val <<< "${comp}"
 		echo export "$var=$val"
@@ -34,8 +34,8 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 		echo -e "\e[92mPopulating\e[0m " $path
 		mkdir -p "${path}"
 		$@ -D "${path}" || exit 1
-		gnuplot "${path}/"*.gnuplot
 	fi
+	gnuplot "${path}/"*.gnuplot
 done < ${PARAM}
 
 exit 0

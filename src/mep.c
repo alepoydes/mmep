@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
     for(int p=0; p<initial_states_count; p++) {
       if(relax_state[p]) {
         fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing image" COLOR_RESET " %d\n", p);
-        skyrmion_steepest_descent(initial_state+size*i, SDM_PROGR, 0.1, epsilon, max_iter);
+        skyrmion_steepest_descent(initial_state+size*p, SDM_PROGR, 0.1, epsilon, max_iter);
       };
     };
   };
