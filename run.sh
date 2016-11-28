@@ -31,7 +31,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 	if [ "$(ls -A ${path} 2>/dev/null)" ]; then
 		echo -e "\e[93mSkipping\e[0m non empty $path"
 	else
-		echo -e "\e[92mPopulating\e[0m " $path
+		echo -e "\e[92mPopulating\e[0m ${path}"
 		mkdir -p "${path}"
 		$@ -D "${path}" || exit 1
 	fi

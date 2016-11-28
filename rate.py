@@ -43,7 +43,7 @@ saddle=np.argmax(energy[:,-1]) # index of saddle point
 print(bcolors.BOLD,'Forward barrier',bcolors.END,' {:e}'.format(energy[saddle,-1]-energy[0,-1]),sep='')
 print(bcolors.BOLD,'Backward barrier',bcolors.END,' {:e}'.format(energy[saddle,-1]-energy[-1,-1]),sep='')
 
-print('Compilling energy function')
+print('Compiling energy function')
 hessian=system.lambda_hessian()
 
 print('Calculating eigenvalues for initial state')

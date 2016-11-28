@@ -2,7 +2,7 @@
 basedir=$1
 mkdir -p ${basedir}
 shift 1
-output=${basedir}/rate.txt
+output="${basedir}/rate.txt"
 echo "Transition rates" > "${output}"
 for d in ${basedir}/*; do
 	echo "===========================================" >> "${output}"
