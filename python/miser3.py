@@ -2,6 +2,7 @@ import numpy as np
 import numba as nb
 import matplotlib.pyplot as plt
 from matplotlib import animation, rc
+import matplotlib.transforms as mtransforms
 from IPython.display import HTML
 import scipy.sparse as sparse
 import scipy.sparse.linalg
@@ -222,7 +223,7 @@ class Lattice(object):
         if axis is None:
             fig,axis=plt.subplots()
         axis.set_aspect('equal')
-        plt.axis("off")
+        axis.set_axis_off()
         s=S.reshape((-1,3))
         b=self.atoms().reshape((-1,self.dim))
         plt.set_cmap('blueblackred')
@@ -242,6 +243,24 @@ class Lattice(object):
             return Q
         def frame(i): return path[i]
         return animate(init, update, path.shape[0], interval)
+
+    def coffee_plot(self, state, axis=None, fig=None, spin=0, smooth=False):
+        if axis is None:
+            fig,axis=plt.subplots()
+        matrix=np.eye(3)
+        matrix[:2,:2]=np.array(self.translations).T
+        szx=self.size[0]*matrix[0,0]+self.size[1]*matrix[0,1]
+        szy=self.size[0]*matrix[1,0]+self.size[1]*matrix[1,1]
+        interpolation='lanczos' if smooth else 'none'
+        im=axis.imshow(state[:,:,spin,2].T, clim=(-1,1), interpolation=interpolation, cmap='YlOrBr', origin='lower',clip_on=True)
+        x1, x2, y1, y2 = im.get_extent()
+        im._image_skew_coordinate = (x2, y1)
+        trans_data = mtransforms.Affine2D(matrix) + axis.transData
+        im.set_transform(trans_data)
+        axis.set_xlim(-matrix[0,0],szx)
+        axis.set_ylim(-matrix[1,1],szy)
+        axis.set_axis_off()    
+        return (fig, axis, im)
 
     def lambda_hessian(self, radius=None):
         if(self.dim!=2): raise Exception("Only 2D lattices are supported")
@@ -453,7 +472,7 @@ class Lattice(object):
     
     def gradient(self,S,hess):
         """Compute energy gradient for the <system> on the state S."""
-        return hessian-self.H.reshape((1,)*self.dim+(1,3))
+        return hess-self.H.reshape((1,)*self.dim+(1,3))
 
     def lambda_restricted_hessian(self, S, hessian=None, mask=None):
         shp=S.shape[:-1]; shp0=S.shape

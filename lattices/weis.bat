@@ -13,7 +13,7 @@ periodic periodic
 {-1, 1} 0, 0
 [external field]
 # mu=3*mu_B
-{0, 0, B} # (J)
+uniform {0, 0, B} # (J)
 [dipole]
 # lattice constant a=2.7 Å of Fe/Ir(111)
 0
@@ -29,6 +29,6 @@ periodic periodic
 0.32 {0, -1, 0}  # (J)
 0.32 {cos(pi/6), -sin(pi/6)}
 0.32 {cos(pi/6), sin(pi/6)}
-[image]
+[image] relax
 vertex {30*(1+sin(pi/6))/2, 30*cos(pi/6)/2} 7, 0, -1
 [image]
