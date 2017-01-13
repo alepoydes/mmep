@@ -285,6 +285,7 @@ void parse_lattice(FILE* file) {
 	yyin=file;
 	yyparse();
 
+	if(number_of_active<0) number_of_active=SIZE;
 	validate();
 };
 
@@ -494,7 +495,7 @@ void load_skyrmion(const char* spinsfilename, real* image) {
 	// Empty buffer for image
 	for(int i=0; i<SIZE*3; i++) image[i]=0.;
 	// Read line by line
-	int empty_mask=active==NULL;
+	int empty_mask=all_active==NULL;
 	count=0;
 	for(int line=0; line<SIZE; line++) {
        	if(!fgets(buf, sizeof(buf), spinsfile)) { 
@@ -509,8 +510,8 @@ void load_skyrmion(const char* spinsfilename, real* image) {
 		count++;
 		normalize3(spin);
 		int id=positions[line];
-		if(empty_mask) SETACTIVE(active, id)
-		else if(!ISACTIVE(active, id)) { fprintf(stderr, "An attempt to set not active spin at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", spinsfilename, line+2); exit(1); };
+		if(empty_mask) SETACTIVE(all_active, id)
+		else if(!ISACTIVE(all_active, id)) { fprintf(stderr, "An attempt to set not active spin at '" COLOR_RED "%s line %d" COLOR_RESET "'\n", spinsfilename, line+2); exit(1); };
 		id*=3;
 		for3(j) image[id+j]=spin[j];
 	};
@@ -529,7 +530,7 @@ void set_uniform(real* dir, real* spin) {
 	int count=0;
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
-		if(ISACTIVE(active, i)) {
+		if(ISACTIVE(all_active, i)) {
 			count++;
 			i*=3; for3(j) spin[i+j]=dir[j];
 		} else {
@@ -540,7 +541,7 @@ void set_uniform(real* dir, real* spin) {
 };
 
 void cut_by_plane(real* o, real* n) {
-	int first=active==NULL;
+	int first=all_active==NULL;
 	int count=0;
 	real d=dot3(o,n);
 	forall(u,x,y,z) {
@@ -549,11 +550,11 @@ void cut_by_plane(real* o, real* n) {
 		real a=dot3(vec,n)-d;
 		int i=INDEX(u,x,y,z);	
 		if(first) {
-			if(a>=0) { SETACTIVE(active, i); count++; }
-			else { SETPASSIVE(active, i); };
+			if(a>=0) { SETACTIVE(all_active, i); count++; }
+			else { SETPASSIVE(all_active, i); };
 		} else {
 			if(a>=0) { count++; }
-			else { SETPASSIVE(active, i); };
+			else { SETPASSIVE(all_active, i); };
 		};
 	};
 	number_of_active=count;
@@ -561,7 +562,7 @@ void cut_by_plane(real* o, real* n) {
 
 void cut_sphere(real* o, real r) {
 	real rsq=r*r;
-	int first=active==NULL;
+	int first=all_active==NULL;
 	int count=0;	
 	forall(u,x,y,z) {
 		real vec[3];
@@ -571,11 +572,11 @@ void cut_sphere(real* o, real r) {
 		if(r<0) a=-a;
 		int i=INDEX(u,x,y,z);	
 		if(first) {
-			if(a<=0) { SETACTIVE(active, i); count++; }
-			else { SETPASSIVE(active, i); };
+			if(a<=0) { SETACTIVE(all_active, i); count++; }
+			else { SETPASSIVE(all_active, i); };
 		} else {
 			if(a<=0) { count++; }
-			else { SETPASSIVE(active, i); };
+			else { SETPASSIVE(all_active, i); };
 		};
 	};
 	number_of_active=count;	

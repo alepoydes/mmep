@@ -36,8 +36,9 @@ int steepest_descend(
   int n, real* a, 
   void (*TF)(const real* x, real* y, realp* E),
   int mode, real mode_param, real epsilon, int max_iter,
-  void (*display)(int iter, real* a, real* grad_f, realp f, real res, real constres, real alpha, realp last_f, real last_grad),
-  real (*P)(real* a)
+  void (*display)(int iter, real* a, real* grad_f, realp f, real res, real constres, real alpha, realp last_f, real last_grad, real err),
+  real (*P)(real* a),
+  void (*A)(const real* a, real* grad_f, real* f)
 );
 
 int flow_descend(

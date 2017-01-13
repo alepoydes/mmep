@@ -97,7 +97,7 @@ void oct_save_state(FILE* file, const char* name, real* data) {
 	fprintf(file,"# columns: %d\n",1);
 	for3(j) forlla(u,x,y,z) {
 		int id=INDEX(u,x,y,z);
-		if(ISACTIVE(active, id)) fprintf(file,"%.*" RF "g\n",DIGITS+2,RT(data[j+3*id]));	
+		if(ISACTIVE(all_active, id)) fprintf(file,"%.*" RF "g\n",DIGITS+2,RT(data[j+3*id]));	
 		else fprintf(file,"%.*" RF "g\n",DIGITS+2,RT(0.));	
 	};
 	fprintf(file,"\n\n");	

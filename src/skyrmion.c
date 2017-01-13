@@ -7,6 +7,10 @@
 #include <assert.h>
 
 // Physical parameters
+real energy_shift_per_atom=0; // mean energy of S=(0,0,1) over all positions
+real zeeman_shift=0;
+real anisotropy_shift=0;
+real exchange_shift=0;
 real magnetic_field[3]={0,0,0};
 real* nonuniform_field=NULL;
 // Structure of crystal lattice
@@ -43,8 +47,10 @@ real* initial_state=NULL;
 int initial_states_count=0;
 int* relax_state=NULL;
 
+char* all_active=NULL;
 char* active=NULL;
-int number_of_active=0;
+int number_of_active=-1;
+int number_of_used=0;
 int* positions=NULL;
 
 int dipole_count=0;
@@ -56,6 +62,77 @@ real temperature=0;
 
 int INDEX(int u, int x, int y, int z) {
 	return ((u*sizex+x)*sizey+y)*sizez+z;
+};
+
+/*
+int activate_fast_and_adjacent(const real* grad, int sizep, real threshold) {
+	char* data=malloc(SIZE*sizeof(char));
+	for(int n=0; n<SIZE; n++) {		
+		data[n]=0;
+		if(!ISACTIVE(active,n)) continue;
+		for(int p=0; p<sizep; p++) {
+			const real* d=grad+3*(n+p*SIZE);
+			real r=rabs(d[0])+rabs(d[1])+rabs(d[2]);
+			if(r>=threshold) { data[n]=1; break; };
+		};
+	};
+	int count=0;
+	forall(u,x,y,z) {
+		int n=INDEX(u,x,y,z);
+		if(!ISACTIVE(all_active, n)) {
+			SETPASSIVE(active, n);
+			continue;
+		};
+		char f=data[n];
+		if(x>0) f=f||data[INDEX(u,x-1,y,z)];
+		if(x<sizex-1) f=f||data[INDEX(u,x+1,y,z)];
+		if(y>0) f=f||data[INDEX(u,x,y-1,z)];
+		if(y<sizey-1) f=f||data[INDEX(u,x,y+1,z)];
+		if(z>0) f=f||data[INDEX(u,x,y,z-1)];
+		if(z<sizez-1) f=f||data[INDEX(u,x,y,z+1)];
+		if(f) {
+			SETACTIVE(active, n);
+			count++;
+		} else SETPASSIVE(active, n);
+	};	
+	free(data);
+	return count;
+};*/
+
+char is_large(const real* grad, int sizep, real threshold) {
+	//fprintf(stderr, "is_large(%d, %"RF"g)\n",sizep,RT(threshold));
+	for(int p=0; p<sizep; p++) {
+		const real* d=grad+p*3*SIZE;
+		real r=rabs(d[0])+rabs(d[1])+rabs(d[2]);
+		//fprintf(stderr, "%" RF "g\n", RT(r));
+		if(r>=threshold) return 1;
+	};
+	return 0;
+};
+
+int deactivate_slow(const real* grad, int sizep, real threshold) {
+	// find maximum
+	real max=0;
+	for(int n=0; n<SIZE; n++) {		
+		if(!ISACTIVE(active,n)) continue;
+		for(int p=0; p<sizep; p++) {
+			const real* d=grad+3*n+p*3*SIZE;
+			real v=rabs(d[0])+rabs(d[1])+rabs(d[2]); 
+			if(v>max) max=v;
+		};
+	};
+	max*=threshold;
+	//fprintf(stderr, COLOR_BLUE "Max: " COLOR_RESET "%" RF "g\n", RT(max));	
+	// turn off slow
+	int count=0;
+	for(int n=0; n<SIZE; n++) {
+		//fprintf(stderr, COLOR_RED "%d: " COLOR_RESET "%d\n", n, count);			
+		if(!ISACTIVE(active,n)) continue;
+		//fprintf(stderr, COLOR_RED "%d: " COLOR_RESET "%d active\n", n, count);			
+		if(is_large(grad+3*n, sizep, max)) count++; 
+		else SETPASSIVE(active,n);
+	};
+	return count;
 };
 
 void allocate_nonuniform_field() {
@@ -79,6 +156,41 @@ void set_tip_field(const real dir[3], const real pos[3]) {
 		int i=INDEX(u,x,y,z);
 		for3(j) nonuniform_field[i*3+j]+=vec[j];
 	};
+};
+
+void prepare_energy_shift() {
+	// find reference vector as mean magnetic field
+	/*real ref[3]={0,0,0};
+	if(nonuniform_field) {
+		forall(u,x,y,z) {
+			int i=INDEX(u,x,y,z);
+			for3(j) ref[j]+=nonuniform_field[j+3*i];
+		};
+		for3(j) ref[j]/=SIZE;
+	} else {
+		for3(j) ref[j]=magnetic_field[j];
+	};*/
+	real ref[3]={0,0,1};
+	normalize3(ref);
+	// compute mean zeeman energy of spin=ref
+	zeeman_shift=0;
+	if(nonuniform_field) {
+		forall(u,x,y,z) {
+			int i=INDEX(u,x,y,z);
+			zeeman_shift-=dot3(ref, nonuniform_field+3*i);
+		};
+		zeeman_shift/=SIZE;
+	} else zeeman_shift-=dot3(ref, magnetic_field); 
+	// add exchange energy for one atom 
+	anisotropy_shift=0;
+	for(int n=0; n<magnetic_anisotropy_count; n++) {
+		real m=dot3(magnetic_anisotropy[n].unit,ref);
+		anisotropy_shift-=m*m*magnetic_anisotropy[n].norm;
+	};
+	exchange_shift=0;
+	for(int n=0;n<sizen;n++) 
+		exchange_shift-=exchange_constant[n];
+	energy_shift_per_atom=zeeman_shift+anisotropy_shift+exchange_shift;
 };
 
 void prepare_dipole_table(real negligible) {
@@ -111,7 +223,7 @@ void prepare_dipole_table(real negligible) {
 	};
 	fprintf(stderr, "Dipole interaction to be computed on %d neighbours\n", dipole_count);
 };
-
+/*
 realp skyrmion_minimum_energy() {
 	int size=sizeu*sizex*sizey*sizez;
 	realp min=0;
@@ -122,15 +234,37 @@ realp skyrmion_minimum_energy() {
 		min-=2*rabs(exchange_constant[n])*size;
 	};
 	return min;
+};*/
+
+real skyrmion_energy_given_hessian(const real* __restrict__ arg, real* __restrict__ hess_grad) {
+	real total_energy=0;
+	#pragma omp parallel for 
+	for(int i=0; i<SIZE; i++) {
+		if(!ISACTIVE(active, i)) continue;
+		real* H=nonuniform_field?nonuniform_field+3*i:magnetic_field;
+		real G[3]; for3(j) G[j]=hess_grad[3*i+j]/2-H[j];
+		for3(j) hess_grad[3*i+j]-=H[j];
+		total_energy+=dot3(G, arg+3*i)-energy_shift_per_atom;
+	};
+	return total_energy;
 };
 
 void skyrmion_gradient(const real* __restrict__ arg, real* __restrict__ grad, realp* __restrict__ energy) {
-	assert(arg); 
+	assert(arg); assert(grad);
   	hamiltonian_hessian(arg, grad);
+  	if(energy) {
+		*energy=skyrmion_energy_given_hessian(arg, grad);
+  	} else {
+  		subtract_field(grad);  		
+  	};
+  	
+	/*  	
   	if(energy) *energy=-dot(3*SIZE, arg, grad)/2;
   	subtract_field(grad);
   	if(energy) (*energy)+=dot(3*SIZE, arg, grad);
+  	*/
 };
+
 
 void projected_gradient(const real* __restrict__ arg, real* __restrict__ grad, realp* __restrict__ energy) {
     skyrmion_gradient(arg, grad, energy);
@@ -146,9 +280,7 @@ void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 	forall(u,x,y,z) {
 		int i=INDEX(u,x,y,z);
 		for3(j) out[3*i+j]=0.;
-		if(!ISACTIVE(active, i)) {
-			continue;
-		};
+		if(!ISACTIVE(active, i)) continue;
 		i*=3;
 		for(int n=0; n<magnetic_anisotropy_count; n++) {
 			real m=dot3(magnetic_anisotropy[n].unit,arg+i);
@@ -176,7 +308,7 @@ void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
+			if(!ISACTIVE(all_active, i1) || !ISACTIVE(active, i2)) continue;
 			i1*=3; i2*=3;
 			cross_minus3(dzyaloshinskii_moriya_vector+3*n,arg+i1,out+i2);
 			mult_minus3(exchange_constant[n],arg+i1,out+i2);
@@ -185,7 +317,7 @@ void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
+			if(!ISACTIVE(active, i1) || !ISACTIVE(all_active, i2)) continue;
 			i1*=3; i2*=3;
 			//fprintf(stderr, "%d@ %d %d %d %d -> %d\n",n,d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez,i1);
 			cross_plus3(dzyaloshinskii_moriya_vector+3*n,arg+i2,out+i1);
@@ -215,7 +347,7 @@ void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
+			if(!ISACTIVE(all_active, i1) || !ISACTIVE(active, i2)) continue;
 			i1*=3; i2*=3;
 			mult_minus3(alpha*dot3(arg+i1,U),U,out+i2);
 			mult_minus3(-alpha,arg+i1,out+i2);
@@ -224,7 +356,7 @@ void hamiltonian_hessian(const real* __restrict__ arg, real* __restrict__ out) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
+			if(!ISACTIVE(active, i1) || !ISACTIVE(all_active, i2)) continue;
 			i1*=3; i2*=3;
 			mult_minus3(alpha*dot3(arg+i2,U),U,out+i1);
 			mult_minus3(-alpha,arg+i2,out+i1);
@@ -247,8 +379,8 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 		real m=dot3(magnetic_anisotropy[n].unit,arg+i);
 		anisotropy_energy-=m*m*magnetic_anisotropy[n].norm;
 	};
-	energy[0]=anisotropy_energy;
-	energy[1]=zeeman_energy;
+	energy[0]=anisotropy_energy-anisotropy_shift;
+	energy[1]=zeeman_energy-zeeman_shift;
 	// Compute exchange part
 	real dmi_energy=0;
 	real exchange_energy=0;
@@ -262,7 +394,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 				&& (boundary_conditions[2]==BC_PERIODIC || (z+sz<sizez && z+sz>=0)) ) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=i; // INDEX(s,x,y,z);
-			if(!ISACTIVE(active, i1)) continue;
+			if(!ISACTIVE(all_active, i1)) continue;
 			i1*=3; 
 			real t[3]; 
 			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
@@ -274,7 +406,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 				&& (boundary_conditions[2]==BC_PERIODIC || (z-sz<sizez && z-sz>=0)) ) {
 			int i1=i; // INDEX(d,x,y,z);
 			int i2=INDEX(s,(x-sx+sizex)%sizex,(y-sy+sizey)%sizey,(z-sz+sizez)%sizez);
-			if(!ISACTIVE(active, i2)) continue;
+			if(!ISACTIVE(all_active, i2)) continue;
 			i2*=3; 
 			real t[3]; 
 			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
@@ -283,7 +415,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 		};		
 	};
 	energy[3]=dmi_energy;
-	energy[2]=exchange_energy;
+	energy[2]=exchange_energy-exchange_shift;
 	// Compute dipole interaction
 	real dipole_energy=0;	
 	for(int n=0;n<dipole_count;n++) {
@@ -299,7 +431,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 				&& (boundary_conditions[2]==BC_PERIODIC || (z+sz<sizez && z+sz>=0)) ) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=i;
-			if(!ISACTIVE(active, i1)) continue;
+			if(!ISACTIVE(all_active, i1)) continue;
 			i1*=3; 
 			dipole_energy-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
 		};
@@ -308,7 +440,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 				&& (boundary_conditions[2]==BC_PERIODIC || (z-sz<sizez && z-sz>=0)) ) {
 			int i1=i; //INDEX(d,x,y,z);
 			int i2=INDEX(s,(x-sx+sizex)%sizex,(y-sy+sizey)%sizey,(z-sz+sizez)%sizez);
-			if(!ISACTIVE(active, i2)) continue;
+			if(!ISACTIVE(all_active, i2)) continue;
 			i2*=3;
 			dipole_energy-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
 		};
@@ -326,12 +458,16 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 	//for(int j=0;j<5;j++) energy[j]=0;
 	// Compute anisotropy part
-	realp anisotropy_energy=0;
-	realp zeeman_energy=0;
+	energy[0]=0;
+	energy[1]=0;
+	int count=0;
 	#pragma omp parallel for collapse(3) reduction(+:anisotropy_energy,zeeman_energy)
 	forall(u,x,y,z) {
+		realp anisotropy_energy=0;
+		realp zeeman_energy=0;
 		int i=INDEX(u,x,y,z);
 		if(!ISACTIVE(active, i)) continue;
+		count++;
 		i*=3;
 		for(int n=0; n<magnetic_anisotropy_count; n++) {
 			real m=dot3(magnetic_anisotropy[n].unit,arg+i);
@@ -339,9 +475,9 @@ void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 		};
 		if(nonuniform_field) zeeman_energy-=dot3(nonuniform_field+i,arg+i);
 		else zeeman_energy-=dot3(magnetic_field,arg+i);
+		energy[0]+=anisotropy_energy-anisotropy_shift;
+		energy[1]+=zeeman_energy-zeeman_shift;
 	};
-	energy[0]=anisotropy_energy;
-	energy[1]=zeeman_energy;
 	// Compute exchange part
 	realp dmi_energy=0;
 	realp exchange_energy=0;
@@ -365,7 +501,10 @@ void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
+			if(!(  (ISACTIVE(active, i1) && ISACTIVE(all_active, i2))
+				|| (ISACTIVE(all_active, i1) && ISACTIVE(active, i2))
+				)
+			  ) continue;
 			i1*=3; i2*=3;
 			real t[3]; 
 			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
@@ -374,7 +513,7 @@ void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 		};
 	};
 	energy[3]=dmi_energy;
-	energy[2]=exchange_energy;
+	energy[2]=exchange_energy-exchange_shift*count;
 	// Compute dipole interaction
 	realp dipole_energy=0;	
 	for(int n=0;n<dipole_count;n++) {
@@ -399,7 +538,10 @@ void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 		for(int x=minx;x<maxx;x++)for(int y=miny;y<maxy;y++)for(int z=minz;z<maxz;z++) {
 			int i1=INDEX(d,(x+sx+sizex)%sizex,(y+sy+sizey)%sizey,(z+sz+sizez)%sizez);
 			int i2=INDEX(s,x,y,z);
-			if(!ISACTIVE(active, i1) || !ISACTIVE(active, i2)) continue;
+			if(!(  (ISACTIVE(active, i1) && ISACTIVE(all_active, i2))
+				|| (ISACTIVE(all_active, i1) && ISACTIVE(active, i2))
+				)
+			  ) continue;
 			i1*=3; i2*=3;
 			dipole_energy-=alpha*(dot3(arg+i1,U)*dot3(arg+i2,U)-dot3(arg+i2,arg+i1));
 		};

@@ -39,6 +39,7 @@
 //   real P(int n, real* a)
 //   void T(int n, const real* a, real* t)
 // 'P' returns squared constrains residual divided by number of constrains.
+// 'A' called after each iteration to update active atoms (side effect).
 // Return 0 on success (residual is less then epsilon)
 //        1 if maximum number of iteration max_iter is reached
 //        2 if machine precision is reached for 'f' evaluation
@@ -46,8 +47,9 @@ int steepest_descend(
 	int n, real* a, 
   void (*TF)(const real* x, real* y, realp* E),
 	int mode, real mode_param, real epsilon, int max_iter,
-	void (*display)(int iter, real* a, real* grad_f, realp f, real res, real constres, real alpha, realp last_f, real last_grad),
-  real (*P)(real* a)
+	void (*display)(int iter, real* a, real* grad_f, realp f, real res, real constres, real alpha, realp last_f, real last_grad, real err),
+  real (*P)(real* a),
+  void (*A)(const real* a, real* grad_f, real* f)
 	)
 {
   real alpha;
@@ -91,13 +93,13 @@ int steepest_descend(
   real* toreturn=a; real* torelease=bufa; 
   int status=1;
 
+  int iter=1;
   if(P) constres=P(a); else constres=0;
   TF(a,grad,&f);
   real res2=normsq(n,grad); res=rsqrt(res2/n); assert(!isnan(res));  
   last_res=res; last_f=f;
   alpha=init_alpha();
 
-  int iter=1;
   int count_constant_f=0;
   while(iter<max_iter && status!=2) {
     if(res+constres<epsilon) { // If solution is found
@@ -113,6 +115,8 @@ int steepest_descend(
     //alpha=update_alpha(rabs(alpha));
     last_res=res;
     last_f=f;
+    // updating active spins
+    if(A) A(a,grad,&last_f);
     // update minimum
     mult_sub_ext(n,alpha,grad,a,bufa);
     if(P) constres=P(bufa);
@@ -127,7 +131,11 @@ int steepest_descend(
           status=2; break; 
         };
       };// else count_constant_f=0; 
-      if(display) display(iter,bufa,bufgrad,f,res,constres,alpha,last_f,last_res);
+      // error of linear approximation
+      real delta_f=f-last_f;
+      real delta_grad=-alpha*last_res*last_res*n;
+      real err=(delta_grad-delta_f)/delta_f;
+      if(display) display(iter,bufa,bufgrad,f,res,constres,alpha,last_f,last_res,err);
       if(stop_signal>0) break;  
       if(f<last_f || mode==SDM_CONSTANT) {
         alpha=update_alpha(rabs(alpha));  
@@ -152,7 +160,8 @@ int steepest_descend(
     real* tmp=a; a=bufa; bufa=tmp;
     tmp=bufgrad; bufgrad=grad; grad=tmp;
   };
-  if(display) display(-iter,a,grad,f,res,constres,alpha,last_f,last_res);
+  if(display) display(-iter,a,grad,f,res,constres,alpha,last_f,last_res,NAN);
+
   if(a!=toreturn) copy_vector(n, a, toreturn);
   free(bufgrad); free(torelease); free(grad); 
   return status;

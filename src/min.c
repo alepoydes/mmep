@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
   };
 
   fprintf(stderr,COLOR_YELLOW COLOR_BOLD "Minimizing image 0" COLOR_RESET "\n");  
-  skyrmion_steepest_descent(spins, mode, mode_param, epsilon, max_iter);
+  skyrmion_minimize(spins, epsilon, max_iter);
 
   // Saving result
   realp energy[6]; skyrmion_energy(spins, energy);

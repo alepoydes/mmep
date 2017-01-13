@@ -13,26 +13,58 @@
 //////////////////////////////////////////////////////
 // Single image optimization
 
+void show_grad(const real* arg, const real* grad) {
+  forall(u,x,y,z) {
+    int i=INDEX(u,x,y,z);
+    if(ISACTIVE(active, i)) fprintf(stderr, COLOR_BOLD);
+    fprintf(stderr, COLOR_BLUE "%d %d %d %d: " COLOR_RESET, u, x, y, z);
+    const real* a=arg+3*i;
+    fprintf(stderr, COLOR_GREEN "%" RF "g %" RF "g %" RF "g " COLOR_RESET, RT(a[0]), RT(a[1]), RT(a[2]));
+    const real* g=grad+3*i;
+    fprintf(stderr, "%" RF "g %" RF "g %" RF "g ", RT(g[0]), RT(g[1]), RT(g[2]));
+    //fprintf(stderr, COLOR_RED "%" RF "g ", RT(dot3(g,a)));
+    //fprintf(stderr, COLOR_YELLOW "%" RF "g ", RT(dot3(a,a)-1));
+    fprintf(stderr, "\n");
+  };
+};
+
 void skyrmion_display(int iter, real* __restrict__ a, real* __restrict__ grad_f, realp f, real res, 
-real constres, real alpha, realp last_f, real last_res) {
+real constres, real alpha, realp last_f, real last_res, real err) {
+  // show progress
   static realp prev_f=NAN; static real prev_res=NAN; 
   if(iter==1) { prev_f=f; prev_res=res; };
   if(iter%debug_every==0 || iter<0) {
   	if(iter!=0) fprintf(stderr, "%6d", abs(iter));
     else fprintf(stderr, "%6s", "");
     fprintf(stderr, " " COLOR_YELLOW "E" COLOR_RESET);
-    watch_number(f,debug_every==1?last_f:prev_f,16);
+    watch_number(f,isnan(last_f)?f:debug_every==1?last_f:prev_f,16);
     fprintf(stderr, " " COLOR_YELLOW "R" COLOR_RESET);
-    watch_number(res,debug_every==1?last_res:prev_res,16);
+    watch_number(res,isnan(last_res)?res:debug_every==1?last_res:prev_res,16);
     fprintf(stderr, "%+.2" RF "g", RT(constres));
     fprintf(stderr, " " COLOR_YELLOW "A" COLOR_RESET "%" RF "g", RT(alpha));
     //fprintf(stderr, " " COLOR_YELLOW "d" COLOR_RESET "%.2g", pow(last_res/res,1./alpha));
+    fprintf(stderr, " " COLOR_YELLOW "#" COLOR_RESET "%d", number_of_used);    
+    if(!isnan(err)) fprintf(stderr, " " "%.0" RF "f" COLOR_YELLOW "%%" COLOR_RESET , RT(100*err));
     fprintf(stderr, "\n");
   	if(debug_plot && iter!=0) 
       plot_field3(stdout,a);
       //plot_field3(stdout,grad_f);
     prev_f=f; prev_res=res;
   };
+  //show_grad(a,grad_f);
+};
+
+void update_active(const real* a, real* grad_f, real* f) {
+  static int iter=0;
+  if(active_iterations<1 || iter++%active_iterations) return;
+  // activate all
+  COPYMASK(all_active, active);
+  // compute gradient in all points
+  projected_gradient(a, grad_f, f);
+  // make fast spins active
+  number_of_used=deactivate_slow(grad_f, 1, active_threshold);
+  // recompute energy and gradient
+  projected_gradient(a, grad_f, f);
 };
 
 real quasynorm(real* __restrict__ x) {
@@ -52,9 +84,26 @@ void integrate(int N, void (*F)(const real* x, real* g, realp* E), real T, real*
     fprintf(stderr, COLOR_RED "Warning:" COLOR_RESET " Runge-Kutta convergence error: %" RF "g\n", RT(err));
 };
 
+void projected_gradient2(const real* __restrict__ arg, real* __restrict__ grad, realp* __restrict__ energy) {
+    skyrmion_gradient(arg, grad, energy);
+    real t=rsqrt(normsq(3*SIZE, grad));
+    project_to_tangent(arg, grad);
+    real p=rsqrt(normsq(3*SIZE, grad));
+    fprintf(stderr, "proj grad rat %" RF "g%%\n", RT(p/t*100));
+};
+
+/*
+void projected_gradient_activate(const real* __restrict__ arg, real* __restrict__ grad, realp* __restrict__ energy) {
+  projected_gradient(arg, grad, energy);
+  activate_fast_and_adjacent(grad, 1, active_threshold);
+};
+*/
+
 int skyrmion_steepest_descent(real* __restrict__ x, 
 int mode, real mode_param, real epsilon, int max_iter) 
 {
+  COPYMASK(all_active, active);
+  number_of_used=number_of_active;
 /*
   return flow_descend(
     SIZE*3, (real*)x, 
@@ -67,13 +116,117 @@ int mode, real mode_param, real epsilon, int max_iter)
 */
 	return steepest_descend(
 		SIZE*3, (real*)x, 
+    //projected_gradient_activate,
     projected_gradient,
 		mode, mode_param, epsilon, max_iter,
 		skyrmion_display, 
-		quasynorm
+		quasynorm,
+    update_active
 	);
+
+  COPYMASK(all_active, active);
+  number_of_used=number_of_active;  
 };
 
+int skyrmion_better_steepest_descent(
+real* __restrict__ x, real epsilon, int max_iter
+) 
+{
+  // init mask
+  COPYMASK(all_active, active);
+  number_of_used=number_of_active;
+
+  // allocate memory
+  real* grad=ralloc(3*SIZE);
+  real* dir=ralloc(3*SIZE);
+  real* lambda=ralloc(SIZE);
+
+  // initialize state
+  realp last_f=-INFINITY, f=NAN;
+  real res=NAN, last_res=0;
+  real constres=NAN;
+  int status=1;
+  int count_constant_f=0;
+
+  constres=normalize(x);
+  // start iterations
+  int iter; for(iter=1; iter<max_iter; iter++) {
+    hamiltonian_hessian(x, grad);
+    f=skyrmion_energy_given_hessian(x, grad);
+    for(int n=0; n<SIZE; n++) {
+      if(!ISACTIVE(active,n)) continue;
+      real l=lambda[n]=dot3(grad+3*n, x+3*n);
+      for3(j) grad[3*n+j]-=l*x[3*n+j];
+    };
+    real res2=normsq(3*SIZE, grad);
+
+    // check exit condition
+    res=rsqrt(res2/SIZE); assert(!isnan(res));
+    if(res+constres<epsilon) { // If solution is found
+      status=0; break; 
+    };
+    if(stop_signal>0) {
+      fprintf(stderr, COLOR_YELLOW "Optimization aborted\n" COLOR_RESET);
+      stop_signal=0;
+      break;
+    }; 
+    if(last_f==f) {
+      if(count_constant_f++>10) { 
+        fprintf(stderr, "Maximum precision is reached\n");
+        status=2; break; 
+      };
+    };
+
+    // compute step size
+    hamiltonian_hessian(grad, dir);
+    real pAp=0;
+    for(int n=0; n<SIZE; n++) {
+      if(!ISACTIVE(active,n)) continue;
+      tangent3(x+3*n,dir+3*n);
+      for3(j) dir[3*n+j]-=lambda[n]*grad[3*n+j];
+      pAp+=dot3(grad+3*n, dir+3*n);
+      //fprintf(stderr, COLOR_BLUE "%d" COLOR_RESET " %"RF"g\n",n,RT(pAp));
+    };
+    real alpha=rabs(res2/pAp);
+    // compute next approximatiob
+    constres=0;
+    for(int n=0; n<SIZE; n++) {
+      if(!ISACTIVE(active,n)) continue;
+      for3(j) x[3*n+j]-=alpha*grad[3*n+j];
+      constres+=normalize3(x+3*n);
+    };
+
+    // update active spins
+    update_active(x, grad, &f);
+    // report progress
+    skyrmion_display(iter,x,grad,f,res,constres,alpha,last_f,last_res,NAN);
+
+    // save statistics
+    last_f=f; last_res=res;
+  };
+  skyrmion_display(-iter,x,grad,f,res,constres,NAN,last_f,last_res,NAN);
+  //free memory
+  free(grad); free(dir); free(lambda);
+  // reset mask
+  COPYMASK(all_active, active);
+  number_of_used=number_of_active; 
+
+  return status; 
+};
+
+
+int skyrmion_minimize(real* __restrict__ x, real epsilon, int max_iter) 
+{
+  switch(single_mode) {
+    case 0: 
+      return skyrmion_steepest_descent(x, SDM_PROGR, 0.1, epsilon, max_iter);
+    case 1:
+      return skyrmion_better_steepest_descent(x, epsilon, max_iter);
+    default:
+      fprintf(stderr, COLOR_RED COLOR_BOLD "Error:" COLOR_RESET "Unknown image minimizer %d\n", single_mode);
+      exit(1);
+  };
+};
 
 //////////////////////////////////////////////////////
 // EMP optimization
@@ -157,7 +310,7 @@ void energy_display(FILE* file) {
 };
 
 void path_display(int iter, real* __restrict__ mep, real* __restrict__ grad_f
-, realp f, real res, real constres, real alpha, realp last_f, real last_res) {
+, realp f, real res, real constres, real alpha, realp last_f, real last_res, real err) {
   if(!post_optimization && (res<100*epsilon || iter>max_iter/2)) {
       //fprintf(stderr,COLOR_YELLOW "Climbing is on." COLOR_RESET " Residue %" RF "g\n",res);
       post_optimization=1;
@@ -173,6 +326,7 @@ void path_display(int iter, real* __restrict__ mep, real* __restrict__ grad_f
     watch_number(res,debug_every==1?last_res:prev_res,16);
     fprintf(stderr, "%+.2" RF "g", RT(constres));
     fprintf(stderr, " " COLOR_YELLOW "A" COLOR_RESET "%" RF "g", RT(alpha));
+    fprintf(stderr, " %" RF "g" COLOR_YELLOW "%%" COLOR_RESET , RT(100*err));
     fprintf(stderr, COLOR_FAINT " %s" COLOR_RESET, post_optimization?"Climbing":"");
     fprintf(stderr, "\n");
     if(debug_plot && iter!=0) {
@@ -393,6 +547,8 @@ void projected_path_gradient(const real* __restrict__ arg, real* __restrict__ ou
 int path_steepest_descent(real* __restrict__ path, int mode, 
   real mode_param, real epsilon, int max_iter) 
 {
+  COPYMASK(all_active, active);
+  number_of_used=number_of_active;
   real updated_param=mode_param;
   //if(mode==SDM_CONSTANT) updated_param=mode_param/sizep;
   return steepest_descend(
@@ -401,6 +557,7 @@ int path_steepest_descent(real* __restrict__ path, int mode,
     mode, 
     updated_param, epsilon, max_iter,
     path_display, 
-    path_normalize
+    path_normalize,
+    NULL
   );
 };

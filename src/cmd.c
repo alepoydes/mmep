@@ -16,11 +16,15 @@ int long max_iter=10000;
 real mode_param=0.2;
 real param2=NAN;
 int mode=SDM_PROGR;
+int single_mode=0;
 int integrator=0;
 int debug_plot=0;
 int debug_every=1000;
 int save_octave=0;
 real dipole_negligible=0.001;
+real active_threshold=0;
+int active_iterations=0;
+int do_energy_shift=1;
 
 const char* outdir=NULL;
 const char default_outdir[]="tmp";
@@ -39,10 +43,14 @@ void showUsage(const char* program, const char* info, const char* options_desc) 
 \n   -i INT  Set maximum number of iterations\
 \n   -r INT  Progress will be shown every given iteration\
 \n   -I INT  Integrator\
-\n   -m INT  Optimization method\
+\n   -m INT  Optimization method for MEP\
+\n   -M INT  Optimization method for single image\
 \n   -a REAL First parameter for optimization methods\
 \n   -b REAL Second parameter for optimization methods\
 \n   -D PATH Directory to output results\
+\n   -t REAL Threshold of inactivity\
+\n   -u INT  Update active spins eevergy given interation\
+\n   -S      Disable energy shift\
 %s\
 \n", info, program, options_desc);
 };
@@ -52,7 +60,7 @@ const char* info, const char* options_desc,
 const char* optstr, char (*handle)(char opt, const char* arg)
 ) {
   char buf[1024];
-  const char common_opts[]="hpE:e:i:I:r:m:a:b:oOD:";
+  const char common_opts[]="hpE:e:i:I:r:m:a:b:oOD:t:u:SM:";
   strncpy(buf, common_opts, sizeof(buf));
   if(optstr) strncat(buf, optstr, sizeof(buf)-strlen(buf));
   int c;
@@ -74,11 +82,15 @@ const char* optstr, char (*handle)(char opt, const char* arg)
       case 'I': integrator=atoi(optarg); break;
       case 'r': debug_every=atoi(optarg); break;
       case 'm': mode=atoi(optarg); break;
+      case 'M': single_mode=atoi(optarg); break;
       case 'a': mode_param=atof(optarg); break;
       case 'b': param2=atof(optarg); break;
       case 'o': save_octave=1; break;      
       case 'O': save_octave=2; break;      
       case 'D': outdir=strdup(optarg); break;
+      case 't': active_threshold=atof(optarg); break;
+      case 'u': active_iterations=atoi(optarg); break;
+      case 'S': do_energy_shift=0; break;
       case 1000: yydebug=1; break;
       case '?': break;
       default: 
@@ -106,6 +118,7 @@ const char* optstr, char (*handle)(char opt, const char* arg)
   	i++;
   } else parse_lattice(stdin);
 
+  if(do_energy_shift) prepare_energy_shift();
   prepare_dipole_table(dipole_negligible);
 
   if(!outdir) outdir=default_outdir;
@@ -114,10 +127,14 @@ const char* optstr, char (*handle)(char opt, const char* arg)
 };
 
 void print_settings() {
-  fprintf(stderr, "Machine epsilon: %"RF"g (%zd bytes per real)\n", RT(EPSILON), sizeof(real));
-  fprintf(stderr,"Using lattice %dx%dx%dx%d with %d bonds\n",sizeu,sizex,sizey,sizez,sizen);
-  if(active) fprintf(stderr, "Active spins: %d / %d\n", number_of_active, SIZE);
-  else fprintf(stderr, "Active spins: all / %d\n", SIZE);
+  fprintf(stderr, COLOR_BOLD "Machine epsilon:" COLOR_RESET " %"RF"g (%zd bytes per real)\n", RT(EPSILON), sizeof(real));
+  fprintf(stderr,COLOR_BOLD "Using lattice %dx%dx%dx%d with %d bonds\n",sizeu,sizex,sizey,sizez,sizen);
+  if(all_active) fprintf(stderr, COLOR_BOLD "Active spins:" COLOR_RESET " %d / %d\n", number_of_active, SIZE);
+  else fprintf(stderr, COLOR_BOLD "Active spins:" COLOR_RESET " all / %d\n", SIZE);
+  fprintf(stderr,COLOR_BOLD "Active spins gradient thr.:" COLOR_RESET " %"RF"g\n", RT(active_threshold));
+  fprintf(stderr,COLOR_BOLD "Update active every" COLOR_RESET " %d-th iteration\n", active_iterations);
+  fprintf(stderr,COLOR_BOLD "Energy shift" COLOR_RESET " %"RF"g per atom\n", RT(energy_shift_per_atom));
+  fprintf(stderr,COLOR_BOLD "Image optimizer" COLOR_RESET " %s\n", single_mode==0?"old":"new");  
 };
 
 void oct_save_lattice(FILE* file) {

@@ -8,12 +8,15 @@ extern long int max_iter;
 extern real mode_param;
 extern real param2;
 extern int mode;
+extern int single_mode;
 extern int integrator;
 extern int debug_plot;
 extern int debug_every;
 extern int save_octave;
 extern real dipole_negligible;
 extern const char* outdir;
+extern real active_threshold;
+extern int active_iterations;
 
 void print_settings();
 

@@ -3,6 +3,7 @@
 
 #include "vector.h"
 
+extern real energy_shift_per_atom;
 // Physical parameters
 extern real magnetic_field[3];
 extern real* nonuniform_field;
@@ -62,18 +63,24 @@ extern real temperature;
 //#define INDEX(u,x,y,z) ((((u)*sizex+(x))*sizey+(y))*sizez+(z))
 int INDEX(int u, int x, int y, int z);
 #define UNPACK(id,u,x,y,z) { z=id%sizez; y=(id/sizez)%sizey; x=(id/sizey/sizez)%sizex; u=id/sizex/sizey/sizez; }
-
 #define SIZE (sizex*sizey*sizez*sizeu)
 
 // Spins in the domain may be in use or not.
 // If a spin is not active then boundary conditions on the atom is free.
 extern char* active;
+extern char* all_active;
 
+#define FREEMASK(mask) { if(mask) free(mask); mask=NULL; }
 #define ALLOCATEMASK(mask) { if(!(mask)) { (mask)=(char*)calloc(1+(SIZE>>3), sizeof(char)); assert(mask);}; }
 #define ISACTIVE(mask, id) (!(mask) || ((mask)[(id)>>3] & (1<<((id) & 7))))
 #define SETACTIVE(mask, id) { ALLOCATEMASK(mask); (mask)[(id)>>3]|=1<<((id) & 7); }
 #define SETPASSIVE(mask, id) { ALLOCATEMASK(mask); (mask)[(id)>>3]&=~(1<<((id) & 7)); }
+#define COPYMASK(src, dst) { ALLOCATEMASK(dst); if(src) { for(int i=0; i<1+(SIZE>>3); i++) dst[i]=src[i]; } else { for(int i=0; i<1+(SIZE>>3); i++) dst[i]=0xff; }; }
 extern int number_of_active;
+extern int number_of_used;
+
+int activate_fast_and_adjacent(const real* grad, int sizep, real threshold);
+int deactivate_slow(const real* grad, int sizep, real threshold);
 
 extern int* positions;
 
@@ -82,6 +89,7 @@ void set_tip_field(const real dir[3], const real pos[3]);
 
 void skyrmion_energy(const real* __restrict__ arg, realp energy[6]);
 void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real energy[6]);
+real skyrmion_energy_given_hessian(const real* __restrict__ arg, real* __restrict__ hess_grad);
 
 void skyrmion_gradient(const real* __restrict__ arg, real* __restrict__ grad, realp* __restrict__ energy);
 void projected_gradient(const real* __restrict__ arg, real* __restrict__ grad, realp* __restrict__ energy);
@@ -120,6 +128,7 @@ void append_skyrmion(const real center[3], real distance, real winding,
 
 void group_generator(const real* __restrict__ spins, int axis, real* __restrict__ gen);
 
+void prepare_energy_shift();
 void prepare_dipole_table(real negligible);
 
 // given coordinates in the space, returns atom in the unit cell and index of the cell having the coordinates

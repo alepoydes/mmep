@@ -244,11 +244,11 @@ class Lattice(object):
         def frame(i): return path[i]
         return animate(init, update, path.shape[0], interval)
 
-    def coffee_plot(self, state, axis=None, fig=None, spin=0, smooth=False):
+    def coffee_plot(self, state, axis=None, fig=None, spin=0, smooth=False, scale=1):
         if axis is None:
             fig,axis=plt.subplots()
         matrix=np.eye(3)
-        matrix[:2,:2]=np.array(self.translations).T
+        matrix[:2,:2]=np.array(self.translations).T*scale
         szx=self.size[0]*matrix[0,0]+self.size[1]*matrix[0,1]
         szy=self.size[0]*matrix[1,0]+self.size[1]*matrix[1,1]
         interpolation='lanczos' if smooth else 'none'
@@ -594,6 +594,30 @@ class Lattice(object):
             nei=None
             c=None
         return (ergy, pei, nei, c, zei, zev)
+
+    def tune_saddle(self, state, hessian=None, mask=None, maxiter=500, epsilon=1e-8, maxstep=1e-1, degree=2):
+        if hessian is None:
+            hessian=self.lambda_hessian()
+        #ergy0=sys.energy(state, hessian(state))[0]
+        for it in range(maxiter):
+            oper, N, embed, project, ergy, grad=self.lambda_restricted_hessian(state, hessian=hessian, mask=mask)
+            vals, vecs=sparse.linalg.eigsh(oper, k=degree, which='SA')
+            grad=project_to_tangent_space(state, grad)
+            res=norm(grad)
+            if res<epsilon and np.sum(vals<0)<=1: break
+            projected_grad=project(grad)
+            grad_in_subbasis=np.dot(projected_grad, vecs)
+            projected_grad-=np.dot(vecs, grad_in_subbasis)
+            #print(': {:.3} {}'.format(miser.norm(projected_grad), grad_in_subbasis))
+            msk=vals<0; msk[0]=False
+            newvals=vals.copy(); newvals[msk]/=-10
+            step=dot(projected_grad,projected_grad)/dot(projected_grad,oper(projected_grad))
+            delta=embed(np.dot(vecs, grad_in_subbasis/newvals)+step*projected_grad)
+            l=norm(delta)
+            if l>maxstep: delta*=maxstep/l
+            state=normalize(state-delta)
+            #print('{}: E={:.2} grad={:.2} eigs={} delta={:.2}'.format(it, ergy-ergy0, res, vals,l))
+        return state
 
 def rate(initial, transition, kT=1, gammaovermu=1):
     ergy0, pei0, nei0, a0, zei0, zev0=initial

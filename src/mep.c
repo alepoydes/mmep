@@ -13,15 +13,28 @@
 #include <time.h>
 #include <getopt.h>
 
-int min_sizep=7; // Number of nodes on path
-int max_sizep=25; // Number of nodes on path
+int* number_of_images=NULL; // Number of images on MEP
 real random_noise=0;
 int do_not_relax_ends=0;
 
+int* parse_image_list(char* str) {
+  int len=0;
+  int alloc=0;
+  int* data=NULL;
+  int number;
+  while((number=strtol(str, &str, 0))) {
+    if(alloc<=len) { alloc=2*alloc+1; data=realloc(data, sizeof(int)*alloc); };
+    data[len++]=number;
+    if(*str==',') str++;
+  };
+  if(alloc<=len) { alloc++; data=realloc(data, sizeof(int)*alloc); };  
+  data[len]=0;
+  return data;
+};
+
 const char options_desc[]="\
 \n   -P      Enable GNUPlot output of MEP\
-\n   -n INT  Minimum number of images on MEP\
-\n   -N INT  Maximum number of images on MEP\
+\n   -n INTs List of number of images on MEP\
 \n   -z      Disable translations preserving energy\
 \n   -R REAL Noise amplitude for initial path\
 \n   -q      Skip ends relaxation\
@@ -30,8 +43,9 @@ const char options_desc[]="\
 char handle_option(char opt, const char* arg) {
   switch(opt) {
     case 'P': debug_plot=1; debug_plot_path=1; break;
-    case 'n': min_sizep=atoi(optarg); break;
-    case 'N': max_sizep=atoi(optarg); break;
+    case 'n': 
+      number_of_images=parse_image_list(optarg);
+      break;
     case 'z': remove_zero_modes=1; break;
     case 'R': random_noise=atof(optarg); break;
     case 'q': do_not_relax_ends=1; break;
@@ -44,11 +58,20 @@ int main(int argc, char** argv) {
   mode=SDM_CONSTANT;
   int i=init_program(argc,argv,
     "Calculate MEP for magnetic systems.", options_desc,
-    "zPN:n:R:q", handle_option);
+    "zPn:R:q", handle_option);
   if(i<argc) {
     fprintf(stderr, COLOR_RED "There are unused parameters:" COLOR_RESET "\n");
     while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
   };
+
+  if(!number_of_images) {
+    number_of_images=(int*)malloc(sizeof(int)*4); assert(number_of_images);
+    number_of_images[0]=7;
+    number_of_images[1]=13;
+    number_of_images[2]=25;
+    number_of_images[3]=0;
+  };
+  
 
   // Initializaton
   print_settings();
@@ -58,16 +81,27 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Initial path noise amplitude: %" RF "g\n", RT(random_noise));
 
   // Set initial path size
-  sizep=min_sizep; 
-  if(sizep<initial_states_count) sizep=initial_states_count;
-  if(max_sizep<sizep) sizep=max_sizep;
+  if(number_of_images[0]<=0) {
+    fprintf(stderr, COLOR_RED "Error: " COLOR_RESET "Number of images should be defined\n");
+    exit(1);
+  };
+  if(number_of_images[0]<initial_states_count) {
+    fprintf(stderr, COLOR_RED "Error: " COLOR_RESET "Number of images is less than number of images in config file\n");
+    exit(1);
+  };
 
-  fprintf(stderr, "Images on path: %d in [%d, %d]\n", sizep, min_sizep, max_sizep);  
+  int max_sizep=*number_of_images;
+  fprintf(stderr, "Number of images:");
+  for(int* ptr=number_of_images; *ptr>0; ptr++) {
+    if(*ptr>max_sizep) max_sizep=*ptr;
+    fprintf(stderr, " %d", *ptr);    
+  };
+  fprintf(stderr, "\n");
 
   // relax initial images if requested
   int size=3*SIZE; // Dimension of vector containing skyrmionic solutions
   if(initial_states_count<2) {
-    fprintf(stderr, COLOR_RED COLOR_BOLD "There should be at least two images in the path\n" COLOR_RESET);
+    fprintf(stderr, COLOR_RED COLOR_BOLD "Error: " COLOR_RESET "There should be at least two images in config file\n" COLOR_RESET);
     exit(1);
   };
   if(do_not_relax_ends) {
@@ -78,51 +112,58 @@ int main(int argc, char** argv) {
     for(int p=0; p<initial_states_count; p++) {
       if(relax_state[p]) {
         fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Relaxing image" COLOR_RESET " %d\n", p);
-        skyrmion_steepest_descent(initial_state+size*p, SDM_PROGR, 0.1, epsilon, max_iter);
+        skyrmion_minimize(initial_state+size*p, epsilon, max_iter);
       };
     };
   };
 
-  // find two minima
+  // find minima
   fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Initializing path\n" COLOR_RESET);
-
-  real* path=ralloc(size*max_sizep); 
   path_steepest_descent_init(max_sizep);
 
-  // opying initial images and interpolation
-  copy_vector(size, initial_state, path);
-  int last_image=0;
-  for (int n=1; n<initial_states_count; n++) {
-    int next_image=n*sizep/(initial_states_count-1)-1;
-    while(last_image>=next_image) next_image=last_image+1;
-    assert(next_image<sizep); 
-    copy_vector(size, initial_state+size*n, path+size*next_image);
-    // Set initial path as geodesic approximation between given states
-    skyrmion_geodesic(random_noise/(next_image-last_image), next_image-last_image+1, path+size*last_image);
-    last_image=next_image;
-  };
-  assert(last_image==sizep-1);
-
-  fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP" COLOR_RESET " for %d images\n", sizep);
   // MEP calculation
   post_optimization=0;
-  path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
-  while(2*(sizep-1)+1<=max_sizep) {
+
+  real* prev_path=initial_state;
+  int prev_count=initial_states_count;
+  real* path=NULL;
+  int* current_number_of_images=number_of_images;
+  while((sizep=*(current_number_of_images++))>0) {
     // interpolating path
+    path=ralloc(size*sizep); 
+    copy_vector(size, prev_path, path);
+    int last_image=0;
+    for (int n=1; n<prev_count; n++) {
+      int next_image=n*sizep/(prev_count-1)-1;
+      while(last_image>=next_image) next_image=last_image+1;
+      assert(next_image<sizep); 
+      copy_vector(size, prev_path+size*n, path+size*next_image);
+      // Set initial path as geodesic approximation between given states
+      skyrmion_geodesic(random_noise/(next_image-last_image), next_image-last_image+1, path+size*last_image);
+      last_image=next_image;
+    };
+    assert(last_image==sizep-1);
+    /*
     for(int p=sizep-1; p>0; p--) copy_vector(size, path+p*size, path+2*p*size);
     for(int p=1; p<sizep; p++) {
-      if(p==1) skyrmion_middle_third_order(path+2*size*(p-1), path+2*size*p, path+2*size*(p+1), path+size*(2*p-1));
+      if(p==1) skyrmion_middle_third_order(path+ 2*size*(p-1), path+2*size*p, path+2*size*(p+1), path+size*(2*p-1));
       else if(p==sizep-1) skyrmion_middle_third_order(path+2*size*p, path+2*size*(p-1), path+2*size*(p-2), path+size*(2*p-1));
       else skyrmion_middle_fourth_order(path+2*size*(p-2), path+2*size*(p-1), path+2*size*p, path+2*size*(p+1), path+size*(2*p-1));
       //skyrmion_middle(path+2*size*(p-1), path+2*size*p, path+size*(2*p-1));
     };
-    sizep=2*(sizep-1)+1;
-    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Increasing number of images" COLOR_RESET " to %d\n", sizep);
-    //post_optimization=0;    
+    */
+    // Path optimization
+    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP" COLOR_RESET " for %d images\n", sizep);
     path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
+    // update previous path
+    free(prev_path);
+    prev_path=path;
+    prev_count=sizep;
   };
+  sizep=prev_count;
   // Ouput result
   flat_distance=0;
+  assert(path);
   energy_evaluate(path);
   realp max_energy=energy[0];
   realp min_energy=energy[0];  
@@ -185,5 +226,6 @@ int main(int argc, char** argv) {
   // Deinitialization
   path_steepest_descent_deinit();
   free(path); 
+  free(number_of_images);
   return 0;
 };

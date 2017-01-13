@@ -11,6 +11,11 @@
 int skyrmion_steepest_descent(real* __restrict__ x, 
 int mode, real mode_param, real epsilon, int max_iter);
 
+int skyrmion_better_steepest_descent(
+real* __restrict__ x, real epsilon, int max_iter
+);
+
+int skyrmion_minimize(real* __restrict__ x, real epsilon, int max_iter);
 //////////////////////////////////////////////////////
 // MEP optimization
 

@@ -20,8 +20,8 @@ free free
 0
 [external field]
 # muB = 5.788e-5 eV/T = 5.788e-2 meV/T
-#{0, 0, -2.1*0.25*-0.05788}
-{0, 0, 0}
+#uniform {0, 0, -2.1*0.25*-0.05788}
+uniform {0, 0, 0}
 [magnetic anisotropy]
 #0.4 {0, 0, 1}
 0.293 {0, 0, 1}
@@ -41,7 +41,7 @@ free free
 -1.5 {-cos(pi/6), -sin(pi/6)}
 -1.5 {cos(pi/6), -sin(pi/6)}
 [cut]
-sphere {200/2, 116*2*cos(pi/6)/2} 50
+sphere {200/2, 116*2*cos(pi/6)/2} 100
 [image]
 vertex {200/2, 116*2*cos(pi/6)/2} 20, 0, -1
 [image]
