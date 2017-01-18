@@ -26,46 +26,17 @@ int play_mode=0;
 int speed=1;
 int step=0;
 
-void parseMEP(FILE* file) {
-  int pos=0; int line=0;
-  char buf[128]; 
-  while(fgets(buf,sizeof(buf),file)) {
-    //buf[127]=0;
-    line++;
-    if(sizef>=sizea) { // Allocating buffer
+real* allocate_image_on_mep() {
+  if(sizef>=sizea) { // Allocating buffer
       sizea=sizea*2+1;
       mep=(real*)realloc(mep,sizeof(real)*SIZE*3*sizea);
-    };
-    long double pd[3],vd[3];
-    int c=sscanf(buf,"%Lg %Lg %Lg %Lg %Lg %Lg",pd,pd+1,pd+2,vd,vd+1,vd+2);
-    //real p[3]={pd[0],pd[1],pd[2]};
-    real v[3]={vd[0],vd[1],vd[2]};
-    if(c!=6) {
-      if(pos==0) { // skipping head
-        continue;
-      };
-      // end of frame
-      if(pos!=SIZE) {
-        fprintf(stderr,"Line %d: Frame %d is too short\n",line,sizef);
-        break;
-      };
-      sizef++; pos=0; 
-      fprintf(stderr, "line %d frame %d\n",line,sizef);
-    } else {
-      // next point of field
-      for3(c) mep[3*(SIZE*sizef+pos)+c]=v[c]; pos++;
-      if(pos>SIZE) {
-        fprintf(stderr,"Line %d: Frame %d is too large\n",line,sizef);
-        break;
-      }
-    };
   };
-  if(pos!=SIZE) {
-    fprintf(stderr,"Incomplete last frame\n");
-  } else sizef++;
-  if(sizef<1) {
-    fprintf(stderr,"No frames read\n");
-  };
+  return mep+3*SIZE*(sizef++);
+};
+
+void parseMEP(FILE* file) {
+  int count=load_path_from_gnuplot(file, allocate_image_on_mep);
+  assert(count==sizef); 
 };
 
 void evaluateEnergy() {

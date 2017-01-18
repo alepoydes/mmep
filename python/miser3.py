@@ -8,14 +8,31 @@ import scipy.sparse as sparse
 import scipy.sparse.linalg
 import functools
 import warnings
-import re
-import os
+import re  
+import os  
 #from scipy.sparse import csc_matrix
 
 # Operation on vector fields.
 def normalize(A):
     """Return unit vectors directed as vectors of A"""
     return A/np.expand_dims(np.sqrt(np.sum(A**2,axis=-1)),-1)
+
+def norm(x): return np.sqrt(np.sum(x**2))
+
+def dot(x,y): return np.sum(x*y)
+
+# x - initial point, y - final point, dx - vector at x.
+# Возвращает вектор dx параллельно перенесенный из x в y.
+def transport(x,y,dx):
+    # x и y должны быть единичной длины
+    n=normalize(np.cross(x,y)) # ось вращения
+    x2=np.cross(x,n) # вектора n, x2 образуют базис в касательном пр-ве в x
+    y2=np.cross(y,n) # вектора n, y2 образуют базис в касательном пр-ве в y
+    # раскладываем dx по базису в x
+    b=dot(dx,n); c=dot(dx,x2); 
+    # паралельно перенесенный вектор имеет в базисе y,n,y2 те же координаты,
+    # что и x в базисе x,n,x2
+    return b*n+c*y2 
 
 def project_to_tangent_space(state, grad): 
     pgrad=grad.copy()
@@ -24,11 +41,7 @@ def project_to_tangent_space(state, grad):
     pgrad-=np.expand_dims(np.sum(state*grad, axis=-1),-1)*state
     pgrad[mask]=0
     return pgrad
-
-def norm(x): return np.sqrt(np.sum(x**2))
-
-def dot(x,y): return np.sum(x*y)
-
+ 
 def spher_distance(a,b,flat=False):
     if flat: return np.sqrt(np.sum((a-b)**2))
     else: 

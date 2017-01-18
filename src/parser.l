@@ -32,6 +32,7 @@ EXP ([Ee][-+]?[0-9]+)
 "[dzyaloshinskii moriya vector]" { return SECDMV; }
 "[image]" { return SECIMAGE; }
 "[load image]" { return SECLOADIMAGE; }
+"[load from gnuplot]" { return SECIMAGEFROMGNUPLOT; }
 "[positions]" { return SECPOSITIONS; }
 "[dipole]" { return SECDIPOLE; }
 "[temperature]" { return SECTEMP; }

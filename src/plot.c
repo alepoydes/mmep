@@ -86,3 +86,48 @@ void animate_path(FILE* file, int sizep, const real* __restrict__ mep) {
 		plot_field3(file,mep+n*size);
 };
 
+
+int load_path_from_gnuplot(FILE* file, real*(*allocate_image)()) {
+  int sizef=0;
+  int pos=0; int line=0;
+  char buf[128]; 
+  real* image=NULL;
+  while(fgets(buf,sizeof(buf),file)) {
+    //buf[127]=0;
+    line++;
+    long double pd[3],vd[3];
+    int c=sscanf(buf,"%Lg %Lg %Lg %Lg %Lg %Lg",pd,pd+1,pd+2,vd,vd+1,vd+2);
+    //real p[3]={pd[0],pd[1],pd[2]};
+    real v[3]={vd[0],vd[1],vd[2]};
+    if(c!=6) {
+      if(!image) { // skipping head
+        continue;
+      };
+      // end of frame
+      if(pos!=SIZE) {
+        fprintf(stderr,"  Line %d: Frame %d is too short\n",line,sizef);
+        break;
+      };
+      sizef++; pos=0; image=NULL;
+      fprintf(stderr, "  Line %d: Start of frame %d\n",line,sizef);
+    } else {
+	  if(!image) {
+		image=allocate_image();
+		assert(image);
+	  };
+	  // next point of field
+      for3(c) image[3*pos+c]=v[c]; pos++;
+      if(pos>SIZE) {
+        fprintf(stderr,"  Line %d: Frame %d is too large\n",line,sizef);
+        break;
+      }
+    };
+  };
+  if(pos!=SIZE) {
+    fprintf(stderr,"  Incomplete last frame\n");
+  } else sizef++;
+  /*if(sizef<1) {
+    fprintf(stderr,"  No frames read\n");
+  };*/
+  return image?sizef+1:sizef;
+};

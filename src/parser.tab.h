@@ -65,17 +65,18 @@ extern int yydebug;
     SECLOADIMAGE = 275,
     SECPOSITIONS = 276,
     SECDIPOLE = 277,
-    SECTEMP = 278,
-    SECCUT = 279,
-    TIP = 280,
-    PLANE = 281,
-    SPHERE = 282,
-    VERTEX = 283,
-    UNIFORM = 284,
-    RANDOM = 285,
-    RELAX = 286,
-    BCFREE = 287,
-    BCPERIODIC = 288
+    SECIMAGEFROMGNUPLOT = 278,
+    SECTEMP = 279,
+    SECCUT = 280,
+    TIP = 281,
+    PLANE = 282,
+    SPHERE = 283,
+    VERTEX = 284,
+    UNIFORM = 285,
+    RANDOM = 286,
+    RELAX = 287,
+    BCFREE = 288,
+    BCPERIODIC = 289
   };
 #endif
 
@@ -84,7 +85,7 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 48 "src/parser.y" /* yacc.c:1909  */
+#line 50 "src/parser.y" /* yacc.c:1909  */
 
  uint sz;
  int i;
@@ -92,7 +93,7 @@ union YYSTYPE
  real vec[3];
  char* fn;
 
-#line 96 "src/parser.tab.h" /* yacc.c:1909  */
+#line 97 "src/parser.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

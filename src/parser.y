@@ -9,6 +9,7 @@
 #include "debug.h"	
 #include "skyrmion.h"	
 #include "assert.h"	
+#include "plot.h"	
 
 void validate();
 void realloc_u(int sz);
@@ -16,6 +17,7 @@ void realloc_n(int sz);
 real get_nearest(const real* invtrans, const real* pos, int* u, int* x, int* y, int* z);
 void load_positions(const char* posfilename);
 void load_skyrmion(const char* spinsfilename, real* image);
+void load_from_gnuplot(int need_to_relax, const char* spinsfilename);
 void set_uniform(real* dir, real* spin);
 void cut_by_plane(real* o, real* n);
 void cut_sphere(real* o, real r);
@@ -61,7 +63,7 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 %token EOL
 
 %token SECS SECEF SECMA SECBC SECTV SECUC SECN SECEC
-%token SECDMV SECIMAGE SECLOADIMAGE SECPOSITIONS SECDIPOLE
+%token SECDMV SECIMAGE SECLOADIMAGE SECPOSITIONS SECDIPOLE SECIMAGEFROMGNUPLOT
 %token SECTEMP SECCUT
 
 %token TIP
@@ -122,6 +124,11 @@ section:
 		real* image=allocate_image($2); 
 		load_skyrmion($4, image);
 		free($4);
+		}
+	| SECIMAGEFROMGNUPLOT is_to_relax EOL FILENAME EOL {
+		//if(!positions) yyerror("Atom positions should be loaded befor image\n"); 
+		load_from_gnuplot($2, $4);
+		free($4);		
 		}
 	| SECPOSITIONS EOL FILENAME EOL {
 		if(positions) yyerror("Not unique atom positions definition\n"); 
@@ -524,6 +531,22 @@ void load_skyrmion(const char* spinsfilename, real* image) {
 	exit(1); };
 	// finalizing
 	fclose(spinsfile);
+};
+
+void load_from_gnuplot(int need_to_relax, const char* spinsfilename) {
+	real* curried_allocate_image() {
+		fprintf(stderr, "  Allocating image\n"); 
+		return allocate_image(need_to_relax);
+	};
+	// Open files
+	FILE* spinsfile=fopen(spinsfilename, "r");
+	if(!spinsfile) { 
+		fprintf(stderr, "Can not open " COLOR_RED "%s" COLOR_RESET "\n", spinsfilename); 
+		exit(1); 
+	};
+	fprintf(stderr, "Reading " COLOR_BLUE "%s" COLOR_RESET "\n", spinsfilename); 
+	int count=load_path_from_gnuplot(spinsfile, curried_allocate_image);
+	fprintf(stderr, "  Number of loaded images: %d\n", count);
 };
 
 void set_uniform(real* dir, real* spin) {
