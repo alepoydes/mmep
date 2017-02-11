@@ -1,10 +1,17 @@
 #!/bin/bash
 
+#BASE="$@"
+#DESC=`echo $BASE | tr -dc '[:alnum:]\n\r'`
+
+BASE="$(basename $1)_$(basename $2)_$(basename $3)"
+DESC=$BASE
+
 PREFIX="tmp/"
 PARAM=$1
 shift 1
+ 
 
-DESC=`echo $@ | tr -dc '[:alnum:]\n\r'`
+
 PREFIX="${PREFIX}${DESC}/"
 lock="${PREFIX}/.lock"
 

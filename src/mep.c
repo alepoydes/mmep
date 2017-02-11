@@ -132,17 +132,18 @@ int main(int argc, char** argv) {
     // interpolating path
     path=ralloc(size*sizep); 
     copy_vector(size, prev_path, path);
-    int last_image=0;
     for (int n=1; n<prev_count; n++) {
-      int next_image=n*sizep/(prev_count-1)-1;
-      while(last_image>=next_image) next_image=last_image+1;
+      int next_image=n*(sizep-1)/(prev_count-1);
+      int last_image=(n-1)*(sizep-1)/(prev_count-1);
+      assert(last_image>=0);
       assert(next_image<sizep); 
+      assert(last_image<=next_image);
+      if(next_image==last_image) continue;
+      //fprintf(stderr, "mep:141: %d %d %d\n", n, last_image, next_image);
       copy_vector(size, prev_path+size*n, path+size*next_image);
       // Set initial path as geodesic approximation between given states
       skyrmion_geodesic(random_noise/(next_image-last_image), next_image-last_image+1, path+size*last_image);
-      last_image=next_image;
     };
-    assert(last_image==sizep-1);
     /*
     for(int p=sizep-1; p>0; p--) copy_vector(size, path+p*size, path+2*p*size);
     for(int p=1; p<sizep; p++) {
@@ -152,11 +153,11 @@ int main(int argc, char** argv) {
       //skyrmion_middle(path+2*size*(p-1), path+2*size*p, path+size*(2*p-1));
     };
     */
+    free(prev_path);    
     // Path optimization
     fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP" COLOR_RESET " for %d images\n", sizep);
     path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
     // update previous path
-    free(prev_path);
     prev_path=path;
     prev_count=sizep;
   };
@@ -208,11 +209,18 @@ int main(int argc, char** argv) {
     fprintf(stderr, COLOR_YELLOW "Computing energy contributions\n" COLOR_RESET);
     realp* contr=(realp*)malloc(sizeof(realp)*sizep*6);
     for(int p=0; p<sizep; p++) skyrmion_energy(path+p*SIZE*3, contr+6*p);
+    fprintf(stderr, COLOR_YELLOW "Computing gradient\n" COLOR_RESET);
+    real* grad=ralloc(sizep*SIZE*3);
+    for(int p=0; p<sizep; p++) {
+      hamiltonian_hessian(path+3*SIZE*p, grad+3*SIZE*p);
+      subtract_field(grad+3*SIZE*p);
+    };
     file=open_file(outdir, "/mep.oct", TRUE);    
     if(file) {
       oct_save_init(file);
       oct_save_lattice(file);
       oct_save_path(file,"PATH",path,sizep);
+      oct_save_path(file,"GRAD",grad,sizep);
       oct_save_vectorp(file,"ENERGY",energy,sizep);
       oct_save_vectorp(file,"DISTANCE",distance,sizep);
       oct_save_vectorp(file,"DIFF",diff,sizep);
@@ -222,6 +230,8 @@ int main(int argc, char** argv) {
       oct_save_finish(file);
       fclose(file);
     };
+    free(grad);
+    free(contr);
   };
   // Deinitialization
   path_steepest_descent_deinit();

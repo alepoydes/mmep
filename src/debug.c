@@ -40,7 +40,12 @@ void watch_number(realp next, realp prev, int digits) {
 	assert(np<sizeof(bufp));
 	//int ap=0; 
 	uint d=0;
+	char zeromode=1;
+	fprintf(stderr,COLOR_GREEN);
 	uint c; for(c=0; c<nn && nn==np && bufn[c]==bufp[c]; c++) {
+		if(zeromode && bufn[c]!='0' && bufn[c]!='.') {
+			zeromode=0; fprintf(stderr,COLOR_RESET);
+		};
 		if(bufn[c]>='0' && bufn[c]<='9') d++;
 		//if(bufn[c]=='.') ap=1;
 		fputc(bufn[c],stderr);

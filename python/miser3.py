@@ -12,6 +12,85 @@ import re
 import os  
 #from scipy.sparse import csc_matrix
 
+nptype=np.double
+nbtype=nb.f8
+
+# Мотивация для оптимизации на многообразии
+# f(x)=dot(x,A(x))/2+dot(x,B)=max, g(x)=dot(x,x)-1=0, A=A^*
+# f(x+dx)=f(x)+dot(dx,A(x)+B)+dot(dx,A(dx))/2
+# g(x+dx)=g(x)+2*dot(x,dx)+dot(dx,dx)
+# l(x,k)=f(x)-k*g(x)
+# l(x+dx,k)=l(x,k)+[dot(dx,A(x)+B)-k*2*dot(x,dx)]+[dot(dx,A(dx))/2-k*dot(dx,dx)]
+# Выбираем a таким, что линейная по dx часть перпендикулярна к x (нормали к поверхности уровня g).
+# d_x l(x,a)=A(x)+B-2*k*x
+# dot(x,A(x)+B-2*k*x)=0 => k=dot(x,A(x)+B)/dot(x,x)/2
+# Таким образом для g(x)=0 => k=dot(x,A(x)+B)/2 и следовательно
+# для фиксированных x, таких что g(x)=0:
+# L(x+dx)=l(x+dx,k)=l(x,k)+[dot(dx,A(x)+B)-dot(x,A(x)+B)*dot(x,dx)]
+#                  +[dot(dx,A(dx))-dot(x,A(x)+B)*dot(dx,dx)]/2
+# При фиксированном x функцию L можно рассматривать как квадратичную форму от dx:
+# L(x+dx)=dot(dx,A(x,dx))/2+dot(dx,B(x)),
+# A(x,dx)=A(dx)-dot(x,A(x)+B)*dx,
+# B(x)=A(x)+B-dot(x,A(x)+B)*x.
+
+# Минимизация бисопряженным градиентом на многообразии:
+# A(x,dx) - квадратичная часть функционала в окр. точки x на приращении dx,
+# A: M x T_x -> T_x
+# Β - линейная часть функционалав в окр. точки x,
+# B : M -> T_x
+# P(x) - проецирует точку x на ближайшую точку на многообразии,
+# P : R^n -> M
+# Τ(x,y,dx) - паралельно переносит вектор dx из точки x в точку y.
+# T : M x M x T_x -> T_y
+# Минимизируемая функция
+# f(x+dx)=f(x)+dot(dx,A(x,dx))/2-dot(dx,B(x))
+# A линейно по dx, следовательно Α(x,0)=0.
+def bigc_manifold(A, B, P, T, x0, maxiter=10, epsilon=1e-14, maxstep=np.inf, debug=0):
+    def dot(m1,m2): return np.sum(m1*m2)
+    x0=P(x0)
+    i0=r0=-B(x0) # невязка (лежит в касательном пространстве) в точке x0
+    rho0=alpha=omega0=1 # константа
+    v0=p0=0 # сопряженные направления (лежат в касательном пространстве)
+    for it in range(maxiter):
+        # debug
+        r0=-B(x0)
+        if debug>0 and it%debug==0:
+            print(it,':',np.sqrt(dot(r0,r0)))
+        #print(it,':',omega0)
+        rho1=dot(i0, r0)
+        if np.abs(omega0)<epsilon: 
+            #print('omega',omega0)
+            return x0
+        beta=(rho1/rho0)*(alpha/omega0)
+        p0=r0+beta*(p0-omega0*v0)
+        v0=A(x0,p0)
+        iv=dot(i0,v0)
+        if np.abs(iv)<epsilon: 
+            #print('iv',iv)
+            return x0
+        alpha=rho1/iv
+        lp=np.sqrt(dot(p0,p0))
+        #if alpha*lp>maxstep: alpha=maxstep/lp; print('step reduced')
+        h=P(x0+alpha*p0)
+        # if h is accurate return h
+        s=T(x0,h,r0-alpha*v0)
+        i0=T(x0,h,i0); p0=T(x0,h,p0); v0=T(x0,h,v0); 
+        t=A(h,s)
+        tt=dot(t,t)
+        if np.abs(tt)<epsilon: 
+            #print('omega0',dot(t,s)/tt)
+            return h
+        omega0=dot(t,s)/tt
+        ls=np.sqrt(dot(s,s))
+        if omega0*ls>maxstep: omega0=maxstep/ls; print('step reduced')
+        x0=P(h+omega0*s)
+        # if x1 is accurate then return x1
+        r0=T(h,x0,s-omega0*t)
+        # index increment
+        rho0=rho1
+        i0=T(h,x0,i0); p0=T(h,x0,p0); v0=T(h,x0,v0); 
+    return x0
+
 # Operation on vector fields.
 def normalize(A):
     """Return unit vectors directed as vectors of A"""
@@ -20,6 +99,8 @@ def normalize(A):
 def norm(x): return np.sqrt(np.sum(x**2))
 
 def dot(x,y): return np.sum(x*y)
+
+def pwdot(x,y): return np.sum(x*y,axis=-1)
 
 # x - initial point, y - final point, dx - vector at x.
 # Возвращает вектор dx параллельно перенесенный из x в y.
@@ -33,6 +114,9 @@ def transport(x,y,dx):
     # паралельно перенесенный вектор имеет в базисе y,n,y2 те же координаты,
     # что и x в базисе x,n,x2
     return b*n+c*y2 
+
+def spherical_triangle_area(a,b,c):
+    return 2*np.arctan(pwdot(a,np.cross(b,c))/(1+pwdot(a,b)+pwdot(a,c)+pwdot(b,c)))
 
 def project_to_tangent_space(state, grad): 
     pgrad=grad.copy()
@@ -64,7 +148,7 @@ def center(point, direction):
     proj=np.array([[[1.,0.],[0.,1.]]])-direction.reshape((-1,2,1))*direction.reshape((-1,1,2))
     mat=proj.sum(axis=0)
     prod=np.sum(np.sum(proj*point.reshape((-1,1,2)),axis=0),axis=-1)
-    return np.linalg.solve(mat, prod)
+    return np.linalg.solve(mat.astype(np.float), prod.astype(np.float))
 
 def distance(point, origin):
     return np.sqrt(np.sum((point.reshape((-1,point.shape[-1]))-origin.reshape((-1,point.shape[-1])))**2,axis=-1))
@@ -95,7 +179,7 @@ def animate(init, update, N, interval=50):
     plt.close(anim._fig)
     return HTML(anim.to_html5_video())
 
-@nb.jit(nb.f8[:](nb.f8[:],nb.f8[:]), nopython=True, cache=True)
+@nb.jit(nbtype[:](nbtype[:],nbtype[:]), nopython=True, cache=True)
 def cross(a,b):
     return np.array([a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]])
 
@@ -138,15 +222,17 @@ class Lattice(object):
     @property
     def number_of_atoms(self): return np.prod(self.size)*self.card
 
-
     def random(self):
         """Returns random vector field on the lattice"""
-        return normalize(np.random.randn(*(self.size+(self.card,3))))
+        return normalize(np.random.randn(*(self.size+(self.card,3)), dtype=nptype))
 
     def uniform(self,vec):
         """Returns uniform vector field on the lattice directed as vector vec"""
-        return np.tile(normalize(np.reshape(vec,(1,)*self.dim+(1,3))),self.size+(self.card,1))
-    
+        return np.tile(normalize(np.reshape(vec,(1,)*self.dim+(1,3))),self.size+(self.card,1), dtype=nptype)
+
+    def __str__(self):
+        return "size:{}\nboundary conditions: {}\ntranslation vectors:\n{}\nSpins in unit cell:\n{}\nBonds:\n{}\nExternal field:\n{}\nAnisottopy:\n{}\n{}\nExchange constant: {}\nDzyaloshinskii-Moriya vectors:\n{}\nMu: {}\nGamma: {}\n".format(self.size, self.bc, self.translations,self.cell,self.bonds,self.H,self.K,self.K0,self.J,self.D,self.mu,self.gamma)
+
     def axes(self):
         """Given a lattice returns list of ranges of every index."""
         return map(lambda i: np.arange(i), self.size)
@@ -260,6 +346,7 @@ class Lattice(object):
     def coffee_plot(self, state, axis=None, fig=None, spin=0, smooth=False, scale=1):
         if axis is None:
             fig,axis=plt.subplots()
+        state=state.astype(np.float)
         matrix=np.eye(3)
         matrix[:2,:2]=np.array(self.translations).T*scale
         szx=self.size[0]*matrix[0,0]+self.size[1]*matrix[0,1]
@@ -294,7 +381,7 @@ class Lattice(object):
         assert(np.all(bc<=1))
         assert(np.all(bc>=0))
 
-        @nb.jit(nb.f8[:,:,:,:](nb.f8[:,:,:,:]), nopython=True, cache=True)
+        @nb.jit(nbtype[:,:,:,:](nbtype[:,:,:,:]), nopython=True, cache=True)
         def fun(S):
             if((sx,sy,card,3)!=S.shape): raise Exception("Wrong vector field dimensions")
             ix=np.empty(sx, dtype=np.int32)
@@ -364,7 +451,7 @@ class Lattice(object):
             return dE
         return fun
 
-    def lambda_energy_contributions(self, radius=None, periodic=False):
+    def lambda_energy_contributions(self, radius=None):
         if(self.dim!=2): raise Exception("Only 2D lattices are supported")
         K=self.K; mu=self.mu; H=self.H
         K0=self.K0
@@ -383,7 +470,7 @@ class Lattice(object):
         assert(np.all(bc<=1))
         assert(np.all(bc>=0))
        
-        @nb.jit(nb.f8[:](nb.f8[:,:,:,:]), nopython=True, cache=True)
+        @nb.jit(nbtype[:](nbtype[:,:,:,:]), nopython=True, cache=True)
         def fun(S):
             if((sx,sy,card,3)!=S.shape): raise Exception("Wrong vector field dimensions")
             ix=np.empty(sx, dtype=np.int32)
@@ -459,7 +546,7 @@ class Lattice(object):
             raise Exception("Magnetic field must be parallel to Oz axis")
         sx=self.size[0]; sy=self.size[1]; card=self.card
         H=self.H[2]
-        @nb.jit((nb.f8[:,:,:,:],nb.f8[:,:,:,:]), nopython=True, cache=True)
+        @nb.jit((nbtype[:,:,:,:],nbtype[:,:,:,:]), nopython=True, cache=True)
         def fun(S, hess):
             E2=0.; E1=0.
             for x in range(sx):
@@ -487,7 +574,7 @@ class Lattice(object):
         """Compute energy gradient for the <system> on the state S."""
         return hess-self.H.reshape((1,)*self.dim+(1,3))
 
-    def lambda_restricted_hessian(self, S, hessian=None, mask=None):
+    def lambda_restricted_hessian(self, S, hessian=None, mask=None, grad=None, energy=None):
         shp=S.shape[:-1]; shp0=S.shape
         if hessian is None:
             #print('Compiling Hessian')
@@ -503,7 +590,12 @@ class Lattice(object):
         #print('compute Hessian on the state')
         hess=hessian(S)
         #print('compute gradient and Lagrange multipliers')
-        ergy, grad=self.energy(S, hess)
+        if grad is None and energy is None: 
+            energy, grad=self.energy(S, hess)
+        elif energy is None: 
+            energy=self.energy(S, hess)[0]
+        elif grad is None:
+            grad=self.gradient(S, hess)
         MU=np.expand_dims(np.sum(grad*S,axis=-1), -1)
         #print('compute basis in the tangent space')
         e0=np.empty(shp0); e0[...,0]=-S[...,1]; e0[...,1]=S[...,0]; e0[...,2]=S[...,2]
@@ -540,7 +632,7 @@ class Lattice(object):
             return project(S2)
 
         oper=sparse.linalg.LinearOperator((2*N, 2*N), restricted_hessian)
-        return oper, 2*N, embed, project, ergy, grad
+        return oper, 2*N, embed, project, energy, grad
 
 
     def fourier(self, S):
@@ -575,10 +667,8 @@ class Lattice(object):
     def generator(self,vec,S):
         return self.ifourier(self.generator_fourier(vec,self.fourier(S)))
 
-    def restricted_harmonic(self, S, hessian=None, threshold=1e-3, mask=None):
-        if hessian is None: 
-            hessian=self.lambda_hessian()
-        oper, N, embed, project, ergy, grad=self.lambda_restricted_hessian(S, hessian=hessian, mask=mask)
+    def restricted_harmonic(self, S, hessian=None, threshold=1e-3, mask=None, grad=None, energy=None):
+        oper, N, embed, project, ergy, grad=self.lambda_restricted_hessian(S, hessian=hessian, mask=mask, grad=grad, energy=energy)
         hes=matrix(oper)
         ei, ev=np.linalg.eigh(hes)
         idx=np.argsort(ei)
@@ -609,28 +699,62 @@ class Lattice(object):
         return (ergy, pei, nei, c, zei, zev)
 
     def tune_saddle(self, state, hessian=None, mask=None, maxiter=500, epsilon=1e-8, maxstep=1e-1, degree=2):
+        self.tune(state, nnev=1, hessian=hessian, mask=mask, maxiter=maxiter, epsilon=epsilon, maxstep=maxstep, degree=degree)
+
+    def tune(self, state, nnev=0, hessian=None, mask=None, maxiter=500, epsilon=1e-8, maxstep=1e-1, degree=2, inv_mult=0.1, debug=0, zerotol=1e-4):
         if hessian is None:
             hessian=self.lambda_hessian()
-        #ergy0=sys.energy(state, hessian(state))[0]
+        if inv_mult<0: inv_mult=-inv_mult
+        ergy0=None
         for it in range(maxiter):
             oper, N, embed, project, ergy, grad=self.lambda_restricted_hessian(state, hessian=hessian, mask=mask)
+            if ergy0 is None: ergy0=ergy
             vals, vecs=sparse.linalg.eigsh(oper, k=degree, which='SA')
             grad=project_to_tangent_space(state, grad)
             res=norm(grad)
-            if res<epsilon and np.sum(vals<0)<=1: break
+            if res<epsilon and np.sum(vals<-zerotol)==nnev: break
             projected_grad=project(grad)
             grad_in_subbasis=np.dot(projected_grad, vecs)
             projected_grad-=np.dot(vecs, grad_in_subbasis)
             #print(': {:.3} {}'.format(miser.norm(projected_grad), grad_in_subbasis))
-            msk=vals<0; msk[0]=False
-            newvals=vals.copy(); newvals[msk]/=-10
+            msk=vals<-zerotol; msk[:nnev]=np.logical_not(msk[:nnev])
+            newvals=vals.copy(); newvals[msk]*=-inv_mult
+            newvals[np.abs(vals)<zerotol]=np.Infinity;
             step=dot(projected_grad,projected_grad)/dot(projected_grad,oper(projected_grad))
             delta=embed(np.dot(vecs, grad_in_subbasis/newvals)+step*projected_grad)
             l=norm(delta)
             if l>maxstep: delta*=maxstep/l
             state=normalize(state-delta)
-            #print('{}: E={:.2} grad={:.2} eigs={} delta={:.2}'.format(it, ergy-ergy0, res, vals,l))
+            if debug>0 and it % debug==0:
+                print('{}: E={:.2} grad={:.2} eigs={} delta={:.2}'.format(it, ergy-ergy0, res, vals,l))
         return state
+
+    def tune_bicg(self, state, hessian=None, maxiter=500, epsilon=1e-8, maxstep=1e-1, debug=0):
+        if hessian is None: hessian=self.lambda_hessian()
+        def a(x,dx): 
+            adx=hessian(dx)
+            grad=self.gradient(x,hessian(x))
+            l=np.sum(grad*x,axis=-1)
+            return adx-l[...,None]*dx
+        def b(x):
+            grad=self.gradient(x,hessian(x))
+            l=np.sum(grad*x,axis=-1)
+            return grad-l[...,None]*x
+        return bigc_manifold(a,b,normalize,transport,state,maxiter=maxiter,maxstep=maxstep, debug=debug)
+        
+
+    def top_charge_triangle(self, state, a, b, c):
+        def roll(state, shift):
+            return np.roll(np.roll(state,shift[1],axis=1),shift[0],axis=0)
+        va=roll(state[...,a[1],:],a[0])
+        vb=roll(state[...,b[1],:],b[0])
+        vc=roll(state[...,c[1],:],c[0])
+        return np.sum(spherical_triangle_area(va,vb,vc))/4/np.pi
+
+    def topological_charge(self, state, k=0):
+        t1=self.top_charge_triangle(state,((0,0),k),((1,0),k),((0,1),k))+self.top_charge_triangle(state,((1,1),k),((0,1),k),((1,0),k))
+        t2=self.top_charge_triangle(state,((0,0),k),((1,1),k),((1,0),k))+self.top_charge_triangle(state,((0,0),k),((0,1),k),((1,1),k))           
+        return (t1,t2)
 
 def rate(initial, transition, kT=1, gammaovermu=1):
     ergy0, pei0, nei0, a0, zei0, zev0=initial
@@ -767,8 +891,9 @@ class LatticeFromOct(Lattice):
 
 def read_doubles(fileobj, N):
     """Read N lines from fileobj each containing single integer"""
-    res=np.empty(N, dtype=np.float64)
-    for l in range(N): res[l]=float(fileobj.readline())
+    res=np.empty(N, dtype=nptype)
+    for l in range(N): 
+        res[l]=np.fromstring(fileobj.readline(), dtype=nptype, sep='\n')
     return res
 
 #def read_sparse(fileobj, nnz, rows, columns):
@@ -825,7 +950,78 @@ def load_results(filename):
     if path.shape[3]==1: path=path.squeeze(axis=3)
     ergy=octdata['CONTRIBUTIONS'] if 'CONTRIBUTIONS' in octdata else octdata['ENERGY']
     distance=octdata['DISTANCE'].squeeze() if 'DISTANCE' in octdata else None
-    return (sys, path, ergy, distance)
+    if 'GRAD' in octdata:
+        grad=np.transpose(octdata['GRAD'], axes=(0,2,3,4,1,5))
+        if grad.shape[3]==1: grad=grad.squeeze(axis=3)
+    else: grad=None
+    return (sys, path, ergy, distance, grad)
+
+def write_ndarray(fileobj, array, name):
+    if array.ndim==1: array=array[:,None]
+    fileobj.write("# name: {}\n".format(name))
+    fileobj.write("# type: matrix\n")
+    fileobj.write("# ndims: {}\n".format(array.ndim))
+    for n in array.shape: fileobj.write("{} ".format(n))
+    fileobj.write("\n")
+    for n in array.flatten(order='F'): fileobj.write("{}\n".format(n))
+    fileobj.write("\n\n")
+
+def write_scalar(fileobj, scalar, name):
+    fileobj.write("# name: {}\n".format(name))
+    fileobj.write("# type: scalar\n")
+    fileobj.write("{}\n\n\n".format(scalar))
+
+def write_lattice(fileobj, sys):
+    if sys.dim==2:
+        size=np.array(sys.size+(1,))
+        cell=np.zeros((2,3),dtype=nptype); cell[:,:2]=np.asarray(sys.cell)
+        translations=np.eye(3,dtype=nptype); translations[:2,:2]=sys.translations
+        bonds=np.zeros((len(sys.bonds),5))
+        bonds[:,:2]=np.array([n[0] for n in sys.bonds])
+        bonds[:,3]=np.array([n[1] for n in sys.bonds])
+        bonds[:,4]=np.array([n[2] for n in sys.bonds])
+    else:
+        size=np.array(sys.size)
+        cell=np.asarray(sys.cell)
+        translations=sys.translations
+        bonds=np.zeros((len(sys.bonds),5))
+        bonds[:,:3]=np.array([n[0] for n in sys.bonds])
+        bonds[:,3]=np.array([n[1] for n in sys.bonds])
+        bonds[:,4]=np.array([n[2] for n in sys.bonds])
+    write_ndarray(fileobj, np.asarray(size), 'SZ')
+    write_ndarray(fileobj, cell, 'CELL')
+    write_ndarray(fileobj, translations, 'TRANSLATIONS')
+    write_ndarray(fileobj, bonds, 'BONDS')
+    write_ndarray(fileobj, sys.H, 'H')
+    write_ndarray(fileobj, sys.K0, 'K0')
+    write_ndarray(fileobj, sys.K, 'K')
+    write_ndarray(fileobj, sys.J, 'J')
+    write_ndarray(fileobj, sys.D, 'D')
+    if sys.mu!=0: write_scalar(fileobj, sys.mu, 'mu')
+    write_scalar(fileobj, sys.gamma, 'gamma')
+    write_ndarray(fileobj, sys.bc, 'BC')
+
+def save_results(fileobj, sys, path, energy=None, distance=None, hessian=None, grad=None):
+    if isinstance(fileobj, str): fileobj=open(fileobj, 'w')
+    fileobj.write("# Created by Miser library\n")
+    write_lattice(fileobj, sys)
+    if energy is None:
+        energy_contributions=sys.lambda_energy_contributions()
+        energy=np.array([energy_contributions(path[n]) for n in range(path.shape[0])])
+    if distance is None:
+        distance=np.cumsum([0]+[spher_distance(a,b,flat=False) for a,b in zip(path[1:],path[:-1])])
+    if path.ndim==5: path=path[...,None,:,:]
+    path=np.transpose(path, axes=(0,4,1,2,3,5))
+    write_ndarray(fileobj, path, "PATH")
+    if energy.ndim==1: write_ndarray(fileobj, energy, "ENERGY")
+    else: write_ndarray(fileobj, energy, "CONTRIBUTIONS") 
+    if not distance is None:
+        write_ndarray(fileobj, distance, 'DISTANCE') 
+    if not grad is None:
+        if grad.ndim==5: grad=grad[...,None,:,:]
+        grad=np.transpose(grad, axes=(0,4,1,2,3,5))
+        write_ndarray(fileobj, grad, "GRAD")    
+    fileobj.close()
 
 # Graphics
 
@@ -849,17 +1045,23 @@ def plot_against(data):
     plt.setp(xticklabels, visible=False)
     plt.setp(yticklabels, visible=False)
 
-def load_dataset(folder, return_distance=False, suffix='/mep.oct'):
-    systems=[]; paths=[]; energies=[]; distances=[]
+def load_dataset(folder, suffix='/mep.oct'):
+    systems=[]; paths=[]; energies=[]; distances=[]; grads=[]
     folders=next(os.walk(folder))[1]
     folders.sort()
     print(folders)
     for dirname in folders:
-        sys, path, ergy, distance=load_results(folder+'/'+dirname+suffix)
+        sys, path, ergy, distance, grad=load_results(folder+'/'+dirname+suffix)
         systems.append(sys) 
         paths.append(path) 
         energies.append(ergy)
         distances.append(distance)
-    if return_distance: 
-        return systems, paths, energies, distances
-    return systems, paths, energies
+        grads.append(grad)
+    return systems, paths, energies, distances, grads
+
+def save_dataset(directory, systems, paths):
+    if not os.path.exists(directory): os.makedirs(directory)
+    for n, (sys, path) in enumerate(zip(systems, paths)):
+        dirname="{}/{}".format(directory, n)
+        if not os.path.exists(dirname): os.makedirs(dirname)
+        save_results("{}/mep.oct".format(dirname), sys, path)

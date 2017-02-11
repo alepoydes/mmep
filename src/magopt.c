@@ -229,7 +229,7 @@ int skyrmion_minimize(real* __restrict__ x, real epsilon, int max_iter)
 };
 
 //////////////////////////////////////////////////////
-// EMP optimization
+// MEP optimization
 
 int sizep=0; // Number of nodes on path
 int debug_plot_path=0;
@@ -311,10 +311,10 @@ void energy_display(FILE* file) {
 
 void path_display(int iter, real* __restrict__ mep, real* __restrict__ grad_f
 , realp f, real res, real constres, real alpha, realp last_f, real last_res, real err) {
-  if(!post_optimization && (res<100*epsilon || iter>max_iter/2)) {
+  /*if(!post_optimization && (res<100*epsilon || iter>max_iter/2)) {
       //fprintf(stderr,COLOR_YELLOW "Climbing is on." COLOR_RESET " Residue %" RF "g\n",res);
       post_optimization=1;
-  }; 
+  };*/ 
   static realp prev_f=NAN; static realp prev_res=NAN;
   if(iter==1) { prev_f=f; prev_res=res; };
   if(iter%debug_every==0 || iter<0) {
@@ -551,7 +551,7 @@ int path_steepest_descent(real* __restrict__ path, int mode,
   number_of_used=number_of_active;
   real updated_param=mode_param;
   //if(mode==SDM_CONSTANT) updated_param=mode_param/sizep;
-  return steepest_descend(
+  int retcode=steepest_descend(
     3*SIZE*sizep, (real*)path, 
     projected_path_gradient,
     mode, 
@@ -560,4 +560,16 @@ int path_steepest_descent(real* __restrict__ path, int mode,
     path_normalize,
     NULL
   );
+  if(post_optimization) return retcode;
+  post_optimization=1;
+  retcode=steepest_descend(
+    3*SIZE*sizep, (real*)path, 
+    projected_path_gradient,
+    mode, 
+    updated_param, epsilon, max_iter,
+    path_display, 
+    path_normalize,
+    NULL
+  );
+  return retcode;
 };
