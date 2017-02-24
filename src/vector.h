@@ -5,6 +5,10 @@
 #include <math.h>
 #include <float.h>
 
+#define bool char
+#define true 1
+#define false 0
+
 #ifdef DOUBLE
 	#define real double
 	#define rsqrt(x) sqrt(x)
@@ -138,6 +142,8 @@ realp dist_sphere_sq3(const real* a, const real* b);
 #define for3(j) for(int j=0;j<3;j++)
 #define random_real() ((real)rand()/(real)(RAND_MAX))
 #define add_random_vector3(alpha, a, b) { (b)[0]=(a)[0]+(alpha)*(random_real()-0.5); (b)[1]=(a)[1]+(alpha)*(random_real()-0.5); (b)[2]=(a)[2]+(alpha)*(random_real()-0.5);  }
+
+#define let3(dest, src) { (dest)[0]=(src)[0]; (dest)[1]=(src)[1]; (dest)[2]=(src)[2];  };
 
 void add_random_cone3(real alpha, const real* A, real* B);
 void matrixmult3(const real* a, const real* b, real* prod);

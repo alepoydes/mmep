@@ -8,7 +8,7 @@ LIBQUAD:=-lquadmath
 OBJDIR:=obj
 BINDIR:=bin
 SRCDIR:=src
-SRC:=parser.tab.c parser.lex.c vector.c skyrmion.c plot.c optim.c debug.c cmd.c octave.c integra.c magopt.c
+SRC:=parser.tab.c parser.lex.c vector.c skyrmion.c plot.c optim.c debug.c cmd.c octave.c integra.c magopt.c cut.c
 SRCGL:=display.c bitmap.c
 
 all:

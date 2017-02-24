@@ -10,6 +10,7 @@
 #include "skyrmion.h"	
 #include "assert.h"	
 #include "plot.h"	
+#include "cut.h"
 
 void validate();
 void realloc_u(int sz);
@@ -19,15 +20,15 @@ void load_positions(const char* posfilename);
 void load_skyrmion(const char* spinsfilename, real* image);
 void load_from_gnuplot(int need_to_relax, const char* spinsfilename);
 void set_uniform(real* dir, real* spin);
-void cut_by_plane(real* o, real* n);
-void cut_sphere(real* o, real r);
+//void cut_by_plane(real* o, real* n);
+//void cut_sphere(real* o, real r);
 void append_anisotropy(real scalar, real k[3]);
 real* allocate_image(int);
 real apply(const char* name, real arg);
 real get_var(const char* name);
 int get_var_int(const char* name);
 void set_uniform_field(const real vec[3]);
-
+void set_domain(primitive_t* pr);
 
 int capacityu, capacityn, dmv_size, ec_size, capacity_anisotropy;
 
@@ -45,7 +46,7 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 
 %left '+' '-'
 %left '*' '/'
-%left NEG
+%left NEG '!'
 
 %union {
  uint sz;
@@ -53,6 +54,7 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
  real r;
  real vec[3];
  char* fn;
+ primitive_t* pr;
 }
 
 /* declare tokens */
@@ -64,10 +66,10 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 
 %token SECS SECEF SECMA SECBC SECTV SECUC SECN SECEC
 %token SECDMV SECIMAGE SECLOADIMAGE SECPOSITIONS SECDIPOLE SECIMAGEFROMGNUPLOT SECCURRENT
-%token SECTEMP SECCUT
+%token SECTEMP SECCUT SECDOMAIN
 
 %token TIP
-%token PLANE SPHERE
+%token <pr> PLANE SPHERE UNIVERSE
 %token VERTEX UNIFORM RANDOM RELAX
 %token BCFREE BCPERIODIC
 
@@ -75,6 +77,7 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 %type <vec> vector
 %type <r> exp
 %type <i> integer is_to_relax
+%type <pr> cutlist domain
 
 %%
 
@@ -141,7 +144,15 @@ section:
 		if(temperature!=0) yyerror("Temperature is set twice\n"); 
 		temperature=$3; 
 		}
-	| SECCUT EOL cutlist
+	| SECCUT EOL cutlist {
+		fprintf(stderr, COLOR_RED"Warning"COLOR_RESET": Section [cut] at %d is "COLOR_RED"depricated"COLOR_RESET". Use "COLOR_BOLD"[domain]"COLOR_RESET" instead\n", yylineno);
+		set_domain($3);
+		}
+	| SECDOMAIN EOL domain EOL {
+		if(all_active!=NULL) 
+			fprintf(stderr, COLOR_RED"Warning"COLOR_RESET" at line %d: domain have been already set.", yylineno);
+		set_domain($3);
+		}
 
 is_to_relax: { $$=0; }
 	| RELAX { $$=1; }
@@ -220,11 +231,15 @@ currentlist:
 		for3(j) spin_polarized_current[j]+=$2[j];
 		}
 
-cutlist:
+cutlist: { $$=new_universe(); }
 	| cutlist PLANE vector vector EOL { 
-		cut_by_plane($3,$4); }
+		$$=new_intersection($1, new_plane($3, $4));
+		//cut_by_plane($3,$4); 
+		}
 	| cutlist SPHERE vector exp EOL { 
-		cut_sphere($3,$4); }		
+		$$=new_intersection($1, ($4)>0?new_sphere($3, $4):new_complement(new_sphere($3, -($4))));
+		//cut_sphere($3,$4); 
+		}		
 
 imagelist:
 	| imagelist VERTEX vector exp ',' exp ',' exp EOL {
@@ -267,6 +282,17 @@ exp:  ID '(' exp ')' { $$=apply($1, $3); }
 	| REAL
 	| INTEGER { $$=$1; }
 	| SZ { $$=(int)$1; } 
+
+domain: UNIVERSE { $$=new_universe(); }
+	| PLANE vector vector { $$=new_plane($2, $3); }
+	| SPHERE vector exp { 
+		if(!($3>0)) yyerror("Radius should be positive");
+		$$=new_sphere($2, $3);
+		}
+	| domain '+' domain { $$=new_union($1, $3); }
+	| domain '*' domain { $$=new_intersection($1, $3); }
+	| '!' domain  { $$=new_complement($2); }
+	| '(' domain ')' { $$=$2; }
 
 vector: '{' exp ',' exp ',' exp '}' { 
 		$$[0]=$2; $$[1]=$4; $$[2]=$6; }
@@ -542,7 +568,6 @@ void load_skyrmion(const char* spinsfilename, real* image) {
 	// finalizing
 	fclose(spinsfile);
 };
-
 void load_from_gnuplot(int need_to_relax, const char* spinsfilename) {
 	real* curried_allocate_image() {
 		fprintf(stderr, "  Allocating image\n"); 
@@ -573,7 +598,27 @@ void set_uniform(real* dir, real* spin) {
 	number_of_active=count;
 };
 
-void cut_by_plane(real* o, real* n) {
+void set_domain(primitive_t* pr) {
+	fprintf(stderr,COLOR_BLUE"Domain: "COLOR_RESET); fprint_primitive(stderr, pr); fprintf(stderr,"\n");
+	int first=all_active==NULL;
+	int count=0;
+	forall(u,x,y,z) {
+		real vec[3];
+		COORDS(u,x,y,z,vec);
+		bool a=does_belong_to_primitive(pr, vec);
+		int i=INDEX(u,x,y,z);	
+		if(first) {
+			if(a) { SETACTIVE(all_active, i); count++; }
+			else { SETPASSIVE(all_active, i); };
+		} else {
+			if(a) { count++; }
+			else { SETPASSIVE(all_active, i); };
+		};
+	};
+	number_of_active=count;
+};
+
+/*void cut_by_plane(real* o, real* n) {
 	int first=all_active==NULL;
 	int count=0;
 	real d=dot3(o,n);
@@ -613,4 +658,4 @@ void cut_sphere(real* o, real r) {
 		};
 	};
 	number_of_active=count;	
-};
+};*/

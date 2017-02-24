@@ -69,15 +69,17 @@ extern int yydebug;
     SECCURRENT = 279,
     SECTEMP = 280,
     SECCUT = 281,
-    TIP = 282,
-    PLANE = 283,
-    SPHERE = 284,
-    VERTEX = 285,
-    UNIFORM = 286,
-    RANDOM = 287,
-    RELAX = 288,
-    BCFREE = 289,
-    BCPERIODIC = 290
+    SECDOMAIN = 282,
+    TIP = 283,
+    PLANE = 284,
+    SPHERE = 285,
+    UNIVERSE = 286,
+    VERTEX = 287,
+    UNIFORM = 288,
+    RANDOM = 289,
+    RELAX = 290,
+    BCFREE = 291,
+    BCPERIODIC = 292
   };
 #endif
 
@@ -86,15 +88,16 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 50 "src/parser.y" /* yacc.c:1909  */
+#line 51 "src/parser.y" /* yacc.c:1909  */
 
  uint sz;
  int i;
  real r;
  real vec[3];
  char* fn;
+ primitive_t* pr;
 
-#line 98 "src/parser.tab.h" /* yacc.c:1909  */
+#line 101 "src/parser.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

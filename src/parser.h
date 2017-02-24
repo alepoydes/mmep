@@ -1,8 +1,10 @@
 #ifndef PARSE_H
 #define PARSE_H
 
-#include <stdio.h>
 #include "vector.h"
+#include "cut.h"
+
+#include <stdio.h>
 
 /* interface to the lexer */
 extern int yylineno; /* from lexer */

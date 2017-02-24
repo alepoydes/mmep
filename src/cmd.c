@@ -49,7 +49,7 @@ void showUsage(const char* program, const char* info, const char* options_desc) 
 \n   -b REAL Second parameter for optimization methods\
 \n   -D PATH Directory to output results\
 \n   -t REAL Threshold of inactivity\
-\n   -u INT  Update active spins eevergy given interation\
+\n   -u INT  Update active spins every given interation\
 \n   -S      Disable energy shift\
 %s\
 \n", info, program, options_desc);

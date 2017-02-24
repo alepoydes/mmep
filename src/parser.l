@@ -40,11 +40,13 @@ EXP ([Ee][-+]?[0-9]+)
 "[polarized current]" { return SECCURRENT; }
 "[current]" { return SECCURRENT; }
 "[cut]" { return SECCUT; }
+"[domain]" { return SECDOMAIN; }
 
 "relax" { return RELAX; }
 "tip" { return TIP; }
 "sphere" { return SPHERE; }
 "plane" { return PLANE; }
+"universe" { return UNIVERSE; }
 "vertex" { return VERTEX; }
 "uniform" { return UNIFORM; }
 "random" { return RANDOM; }
@@ -62,7 +64,8 @@ EXP ([Ee][-+]?[0-9]+)
 "{" | 
 "}" | 
 "+" | 
-"-" | 
+"-" |
+"!" | 
 "*" |
 "/" |
 "(" |

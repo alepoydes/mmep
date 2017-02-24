@@ -40,8 +40,12 @@ uniform {0, 0, 0}
 -1.5 {cos(pi/6), sin(pi/6)}
 -1.5 {-cos(pi/6), -sin(pi/6)}
 -1.5 {cos(pi/6), -sin(pi/6)}
-[cut]
-sphere {200/2, 116*2*cos(pi/6)/2} 100
+[domain]
+sphere {200/2, 116*2*cos(pi/6)/2} 100)
+#[cut]
+#sphere {200/2, 116*2*cos(pi/6)/2} 100
+[image]
+random
 [image]
 vertex {200/2, 116*2*cos(pi/6)/2} 20, 0, -1
 [image]
