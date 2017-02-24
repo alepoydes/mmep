@@ -43,7 +43,7 @@ void screen() {
 
   fprintf(stderr,"Energy "); 
   watch_number(E,E0,6); E0=E;
-  fprintf(stderr," Damping %" RF "g ", RT(damping));   
+  fprintf(stderr," Damping %" RF "g ", RT(damping));
   fprintf(stderr,COLOR_YELLOW "[/]" COLOR_RESET " dec./inc. ");
   fprintf(stderr,COLOR_YELLOW "\\" COLOR_RESET " neg.    \n");
 
@@ -87,9 +87,11 @@ void dspins(const real* X, real* G, realp* E) {
   skyrmion_gradient(X, G, E);
   forall(u,x,y,z) {
     int i=INDEX(u,x,y,z)*3;
-    real vec[3]; cross3(X+i,G+i,vec);
-    real vec2[3]; cross3(vec,X+i,vec2);
-    for3(c) G[i+c]=vec[c]-damping*vec2[c];
+    real eff[3]; cross3(X+i,spin_polarized_current,eff);
+    for3(j) eff[j]+=G[i+j];
+    real vec[3]; cross3(X+i,eff,vec);
+    real vec2[3]; cross3(X+i,vec,vec2);
+    for3(c) G[i+c]=vec[c]+damping*vec2[c];
   };
 };
 

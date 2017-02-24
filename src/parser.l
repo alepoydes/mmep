@@ -36,6 +36,9 @@ EXP ([Ee][-+]?[0-9]+)
 "[positions]" { return SECPOSITIONS; }
 "[dipole]" { return SECDIPOLE; }
 "[temperature]" { return SECTEMP; }
+"[spin polarized current]" { return SECCURRENT; }
+"[polarized current]" { return SECCURRENT; }
+"[current]" { return SECCURRENT; }
 "[cut]" { return SECCUT; }
 
 "relax" { return RELAX; }

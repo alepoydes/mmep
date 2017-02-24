@@ -66,17 +66,18 @@ extern int yydebug;
     SECPOSITIONS = 276,
     SECDIPOLE = 277,
     SECIMAGEFROMGNUPLOT = 278,
-    SECTEMP = 279,
-    SECCUT = 280,
-    TIP = 281,
-    PLANE = 282,
-    SPHERE = 283,
-    VERTEX = 284,
-    UNIFORM = 285,
-    RANDOM = 286,
-    RELAX = 287,
-    BCFREE = 288,
-    BCPERIODIC = 289
+    SECCURRENT = 279,
+    SECTEMP = 280,
+    SECCUT = 281,
+    TIP = 282,
+    PLANE = 283,
+    SPHERE = 284,
+    VERTEX = 285,
+    UNIFORM = 286,
+    RANDOM = 287,
+    RELAX = 288,
+    BCFREE = 289,
+    BCPERIODIC = 290
   };
 #endif
 
@@ -93,7 +94,7 @@ union YYSTYPE
  real vec[3];
  char* fn;
 
-#line 97 "src/parser.tab.h" /* yacc.c:1909  */
+#line 98 "src/parser.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

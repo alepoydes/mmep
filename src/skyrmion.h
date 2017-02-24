@@ -48,6 +48,7 @@ extern int dipole_count;
 // Dzyaloshinskii Moriya vector for every pair of atoms
 //extern real dzyaloshinskii_moriya_vector[sizen][3];
 extern real* dzyaloshinskii_moriya_vector;
+extern real spin_polarized_current[3];
 // Initial path approximation
 extern int initial_states_count;
 extern real* initial_state;

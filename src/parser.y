@@ -63,7 +63,7 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 %token EOL
 
 %token SECS SECEF SECMA SECBC SECTV SECUC SECN SECEC
-%token SECDMV SECIMAGE SECLOADIMAGE SECPOSITIONS SECDIPOLE SECIMAGEFROMGNUPLOT
+%token SECDMV SECIMAGE SECLOADIMAGE SECPOSITIONS SECDIPOLE SECIMAGEFROMGNUPLOT SECCURRENT
 %token SECTEMP SECCUT
 
 %token TIP
@@ -111,6 +111,7 @@ section:
 		real vec[3]={0,0,1};
 		copy3(vec, translation_vectors[2]);
 		}		
+	| SECCURRENT EOL currentlist 
 	| SECUC EOL uclist 
 	| SECN EOL nlist
 	| SECEC EOL eclist
@@ -208,6 +209,15 @@ dmvlist:
 		if(dmv_size>=capacityn) { capacityn=capacityn*2+1; realloc_n(capacityn); };
 		copy3($2, dzyaloshinskii_moriya_vector+3*dmv_size);
 		dmv_size++;
+		}
+
+currentlist:
+	| currentlist exp vector EOL {
+		mult3($2,$3,$3);
+		for3(j) spin_polarized_current[j]+=$3[j];
+		}
+	| currentlist vector EOL {
+		for3(j) spin_polarized_current[j]+=$2[j];
 		}
 
 cutlist:

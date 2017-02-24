@@ -39,6 +39,8 @@ D {cos(pi/6), -sin(pi/6)}
 D {-cos(pi/6), -sin(pi/6)}
 D {cos(pi/6), sin(pi/6)}
 D {-cos(pi/6), sin(pi/6)}
+#[load from gnuplot] relax
+#"state.gnuplot"
 [image] relax
 vertex {SZ/2, SZ/2*cos(pi/6)} 7, 0, -1
 #random

@@ -43,6 +43,8 @@ real* exchange_constant=NULL;
 real dipole=0;
 // Dzyaloshinskii Moriya vector for every pair of atoms
 real* dzyaloshinskii_moriya_vector=NULL;
+// Spin polarized current
+real spin_polarized_current[3]={0,0,0};
 real* initial_state=NULL;
 int initial_states_count=0;
 int* relax_state=NULL;

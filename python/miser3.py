@@ -3,6 +3,8 @@ import numba as nb
 import matplotlib.pyplot as plt
 from matplotlib import animation, rc
 import matplotlib.transforms as mtransforms
+from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from IPython.display import HTML
 import scipy.sparse as sparse
 import scipy.sparse.linalg
@@ -14,6 +16,30 @@ import os
 
 nptype=np.double
 nbtype=nb.f8
+
+def orts(direction):
+    direction=np.asarray(direction,dtype=np.float); direction/=np.sqrt(np.sum(direction*direction))
+    a=np.cross(direction,[0,0,1] if direction[2]<0.9 else [0,1,0])
+    a/=np.sqrt(np.sum(a*a))
+    b=np.cross(direction,a)
+    return direction,a,b
+    
+def spin_conus(position, direction, vertices, normals, N=10, height=1.):
+    position=np.asarray(position,dtype=float)
+    phi=2*np.pi*np.arange(0,N, dtype=np.float)/N
+    width=height/2.
+    a,b=np.cos(phi)*width,np.sin(phi)*width
+    direction,e,g=orts(direction)
+    direction*=height
+    for k in range(N):
+        v0=position+direction
+        v1=position+a[k-1]*e+b[k-1]*g-direction
+        v2=position+a[k]*e+b[k]*g-direction
+        vertices.append([v0, v1, v2])
+        n=np.cross(v0-v1,v0-v2); n/=np.sqrt(np.sum(n*n))
+        normals.append((n+1)/2)
+    return 
+
 
 # Мотивация для оптимизации на многообразии
 # f(x)=dot(x,A(x))/2+dot(x,B)=max, g(x)=dot(x,x)-1=0, A=A^*
@@ -342,6 +368,28 @@ class Lattice(object):
             return Q
         def frame(i): return path[i]
         return animate(init, update, path.shape[0], interval)
+  
+    def conus_plot(self, field, fig=None, scale=0.5, axis=None):
+        if fig is None: fig=plt.figure(figsize=(10,10))
+        if axis is None: axis = fig.add_subplot(111, projection='3d')
+        s=field.reshape((-1,3))
+        b0=self.atoms().reshape((-1,self.dim))
+        b=np.zeros((b0.shape[0],3))
+        b[:,:self.dim]=b0
+        vertices = []
+        normals = []
+        height=np.min(np.sum(np.asarray(self.translations)**2,axis=-1))*scale
+        for j in range(s.shape[0]):
+            spin_conus(b[j],s[j],vertices,normals,height=height)
+        collection = Poly3DCollection(vertices, linewidths=0)
+        collection.set_facecolors(normals)
+        axis.add_collection3d(collection)
+        border=2*height
+        mn=np.min(b,axis=0); mx=np.max(b,axis=0); center=(mx+mn)/2.; size=np.max(mx-mn)
+        axis.set_xlim(center[0]-size/2-border,center[0]+size/2+border)
+        axis.set_ylim(center[1]-size/2-border,center[1]+size/2+border)
+        axis.set_zlim(center[2]-size/2-border,center[2]+size/2+border)
+        return fig, axis
 
     def coffee_plot(self, state, axis=None, fig=None, spin=0, smooth=False, scale=1):
         if axis is None:
