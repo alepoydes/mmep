@@ -6,11 +6,12 @@
 BASE="$(basename $1)_$(basename $2)_$(basename $3)"
 DESC=$BASE
 
+do_skipping=true
+if [ "$1" = "-S" ]; then do_skipping=false; shift 1; fi
+
 PREFIX="tmp/"
 PARAM=$1
 shift 1
- 
-
 
 PREFIX="${PREFIX}${DESC}/"
 lock="${PREFIX}/.lock"
@@ -35,7 +36,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 		path="${path}$var$val"
 	done
 	path="${path}/"
-	if [ "$(ls -A ${path} 2>/dev/null)" ]; then
+	if [ "$do_skipping" = true ] && [ "$(ls -A ${path} 2>/dev/null)" ]; then
 		echo -e "\e[93mSkipping\e[0m non empty $path"
 	else
 		echo -e "\e[92mPopulating\e[0m ${path}"
