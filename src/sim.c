@@ -220,11 +220,11 @@ int main(int argc, char** argv) {
   copy_vector(SIZE*3,nonuniform_field,external_field);
   // Main loop
   fprintf(stderr, CLEAR_SCREEN);
-  display_buffer=ralloc(SIZE*3); 
   while(!is_aborting) { 
     if(is_new_frame) {
       screen();
-      lockDisplay(); 
+      lockDisplay();
+      if(!display_buffer) display_buffer=ralloc(SIZE*3); 
       copy_vector(3*SIZE,spins,display_buffer); 
       releaseDisplay();
       displayRedraw();
