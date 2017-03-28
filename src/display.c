@@ -132,7 +132,7 @@ void drawField(real* field) {
 	forall(u,x,y,z) {
 		real vec[3]; COORDS(u,x,y,z,vec);
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(active, i)) {
+		if(!ISACTIVE(all_active, i)) {
 			idx[i]=-1;
 			dist[i]=0;
 			continue;
