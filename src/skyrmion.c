@@ -7,10 +7,10 @@
 #include <assert.h>
 
 // Physical parameters
-real energy_shift_per_atom=0; // mean energy of S=(0,0,1) over all positions
-real zeeman_shift=0;
-real anisotropy_shift=0;
-real exchange_shift=0;
+real* energy_shift_per_atom=NULL; // mean energy of S=(0,0,1) over all positions
+real zeeman_shift=NAN;
+real anisotropy_shift=NAN;
+real* exchange_shift=NULL;
 real magnetic_field[3]={0,0,0};
 real* nonuniform_field=NULL;
 // Structure of crystal lattice
@@ -160,23 +160,21 @@ void set_tip_field(const real dir[3], const real pos[3]) {
 	};
 };
 
-void prepare_energy_shift() {
-	// find reference vector as mean magnetic field
-	/*real ref[3]={0,0,0};
-	if(nonuniform_field) {
-		forall(u,x,y,z) {
-			int i=INDEX(u,x,y,z);
-			for3(j) ref[j]+=nonuniform_field[j+3*i];
-		};
-		for3(j) ref[j]/=SIZE;
-	} else {
-		for3(j) ref[j]=magnetic_field[j];
-	};*/
-	real ref[3]={0,0,1};
-	normalize3(ref);
-	// compute mean zeeman energy of spin=ref
+void prepare_energy_shift(int do_shift) {
+	// allocating memory for shifts for every atom in fundamental cell
 	zeeman_shift=0;
+	energy_shift_per_atom=ralloc(sizeu); // mean energy of S=(0,0,1) over all positions
+	anisotropy_shift=0;
+	exchange_shift=ralloc(sizeu);
+	for(int u=0; u<sizeu; u++) 
+		energy_shift_per_atom[u]=exchange_shift[u]=0;
+	if(!do_shift) return;
+	// zero of energy is set to uniform magnetic fielf with direction ref.
+	real ref[3]={0,0,1};
+	normalize3(ref);		
+	// compute mean zeeman energy of spin=ref
 	if(nonuniform_field) {
+		// TODO: take into account domain/inactive spins
 		forall(u,x,y,z) {
 			int i=INDEX(u,x,y,z);
 			zeeman_shift-=dot3(ref, nonuniform_field+3*i);
@@ -184,15 +182,16 @@ void prepare_energy_shift() {
 		zeeman_shift/=SIZE;
 	} else zeeman_shift-=dot3(ref, magnetic_field); 
 	// add exchange energy for one atom 
-	anisotropy_shift=0;
 	for(int n=0; n<magnetic_anisotropy_count; n++) {
 		real m=dot3(magnetic_anisotropy[n].unit,ref);
 		anisotropy_shift-=m*m*magnetic_anisotropy[n].norm;
 	};
-	exchange_shift=0;
-	for(int n=0;n<sizen;n++) 
-		exchange_shift-=exchange_constant[n];
-	energy_shift_per_atom=zeeman_shift+anisotropy_shift+exchange_shift;
+	for(int n=0;n<sizen;n++) {
+		exchange_shift[neighbours[n*5+3]]-=exchange_constant[n]/2;
+		exchange_shift[neighbours[n*5+4]]-=exchange_constant[n]/2;
+	};
+	for(int u=0; u<sizeu; u++) 
+		energy_shift_per_atom[u]=zeeman_shift+anisotropy_shift+exchange_shift[u];
 };
 
 void prepare_dipole_table(real negligible) {
@@ -240,13 +239,14 @@ realp skyrmion_minimum_energy() {
 
 real skyrmion_energy_given_hessian(const real* __restrict__ arg, real* __restrict__ hess_grad) {
 	real total_energy=0;
-	#pragma omp parallel for 
-	for(int i=0; i<SIZE; i++) {
+	#pragma omp parallel for collape(4) reduction(+:total_energy)
+	forall(u,x,y,z) {
+		int i=INDEX(u,x,y,z);
 		if(!ISACTIVE(active, i)) continue;
 		real* H=nonuniform_field?nonuniform_field+3*i:magnetic_field;
 		real G[3]; for3(j) G[j]=hess_grad[3*i+j]/2-H[j];
 		for3(j) hess_grad[3*i+j]-=H[j];
-		total_energy+=dot3(G, arg+3*i)-energy_shift_per_atom;
+		total_energy+=dot3(G, arg+3*i)-energy_shift_per_atom[u];
 	};
 	return total_energy;
 };
@@ -417,7 +417,7 @@ void node_energy(int u, int x, int y, int z, const real* __restrict__ arg, real 
 		};		
 	};
 	energy[3]=dmi_energy;
-	energy[2]=exchange_energy-exchange_shift;
+	energy[2]=exchange_energy-exchange_shift[u];
 	// Compute dipole interaction
 	real dipole_energy=0;	
 	for(int n=0;n<dipole_count;n++) {
@@ -462,14 +462,15 @@ void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 	// Compute anisotropy part
 	energy[0]=0;
 	energy[1]=0;
-	int count=0;
-	#pragma omp parallel for collapse(3) reduction(+:anisotropy_energy,zeeman_energy)
+	int countu[sizeu]; for(int u=0; u<sizeu; u++) countu[u]=0;
+	// TODO: fix reduction on vector countu 
+	#pragma omp parallel for collapse(4) reduction(+:anisotropy_energy,zeeman_energy,countu)
 	forall(u,x,y,z) {
 		realp anisotropy_energy=0;
 		realp zeeman_energy=0;
 		int i=INDEX(u,x,y,z);
 		if(!ISACTIVE(active, i)) continue;
-		count++;
+		countu[u]++;
 		i*=3;
 		for(int n=0; n<magnetic_anisotropy_count; n++) {
 			real m=dot3(magnetic_anisotropy[n].unit,arg+i);
@@ -480,9 +481,13 @@ void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 		energy[0]+=anisotropy_energy-anisotropy_shift;
 		energy[1]+=zeeman_energy-zeeman_shift;
 	};
+	int count=0;
+	for(int u=0; u<sizeu; u++) count+=countu[u];
+
 	// Compute exchange part
 	realp dmi_energy=0;
-	realp exchange_energy=0;
+	realp exchange_energy[sizeu];
+	for(int u=0; u<sizeu; u++) { exchange_energy[u]=0; };
 	for(int n=0;n<sizen;n++) {
 		// local cache
 		int s=neighbours[5*n+3], d=neighbours[5*n+4];
@@ -511,11 +516,14 @@ void skyrmion_energy(const real* __restrict__ arg, realp energy[6]) {
 			real t[3]; 
 			cross3(dzyaloshinskii_moriya_vector+3*n,arg+i1,t);
 			dmi_energy-=dot3(t,arg+i2);
-			exchange_energy-=exchange_constant[n]*dot3(arg+i1,arg+i2);
+			realp exen=exchange_constant[n]*dot3(arg+i1,arg+i2)/2;
+			exchange_energy[s]-=exen; 
+			exchange_energy[d]-=exen; 
 		};
 	};
 	energy[3]=dmi_energy;
-	energy[2]=exchange_energy-exchange_shift*count;
+	energy[2]=0;
+	for(int u=0; u<sizeu; u++) energy[2]+=exchange_energy[u]-exchange_shift[u]*countu[u];
 	// Compute dipole interaction
 	realp dipole_energy=0;	
 	for(int n=0;n<dipole_count;n++) {

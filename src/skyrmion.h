@@ -3,7 +3,7 @@
 
 #include "vector.h"
 
-extern real energy_shift_per_atom;
+extern real* energy_shift_per_atom;
 // Physical parameters
 extern real magnetic_field[3];
 extern real* nonuniform_field;
@@ -129,7 +129,7 @@ void append_skyrmion(const real center[3], real distance, real winding,
 
 void group_generator(const real* __restrict__ spins, int axis, real* __restrict__ gen);
 
-void prepare_energy_shift();
+void prepare_energy_shift(int do_shift);
 void prepare_dipole_table(real negligible);
 
 // given coordinates in the space, returns atom in the unit cell and index of the cell having the coordinates

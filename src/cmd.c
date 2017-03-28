@@ -118,7 +118,7 @@ const char* optstr, char (*handle)(char opt, const char* arg)
   	i++;
   } else parse_lattice(stdin);
 
-  if(do_energy_shift) prepare_energy_shift();
+  prepare_energy_shift(do_energy_shift);
   prepare_dipole_table(dipole_negligible);
 
   if(!outdir) outdir=default_outdir;
@@ -133,7 +133,9 @@ void print_settings() {
   else fprintf(stderr, COLOR_BOLD "Active spins:" COLOR_RESET " all / %d\n", SIZE);
   fprintf(stderr,COLOR_BOLD "Active spins gradient thr.:" COLOR_RESET " %"RF"g\n", RT(active_threshold));
   fprintf(stderr,COLOR_BOLD "Update active every" COLOR_RESET " %d-th iteration\n", active_iterations);
-  fprintf(stderr,COLOR_BOLD "Energy shift" COLOR_RESET " %"RF"g per atom\n", RT(energy_shift_per_atom));
+  fprintf(stderr,COLOR_BOLD "Energy shift" COLOR_RESET);
+  for(int u=0; u<sizeu; u++) fprintf(stderr, " %"RF"g", RT(energy_shift_per_atom[u]));
+  fprintf(stderr, " per atom\n");
   fprintf(stderr,COLOR_BOLD "Image optimizer" COLOR_RESET " %s\n", single_mode==0?"old":"new");  
 };
 
