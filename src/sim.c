@@ -87,6 +87,10 @@ void dspins(const real* X, real* G, realp* E) {
   skyrmion_gradient(X, G, E);
   forall(u,x,y,z) {
     int i=INDEX(u,x,y,z)*3;
+    if(!ISACTIVE(active, i)) {
+      for3(c) G[i+c]=0;
+      continue;
+    };
     real eff[3]; cross3(X+i,spin_polarized_current,eff);
     for3(j) eff[j]+=G[i+j];
     real vec[3]; cross3(X+i,eff,vec);

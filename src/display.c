@@ -132,12 +132,18 @@ void drawField(real* field) {
 	forall(u,x,y,z) {
 		real vec[3]; COORDS(u,x,y,z,vec);
 		int i=INDEX(u,x,y,z);
+		if(!ISACTIVE(all_active, i)) {
+			idx[i]=-1;
+			dist[i]=0;
+			continue;
+		};
 		idx[i]=i;
 		dist[i]=dot3(normal,vec);
 	};
 	qsort(idx, SIZE, sizeof(*idx), drawField_cmp);
 	lockDisplay();
 	for(int id=0; id<SIZE; id++) {
+		if(idx[id]<0) continue;
 		int u,x,y,z; UNPACK(idx[id],u,x,y,z);
 		real vec[3]; COORDS(u,x,y,z,vec);
 		int i=idx[id]*3;
