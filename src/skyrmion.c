@@ -173,22 +173,26 @@ void prepare_energy_shift(int do_shift) {
 	real ref[3]={0,0,1};
 	normalize3(ref);		
 	// compute mean zeeman energy of spin=ref
-	if(nonuniform_field) {
-		// TODO: take into account domain/inactive spins
-		forall(u,x,y,z) {
-			int i=INDEX(u,x,y,z);
-			zeeman_shift-=dot3(ref, nonuniform_field+3*i);
-		};
-		zeeman_shift/=SIZE;
-	} else zeeman_shift-=dot3(ref, magnetic_field); 
+	if(sizen>0 && exchange_constant[0]<0) {
+		
+	} else {
+		if(nonuniform_field) {
+			// TODO: take into account domain/inactive spins
+			forall(u,x,y,z) {
+				int i=INDEX(u,x,y,z);
+				zeeman_shift-=dot3(ref, nonuniform_field+3*i);
+			};
+			zeeman_shift/=SIZE;
+		} else zeeman_shift-=dot3(ref, magnetic_field); 
+	};
 	// add exchange energy for one atom 
 	for(int n=0; n<magnetic_anisotropy_count; n++) {
 		real m=dot3(magnetic_anisotropy[n].unit,ref);
 		anisotropy_shift-=m*m*magnetic_anisotropy[n].norm;
 	};
 	for(int n=0;n<sizen;n++) {
-		exchange_shift[neighbours[n*5+3]]-=exchange_constant[n]/2;
-		exchange_shift[neighbours[n*5+4]]-=exchange_constant[n]/2;
+		exchange_shift[neighbours[n*5+3]]-=rabs(exchange_constant[n])/2;
+		exchange_shift[neighbours[n*5+4]]-=rabs(exchange_constant[n])/2;
 	};
 	for(int u=0; u<sizeu; u++) 
 		energy_shift_per_atom[u]=zeeman_shift+anisotropy_shift+exchange_shift[u];
@@ -911,6 +915,17 @@ int axis, real* __restrict__ gen) {
 
 // finilizing
 	free(kernel);
+};
+
+void skyrmion_afm(real* __restrict__ a) {
+	forall(u,x,y,z) {
+		int n=INDEX(u,x,y,z); int i=3*n;
+		if(!ISACTIVE(active, n)) {
+			for3(j) a[i+j]=0;
+		} else if(((x+y+z)*sizeu+u)%2) { 
+			for3(j) a[i+j]*=-1;
+		};
+	}
 };
 
 void skyrmion_random(real* __restrict__ a) {

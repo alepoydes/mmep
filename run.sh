@@ -3,11 +3,11 @@
 #BASE="$@"
 #DESC=`echo $BASE | tr -dc '[:alnum:]\n\r'`
 
-BASE="$(basename $1)_$(basename $2)_$(basename $3)"
-DESC=$BASE
-
 do_skipping=true
 if [ "$1" = "-S" ]; then do_skipping=false; shift 1; fi
+
+BASE="$(basename $1)_$(basename $2)_$(basename $3)"
+DESC=$BASE
 
 PREFIX="tmp/"
 PARAM=$1

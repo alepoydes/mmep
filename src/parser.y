@@ -44,6 +44,8 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 
 %define parse.error verbose
 
+%left '|'
+%left '&'
 %left '+' '-'
 %left '*' '/'
 %left NEG '!'
@@ -70,7 +72,7 @@ static void yyprint(FILE* file, int type, YYSTYPE value);
 
 %token TIP
 %token <pr> PLANE SPHERE UNIVERSE
-%token VERTEX UNIFORM RANDOM RELAX
+%token VERTEX UNIFORM RANDOM RELAX AFM
 %token BCFREE BCPERIODIC
 
 %type <sz> bc sz
@@ -255,6 +257,10 @@ imagelist:
 		real* image=initial_state+SIZE*3*(initial_states_count-1);
 		skyrmion_random(image);
 		}
+	| imagelist AFM EOL {
+		real* image=initial_state+SIZE*3*(initial_states_count-1);
+		skyrmion_afm(image);
+	}
 
 integer: INTEGER { $$=$1; }
 	| SZ { $$=(int)$1; } 
@@ -289,8 +295,8 @@ domain: UNIVERSE { $$=new_universe(); }
 		if(!($3>0)) yyerror("Radius should be positive");
 		$$=new_sphere($2, $3);
 		}
-	| domain '+' domain { $$=new_union($1, $3); }
-	| domain '*' domain { $$=new_intersection($1, $3); }
+	| domain '|' domain { $$=new_union($1, $3); }
+	| domain '&' domain { $$=new_intersection($1, $3); }
 	| '!' domain  { $$=new_complement($2); }
 	| '(' domain ')' { $$=$2; }
 

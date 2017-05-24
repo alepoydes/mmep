@@ -52,6 +52,7 @@ EXP ([Ee][-+]?[0-9]+)
 "random" { return RANDOM; }
 "free" { return BCFREE; }
 "periodic" { return BCPERIODIC; }
+"afm" { return AFM; }
 
 [A-Za-z][a-zA-Z0-9]* {
 	yylval.fn=strdup(yytext);

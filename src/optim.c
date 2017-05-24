@@ -306,7 +306,8 @@ int lagrange_conjugate_quad(
       fprintf(stderr,COLOR_RED "%d: res=%" RF "g %+" RF "g mu=%" RF "g\n" COLOR_RESET,iter,RT(rsqrt(resx/N)),RT(rsqrt(resu/M)),RT(mu));
       if(N+M<=8) {
         fprintf(stderr, COLOR_YELLOW);
-        for(int j=0;j<N;j++) fprintf(stderr,"%" RF "g ",RT(x0[j])); fprintf(stderr,":");
+        for(int j=0;j<N;j++) fprintf(stderr,"%" RF "g ",RT(x0[j])); 
+        fprintf(stderr,":");
         for(int j=0;j<M;j++) fprintf(stderr," %" RF "g",RT(u[j])); 
         fprintf(stderr,COLOR_RESET "\n");
       };

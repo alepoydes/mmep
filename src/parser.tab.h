@@ -78,8 +78,9 @@ extern int yydebug;
     UNIFORM = 288,
     RANDOM = 289,
     RELAX = 290,
-    BCFREE = 291,
-    BCPERIODIC = 292
+    AFM = 291,
+    BCFREE = 292,
+    BCPERIODIC = 293
   };
 #endif
 
@@ -88,7 +89,7 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 51 "src/parser.y" /* yacc.c:1909  */
+#line 53 "src/parser.y" /* yacc.c:1909  */
 
  uint sz;
  int i;
@@ -97,7 +98,7 @@ union YYSTYPE
  char* fn;
  primitive_t* pr;
 
-#line 101 "src/parser.tab.h" /* yacc.c:1909  */
+#line 102 "src/parser.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

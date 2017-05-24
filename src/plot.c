@@ -111,12 +111,13 @@ int load_path_from_gnuplot(FILE* file, real*(*allocate_image)()) {
       sizef++; pos=0; image=NULL;
       fprintf(stderr, "  Line %d: Start of frame %d\n",line,sizef);
     } else {
-	  if(!image) {
-		image=allocate_image();
-		assert(image);
-	  };
-	  // next point of field
-      for3(c) image[3*pos+c]=v[c]; pos++;
+	  	if(!image) {
+				image=allocate_image();
+				assert(image);
+	  	};
+	  	// next point of field
+      for3(c) image[3*pos+c]=v[c]; 
+			pos++;
       if(pos>SIZE) {
         fprintf(stderr,"  Line %d: Frame %d is too large\n",line,sizef);
         break;

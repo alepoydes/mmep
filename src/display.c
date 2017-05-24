@@ -57,8 +57,10 @@ void resetCamera() {
 	real bounds[3][2]; plot_bounds(bounds);
 	for3(c) center[c]=(bounds[c][1]+bounds[c][0])/2;
 	real dims[3]; for3(c) dims[c]=bounds[c][1]-bounds[c][0];
-	for3(c) eye[c]=center[c]; eye[2]+=(dims[0]+dims[1]+dims[2])/3;
-	for3(c) dir[c]=0; dir[1]=1;
+	for3(c) eye[c]=center[c]; 
+	eye[2]+=(dims[0]+dims[1]+dims[2])/3;
+	for3(c) dir[c]=0; 
+	dir[1]=1;
 };
 
 void displayRedraw() {
@@ -321,7 +323,8 @@ void displayFunction() {
 void displayReshape(GLsizei width, GLsizei height) {  // GLsizei for non-negative integer
 	// Set the viewport to cover the new window
 	glViewport(0, 0, windowWidth, windowHeight);
-	if(width==0) width=1; if(height==0) height=1;
+	if(width==0) width=1; 
+	if(height==0) height=1;
 	real delta[2]; 
 	delta[0]=width/(float)windowWidth; 
 	delta[1]=height/(float)windowHeight;

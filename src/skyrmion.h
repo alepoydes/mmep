@@ -103,6 +103,7 @@ realp seminormalize(real factor, real* __restrict__ a);
 // Project vector field 'b' to tangent space of unit length vector field 'a'
 void project_to_tangent(const real* __restrict__ a, real* __restrict__ b);
 
+void skyrmion_afm(real* __restrict__ a);
 void skyrmion_random(real* __restrict__ a);
 void skyrmion_constrain(const real* __restrict__ a, real* __restrict__ r);
 void skyrmion_constrain_gradient(const real* __restrict__ a, const real* __restrict__ u, real* __restrict__ r);
