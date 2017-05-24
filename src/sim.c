@@ -83,6 +83,7 @@ void screen() {
 
 };
 
+/*
 void dspins(const real* X, real* G, realp* E) {
   skyrmion_gradient(X, G, E);
   forall(u,x,y,z) {
@@ -96,6 +97,28 @@ void dspins(const real* X, real* G, realp* E) {
     real vec[3]; cross3(X+i,eff,vec);
     real vec2[3]; cross3(X+i,vec,vec2);
     for3(c) G[i+c]=vec[c]+damping*vec2[c];
+  };
+};
+*/
+
+void dspins(const real* X, real* G, realp* E) {
+  skyrmion_gradient(X, G, E);
+  forall(u,x,y,z) {
+    int i=INDEX(u,x,y,z)*3;
+    if(!ISACTIVE(active, i)) {
+      for3(c) G[i+c]=0;
+      continue;
+    };
+    real eff[3]; cross3(spin_polarized_current,X+i,eff);
+    for3(j) eff[j]+=G[i+j]; // gamma*(grad E+beta*(p times m))
+    real vec[3]; cross3(X+i,eff,vec); // m times gamma*(grad E+beta*(p times m)) 
+    for3(c) G[i+c]=vec[c]; // = d m/d t without damping
+    const int number_of_consistancy_iterations=3;
+    // solving dm/dt=vec+damping*m times dm/dt.
+    for(int r=0; r<number_of_consistancy_iterations; r++) { 
+      real vec2[3]; cross3(X+i,G+i,vec2); // m times d m/d t
+      for3(c) G[i+c]=vec[c]+damping*vec2[c]; // 
+    };
   };
 };
 
