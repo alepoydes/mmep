@@ -1,0 +1,14 @@
+# An example of continuous limit 
+
+To obtain several levels of detalization of FM skyrmion run:
+
+```
+./run.sh -S lattices/square.par bin/minl lattices/square_fm.lat -M1 -r1000 -i10000
+```
+
+To obtain the same result for AFM skyrmion execute:
+
+```
+./run.sh -S lattices/square.par bin/minl lattices/square_afm.lat -M1 -r1000 -i10000
+```
+
