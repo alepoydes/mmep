@@ -174,7 +174,7 @@ void prepare_energy_shift(int do_shift) {
 	normalize3(ref);		
 	// compute mean zeeman energy of spin=ref
 	if(sizen>0 && exchange_constant[0]<0) {
-		
+
 	} else {
 		if(nonuniform_field) {
 			// TODO: take into account domain/inactive spins
@@ -825,8 +825,8 @@ void three_point_equalizer(const real* __restrict__ a, const real* __restrict__ 
 	};
 };
 */
-void append_skyrmion(const real center[3], real distance, real winding, 
-	real rotation, real* __restrict__ data) 
+void append_skyrmion(const real center[3], real distance, real winding_rho, real winding_phi, 
+	real rotation_rho, real rotation_phi, real z_rot_rho, real z_rot_phi, real* __restrict__ data)
 {
 	real field[3]={0,0,1}; 
 	#pragma omp parallel for collapse(4)	
@@ -836,9 +836,6 @@ void append_skyrmion(const real center[3], real distance, real winding,
 		i*=3;
 		real vec[3]; COORDS(u,x,y,z,vec);
 		sub3(vec,center,vec);
-		//real elevation=dot3(vec,magnetic_field)/hnorm;
-		//if(rabs(elevation)<distance) continue;
-		//mult_minus3(elevation, magnetic_field, vec);
 		real dist=rsqrt(normsq3(vec));
 		if(dist>distance) continue;
 		if(dist==0) {
@@ -846,17 +843,22 @@ void append_skyrmion(const real center[3], real distance, real winding,
 			continue;
 		};
 		multinv3(dist, vec, vec);
+		real phi=ratan2(vec[1],vec[0]);
 		// First rotation is around vec
 		dist/=distance; dist=1-dist; dist*=M_PI_2;
 		real sinalpha, cosalpha; 
-		rsincos(dist*winding,&sinalpha,&cosalpha); 
+		rsincos(dist*winding_rho+phi*winding_phi,&sinalpha,&cosalpha); 
 		real q1[4]; q1[0]=cosalpha; mult3(sinalpha,vec,q1+1);
 		// Second rotation is in the plane containing vec and field
-		rsincos(dist*rotation,&sinalpha,&cosalpha); 
+		rsincos(dist*rotation_rho+phi*rotation_phi,&sinalpha,&cosalpha); 
 		real q2[4]; q2[0]=cosalpha; cross3(field,vec,q2+1);
 		mult3(sinalpha,q2+1,q2+1);
+		// Third rotation is around z axis
+		rsincos(dist*z_rot_rho+phi*z_rot_phi,&sinalpha,&cosalpha); 
+		real q3[4]={cosalpha,0,0,sinalpha}; 
 		// combined rotation
-		real q[4]; quaternion_product(q2,q1,q);
+		real qt[4]; quaternion_product(q2,q1,qt);
+		real q[4]; quaternion_product(q3,qt,q);
 		// applying rotation
 		q1[0]=0; copy3(data+i, q1+1);
 		quaternion_product(q,q1,q2);

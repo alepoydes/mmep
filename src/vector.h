@@ -11,6 +11,7 @@
 
 #ifdef DOUBLE
 	#define real double
+	#define ratan2(y,x) atan2(y,x)
 	#define rsqrt(x) sqrt(x)
 	#define rabs(x) fabs(x)
 	#define racos(x) acos(x)
@@ -33,6 +34,7 @@
 #elif defined LONGDOUBLE
 
 	#define real long double
+	#define ratan2(y,x) atan2l(y,x)
 	#define rsqrt(x) sqrtl(x)
 	#define rabs(x) fabsl(x)
 	#define racos(x) acosl(x)
@@ -56,6 +58,7 @@
 	#include <quadmath.h>
 
 	#define real __float128
+	#define ratan2(y,x) atan2q(y,x)
 	#define rsqrt(x) sqrtq(x)
 	#define rabs(x) fabsq(x)
 	#define racos(x) acosq(x)
@@ -78,6 +81,7 @@
 #else 
 
 	#define real float
+	#define ratan2(y,x) atan2f(y,x)
 	#define rsqrt(x) sqrtf(x)
 	#define rabs(x) fabsf(x)
 	#define racos(x) acosf(x)
