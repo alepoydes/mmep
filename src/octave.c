@@ -145,8 +145,11 @@ void oct_save_field(FILE* file, const char* name, real* data) {
 	fprintf(file,"# name: %s\n",name);
 	fprintf(file,"# type: matrix\n");
 	fprintf(file,"# ndims: 5\n%d %d %d %d 3\n",sizeu,sizex,sizey,sizez);
-	for3(j) forlla(u,x,y,z)
-		fprintf(file,"%.*" RF "g\n",DIGITS+2,RT(data[3*INDEX(u,x,y,z)+j]));
+	for3(j) forlla(u,x,y,z) {
+		int id=INDEX(u,x,y,z);
+		if(ISACTIVE(all_active, id)) fprintf(file,"%.*" RF "g\n",DIGITS+2,RT(data[j+3*id]));	
+		else fprintf(file,"%.*" RF "g\n",DIGITS+2,RT(0.));
+	};
 	fprintf(file,"\n\n");
 };
 
@@ -154,8 +157,11 @@ void oct_save_path(FILE* file, const char* name, real* data, int sizep) {
 	fprintf(file,"# name: %s\n",name);
 	fprintf(file,"# type: matrix\n");
 	fprintf(file,"# ndims: 6\n%d %d %d %d %d 3\n",sizep,sizeu,sizex,sizey,sizez);
-	for3(j) forlla(u,x,y,z) for(int p=0; p<sizep; p++) 		
-		fprintf(file,"%.*" RF "g\n",DIGITS+2,RT(data[3*(p*SIZE+INDEX(u,x,y,z))+j]));
+	for3(j) forlla(u,x,y,z) for(int p=0; p<sizep; p++) {
+		int id=INDEX(u,x,y,z);
+		if(ISACTIVE(all_active, id)) fprintf(file,"%.*" RF "g\n",DIGITS+2,RT(data[j+3*(p*SIZE+id)]));	
+		else fprintf(file,"%.*" RF "g\n",DIGITS+2,RT(0.));
+	};
 	fprintf(file,"\n\n");
 };
 
