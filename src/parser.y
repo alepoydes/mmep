@@ -246,11 +246,11 @@ cutlist: { $$=new_universe(); }
 imagelist:
 	| imagelist VERTEX vector exp ',' windnum ',' windnum EOL {
 		real* image=initial_state+SIZE*3*(initial_states_count-1);
-		append_skyrmion($3, $4, $6[0], $6[1], $8[0], $8[1], 0, 0, image);
+		append_skyrmion($3, $4, $6[0], $6[1], $6[2], $8[0], $8[1], $8[2], 0, 0, 0, image);
 		}
 	| imagelist VERTEX vector exp ',' windnum ',' windnum ',' windnum EOL {
 		real* image=initial_state+SIZE*3*(initial_states_count-1);
-		append_skyrmion($3, $4, $6[0], $6[1], $8[0], $8[1], $10[0], $10[1], image);
+		append_skyrmion($3, $4, $6[0], $6[1],  $6[2], $8[0], $8[1], $8[2], $10[0], $10[1], $10[2], image);
 		}		
 	| imagelist UNIFORM vector EOL {
 		real* image=initial_state+SIZE*3*(initial_states_count-1);
@@ -267,7 +267,8 @@ imagelist:
 	}
 
 windnum: exp { $$[0]=$1; $$[1]=0; $$[2]=0; }
-	| exp '~' exp  { $$[0]=$1; $$[1]=$3; $$[2]=0; }
+	| exp '~' exp { $$[0]=$1; $$[1]=$3; $$[2]=0; }
+	| exp '~' exp '~' exp { $$[0]=$1; $$[1]=$3; $$[2]=$5; }
 
 integer: INTEGER { $$=$1; }
 	| SZ { $$=(int)$1; } 

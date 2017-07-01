@@ -1,0 +1,34 @@
+[size]
+N*SZ, N*SZ, N*SZ
+[boundary conditions]
+periodic periodic periodic
+[translation vectors]
+{1, 0, 0}
+{0, 1, 0}
+{0, 0, 1}
+[unit cell]
+{0, 0, 0}
+[neigborood]
+{-1, 0, 0} 0, 0
+{0, -1, 0} 0, 0
+{0, 0, -1} 0, 0
+[dipole]
+0
+[external field]
+uniform {0, 0, P/N/N}
+[magnetic anisotropy]
+K/N/N/N {0, 0, 1} 
+[exchange constant]
+J/N
+J/N
+J/N
+[dzyaloshinskii moriya vector]
+D/N/N {1, 0, 0}
+D/N/N {0, 1, 0}
+D/N/N {0, 0, 1}
+[image] relax
+vertex {SZ*N/2, SZ*N/2, SZ*N/2} 4*N, 1, 0
+afm
+[image] relax
+uniform {0,0,1}
+afm

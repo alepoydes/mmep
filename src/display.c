@@ -14,6 +14,8 @@ real* display_buffer=NULL;
 int is_aborting=0;
 int is_new_frame=0;
 
+int visible_layer=-1;
+
 // constants
 char window_title[]="Skyrmion simulation";  // Window title
 float wheel_speed=1.1;
@@ -126,7 +128,8 @@ void drawField(real* field) {
 	for(int n=0;n<N;n++) {
 		rsincos(M_PI*2/N*n,S+n,C+n); C[n]*=width; S[n]*=width;
 	};
-	real magn[3]; copy3(magnetic_field, magn); normalize3(magn);
+	//real magn[3]; copy3(magnetic_field, magn); normalize3(magn);
+	real magn[3]={0,0,1};
 	//if(arrow_mode>=2) glEnable(GL_CULL_FACE);
 	dist=ralloc(SIZE);
 	int* idx=(int*)malloc(sizeof(int)*SIZE); assert(idx);	
@@ -134,7 +137,7 @@ void drawField(real* field) {
 	forall(u,x,y,z) {
 		real vec[3]; COORDS(u,x,y,z,vec);
 		int i=INDEX(u,x,y,z);
-		if(!ISACTIVE(all_active, i)) {
+		if(!ISACTIVE(all_active, i) || (visible_layer>=0 && visible_layer!=z)) {
 			idx[i]=-1;
 			dist[i]=0;
 			continue;
@@ -334,7 +337,6 @@ void displayReshape(GLsizei width, GLsizei height) {  // GLsizei for non-negativ
 };
 
 void displayKeyboard(unsigned char key, int x, int y) {
-	//fprintf(stderr, "key '%c'\n",key);
 	switch (key) {
 		case 'b': show_bbox=!show_bbox; break;
 		case 'r': resetCamera(); break;
@@ -346,6 +348,22 @@ void displayKeyboard(unsigned char key, int x, int y) {
 	};
 	displayRedraw();
 }
+
+void displaySpecial(int key, int x, int y) {  
+  	switch (key) {
+		case GLUT_KEY_HOME: visible_layer=-visible_layer-1; break;
+		case GLUT_KEY_PAGE_UP: 
+			if(visible_layer>=0) visible_layer=(visible_layer+1)%sizez; 
+			else visible_layer=-visible_layer-1;
+			break;
+		case GLUT_KEY_PAGE_DOWN: 
+			if(visible_layer>=0) { if(--visible_layer<0) visible_layer=sizez-1; }
+			else visible_layer=-visible_layer-1;
+			break;
+		default: break;
+	};
+	displayRedraw();
+} 
 
 void displayMouse(int button, int state, int x, int y) {
 	if (button==4 && state==GLUT_DOWN) { // wheel down
@@ -444,6 +462,7 @@ void *consumer(void *ptr) {
 	//glutTimerFunc(0, Timer, 0);   // First timer call immediately
 	//glutSpecialFunc(specialKeys); // Register callback handler for special-key event
 	glutKeyboardFunc(displayKeyboard);   // Register callback handler for special-key event
+	glutSpecialFunc(displaySpecial);
 	//glutFullScreen();             // Put into full screen
 	glutMouseFunc(displayMouse);   // Register callback handler for mouse event
 	glutMotionFunc(displayMotion);

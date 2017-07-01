@@ -825,8 +825,11 @@ void three_point_equalizer(const real* __restrict__ a, const real* __restrict__ 
 	};
 };
 */
-void append_skyrmion(const real center[3], real distance, real winding_rho, real winding_phi, 
-	real rotation_rho, real rotation_phi, real z_rot_rho, real z_rot_phi, real* __restrict__ data)
+void append_skyrmion(const real center[3], real distance, 
+	real winding_rho, real winding_phi, real winding_z, 
+	real rotation_rho, real rotation_phi, real rotation_z, 
+	real z_rot_rho, real z_rot_phi, real z_rot_z, 
+	real* __restrict__ data)
 {
 	real field[3]={0,0,1}; 
 	#pragma omp parallel for collapse(4)	
@@ -836,25 +839,28 @@ void append_skyrmion(const real center[3], real distance, real winding_rho, real
 		i*=3;
 		real vec[3]; COORDS(u,x,y,z,vec);
 		sub3(vec,center,vec);
-		real dist=rsqrt(normsq3(vec));
-		if(dist>distance) continue;
-		if(dist==0) {
+		real hei=vec[2];
+		real distsq=vec[0]*vec[0]+vec[1]*vec[1];
+		if(distsq>distance*distance-hei*hei) continue;
+		if(distsq==0) {
 			mult3(-1,data+i,data+i);
 			continue;
 		};
-		multinv3(dist, vec, vec);
+		vec[2]=0; normalize3(vec);
 		real phi=ratan2(vec[1],vec[0]);
 		// First rotation is around vec
-		dist/=distance; dist=1-dist; dist*=M_PI_2;
-		real sinalpha, cosalpha; 
-		rsincos(dist*winding_rho+phi*winding_phi,&sinalpha,&cosalpha); 
+		real dist=rsqrt(distsq)/distance; hei/=distance; 
+		dist/=rsqrt(1-hei*hei); dist=1-dist; 
+		dist*=M_PI_2; hei*=M_PI_2;
+		real sinalpha, cosalpha;
+		rsincos(dist*winding_rho+phi*winding_phi+hei*winding_z,&sinalpha,&cosalpha); 
 		real q1[4]; q1[0]=cosalpha; mult3(sinalpha,vec,q1+1);
 		// Second rotation is in the plane containing vec and field
-		rsincos(dist*rotation_rho+phi*rotation_phi,&sinalpha,&cosalpha); 
+		rsincos(dist*rotation_rho+phi*rotation_phi+hei*rotation_z,&sinalpha,&cosalpha); 
 		real q2[4]; q2[0]=cosalpha; cross3(field,vec,q2+1);
 		mult3(sinalpha,q2+1,q2+1);
 		// Third rotation is around z axis
-		rsincos(dist*z_rot_rho+phi*z_rot_phi,&sinalpha,&cosalpha); 
+		rsincos(dist*z_rot_rho+phi*z_rot_phi+hei*z_rot_z,&sinalpha,&cosalpha); 
 		real q3[4]={cosalpha,0,0,sinalpha}; 
 		// combined rotation
 		real qt[4]; quaternion_product(q2,q1,qt);

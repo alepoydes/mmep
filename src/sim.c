@@ -65,6 +65,7 @@ void screen() {
   fprintf(stderr," " COLOR_YELLOW "i" COLOR_RESET " chng.                      \n");  
 
   fprintf(stderr,"Key bindings:\n");
+  fprintf(stderr,"  " COLOR_YELLOW "PgUp/PgDown" COLOR_RESET " - cycle visible layer " COLOR_YELLOW "Home" COLOR_RESET " - show all layers\n");  
   fprintf(stderr,"  " COLOR_YELLOW "ENTER" COLOR_RESET " - make screenshot\n");  
   fprintf(stderr,"  " COLOR_YELLOW "SPACE" COLOR_RESET " - pause\n");
   fprintf(stderr,"  " COLOR_YELLOW "m" COLOR_RESET " - select spins/external field\n");
@@ -164,8 +165,8 @@ void do_print(int width, int height, void* buffer) {
 
 void keyboard_function(unsigned char key) {
   switch(key) {
-    case '[': damping/=1.1; break; // SYNCHRONIZE !!!
-    case ']': if(damping!=0) damping*=1.1; else damping=0.01; break;
+    case ']': if(damping<1) damping+=0.1; break; // SYNCHRONIZE !!!
+    case '[': if(damping>-1) damping-=0.1; break;
     case '\\': damping=-damping; break;
     case '-': time_step/=1.1; break;
     case '=': if(time_step!=0) time_step*=1.1; else time_step=0.001; break;

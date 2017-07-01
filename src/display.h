@@ -6,6 +6,7 @@
 extern real* display_buffer;
 extern int is_aborting;
 extern int is_new_frame;
+extern int visible_layer;
 
 int initDisplay(int* argc, char** argv);
 void deinitDisplay();

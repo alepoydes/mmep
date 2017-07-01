@@ -123,8 +123,11 @@ void three_point_tangent_stable(real ea, real eb, real ec, const real* __restric
 
 realp skyrmion_minimum_energy();
 
-void append_skyrmion(const real center[3], real distance, real winding_rho, real winding_phi, 
-	real rotation_rho, real rotation_phi, real z_rot_rho, real z_rot_phi, real* __restrict__ data);
+void append_skyrmion(const real center[3], real distance, 
+	real winding_rho, real winding_phi, real winding_z, 
+	real rotation_rho, real rotation_phi, real rotation_z, 
+	real z_rot_rho, real z_rot_phi, real z_rot_z, 
+	real* __restrict__ data);
 
 #define COORDS(u,x,y,z,vec) { (vec)[0]=atom_positions[3*u+0]+x*translation_vectors[0][0]+y*translation_vectors[1][0]+z*translation_vectors[2][0]; (vec)[1]=atom_positions[3*u+1]+x*translation_vectors[0][1]+y*translation_vectors[1][1]+z*translation_vectors[2][1]; (vec)[2]=atom_positions[3*u+2]+x*translation_vectors[0][2]+y*translation_vectors[1][2]+z*translation_vectors[2][2]; }
 
