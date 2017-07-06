@@ -25,12 +25,17 @@ extern int remove_zero_modes;
 extern int flat_distance;
 extern int post_optimization;
 extern int single_maximum;
+extern int fixed_length;
 
 extern realp *distance;
 extern realp *energy;
 extern realp *diff;
 extern realp *tdiff;
 extern realp *inflation;
+
+extern int middle_index;
+extern realp desired_left;
+extern realp desired_right;
 
 void path_steepest_descent_init(int max_sizep);
 void path_steepest_descent_deinit();

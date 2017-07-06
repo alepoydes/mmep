@@ -33,6 +33,7 @@ int* parse_image_list(char* str) {
 };
 
 const char options_desc[]="\
+\n   -F      Fix length\
 \n   -P      Enable GNUPlot output of MEP\
 \n   -n INTs List of number of images on MEP\
 \n   -z      Disable translations preserving energy\
@@ -42,6 +43,10 @@ const char options_desc[]="\
 
 char handle_option(char opt, const char* arg) {
   switch(opt) {
+    case 'F': 
+      fixed_length=1; 
+      middle_index=optarg?atoi(optarg):-1;
+      break;
     case 'P': debug_plot=1; debug_plot_path=1; break;
     case 'n': 
       number_of_images=parse_image_list(optarg);
@@ -58,7 +63,7 @@ int main(int argc, char** argv) {
   mode=SDM_CONSTANT;
   int i=init_program(argc,argv,
     "Calculate MEP for magnetic systems.", options_desc,
-    "zPn:R:q", handle_option);
+    "zPn:R:qF::", handle_option);
   if(i<argc) {
     fprintf(stderr, COLOR_RED "There are unused parameters:" COLOR_RESET "\n");
     while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
@@ -72,9 +77,13 @@ int main(int argc, char** argv) {
     number_of_images[3]=0;
   };
   
-
   // Initializaton
   print_settings();
+  if(fixed_length) {
+    fprintf(stderr, COLOR_BOLD "Path length " COLOR_RESET "fixed\n");
+    fprintf(stderr, COLOR_BOLD "Handle image " COLOR_RESET "%d\n",middle_index);    
+  } else fprintf(stderr, COLOR_BOLD "Path length " COLOR_RESET "variable\n");
+  
   if(remove_zero_modes)
     fprintf(stderr, "Zero modes (translations) are removed\n");
   if(random_noise>0) 
@@ -129,6 +138,11 @@ int main(int argc, char** argv) {
   real* path=NULL;
   int* current_number_of_images=number_of_images;
   while((sizep=*(current_number_of_images++))>0) {
+    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP" COLOR_RESET " for %d images\n", sizep);    
+    if(middle_index>=0) {
+      middle_index=middle_index*(sizep-1)/(prev_count-1);
+      fprintf(stderr, "Handle image %d\n",middle_index);
+    };    
     // interpolating path
     path=ralloc(size*sizep); 
     copy_vector(size, prev_path, path);
@@ -155,7 +169,6 @@ int main(int argc, char** argv) {
     */
     free(prev_path);    
     // Path optimization
-    fprintf(stderr, COLOR_YELLOW COLOR_BOLD "Calculating MEP" COLOR_RESET " for %d images\n", sizep);
     path_steepest_descent(path, mode, mode_param, epsilon, max_iter);
     // update previous path
     prev_path=path;

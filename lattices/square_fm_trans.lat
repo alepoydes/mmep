@@ -1,10 +1,9 @@
+# ./run.sh -S lattices/square0.par bin/mepl lattices/square_fm_trans.lat -n13 -F1 -q -i12000
 [size]
-N*SZ, N*SZ
+SZ, SZ
 [boundary conditions]
 periodic periodic
 [translation vectors]
-#{1./N, 0}
-#{0, 1./N}
 {1, 0}
 {0, 1}
 [unit cell]
@@ -15,18 +14,19 @@ periodic periodic
 [dipole]
 0
 [external field]
-uniform {0, 0, -P/N}
+uniform {0, 0, 0}
 [magnetic anisotropy]
-K/N/N {0, 0, 1} 
+(K+P*P/J/16)/N/N {0, 0, 1} 
 [exchange constant]
 -J
 -J
 [dzyaloshinskii moriya vector]
--D/N {-1, 0}
--D/N {0, -1}
+-D/N {1, 0}
+-D/N {0, 1}
+#[load from gnuplot] 
+#"lattices/mep.gnuplot"
 [image] relax
-vertex {SZ*N/2, SZ*N/2} SZ*N/4, 1, 0
-afm
-[image] relax
+vertex {SZ/2, SZ/2} SZ/4, 1, 0
+[image] 
 uniform {0,0,1}
-afm
+

@@ -76,4 +76,4 @@ BINEXP=$(addprefix $(BINDIR)/,$(BIN))
 all: README.html $(BINEXP)
 
 clean:
-	rm -f $(OBJDIR)/*.o $(BINEXP) 
+	rm -f $(OBJDIR)/*.o $(BINEXP)

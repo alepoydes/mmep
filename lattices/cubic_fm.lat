@@ -23,9 +23,9 @@ uniform {0, 0, 0}
 -J/N
 -J/N
 [dzyaloshinskii moriya vector]
-D/N/N {1, 0, 0}
-D/N/N {0, 1, 0}
-D/N/N {0, 0, 1}
+-D/N/N {1, 0, 0}
+-D/N/N {0, 1, 0}
+-D/N/N {0, 0, 1}
 [image] relax
 vertex {SZ*N/2, SZ*N/2, SZ*N/2} 4*N, 1, 0
 [image] relax
