@@ -312,7 +312,7 @@ int lagrange_conjugate_quad(
         fprintf(stderr,COLOR_RESET "\n");
       };
     #endif
-    // Residula is negative gradient
+    // Residual is negative gradient
     negate_inplace(N,gradx); negate_inplace(M,gradu);
     // Reporting result
     if(res<epsilon) { 

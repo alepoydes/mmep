@@ -266,6 +266,18 @@ int argmax_energy() {
   return f;
 };
 
+void get_tangent(int p, const real* path, real* u) {
+  if(p==0) {
+    two_point_tangent0(path+3*SIZE*p,path+3*SIZE*(p+1),u);
+  } else if(p==sizep-1) {
+    two_point_tangent1(path+3*SIZE*(p-1),path+3*SIZE*p,u);
+  } else {
+    three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],path+3*SIZE*(p-1),path+3*SIZE*p,path+3*SIZE*(p+1),u);
+    //three_point_tangent(path+3*SIZE*(p-1),path+3*SIZE*p,path+3*SIZE*(p+1),u);
+  };
+};
+
+
 void energy_evaluate_neb(real* path) {
   real* q=ralloc(3*SIZE);
   real* u=ralloc(3*SIZE); 
@@ -284,15 +296,14 @@ void energy_evaluate_neb(real* path) {
     project_to_tangent(path+3*SIZE*p,q);
     // q is orthogonal to normales to all spheres
     diff[p]=rpsqrt(normsq(3*SIZE,q)/(SIZE));
-    tdiff[p]=diff[p];
-    if(p>0 && p<sizep-1) {
-      three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],path+3*SIZE*(p-1),path+3*SIZE*p,path+3*SIZE*(p+1),u);
-      //three_point_tangent(path+3*SIZE*(p-1),path+3*SIZE*p,path+3*SIZE*(p+1),u);
+    int need_projection=(p>0 && p<sizep-1) || (fixed_length && middle_index!=p);
+    if(need_projection) {
+      get_tangent(p, path, u);
       real proj=dot(3*SIZE,u,q)/dot(3*SIZE,u,u);
       mult_sub(3*SIZE, proj, u, q);
       // q is orthogonal to tangent to MEP
       tdiff[p]=rpsqrt(normsq(3*SIZE,q)/(SIZE));
-    };
+    } else tdiff[p]=diff[p];
     inflation[p]=NAN;
   };
   free(u); free(q);
@@ -302,6 +313,7 @@ void energy_evaluate(real* path) {
   energy_evaluate_neb(path);
   if(fixed_length) {
     if(middle_index<0) {
+      desired_left=desired_right=-1;
       middle_index=argmax_energy();
       fprintf(stderr, "Set handle image to %d corresponding to maximum energy\n",middle_index);
     } else if(middle_index>=sizep) {
@@ -403,14 +415,15 @@ void interp_idx(int from, realp length, int nsteps, int* idx, realp* loc) {
 }
 
 void interpolate_path(real* path, int* idx, realp* loc) {
-  //for(int i=0; i<sizep; i++)
-  //  fprintf(stderr, "%d(%"RF"g) ", idx[i], RT(loc[i])); fprintf(stderr,"\n");
-
   real* buf=ralloc(sizeof(real)*3*SIZE*sizep);
   copy_vector(3*SIZE*sizep, path, buf);
   for(int p=0; p<sizep; p++) {
-    assert(idx[p]>=0 && idx[p]<sizep);
-    assert(loc[p]>=0 && loc[p]<=1);
+    if(idx[p]<0 || idx[p]>=sizep || loc[p]<-1e-4 || loc[p]>1+1e-4) {
+      fprintf(stderr, COLOR_RED "Internal error" COLOR_RESET " incorrect reparametrization\n");
+      for(int i=0; i<sizep; i++)
+        fprintf(stderr, "%d(%"RF"g) ", idx[i], RT(loc[i])); fprintf(stderr,"\n");
+      exit(1);
+    };
     if(loc[p]==0) {
       copy_vector(3*SIZE, buf+3*SIZE*idx[p], path+3*SIZE*p);
       continue;
@@ -541,65 +554,31 @@ void path_tangent_rec(const real* __restrict__ mep, real* __restrict__ grad, int
   free(u); free(q); free(l);
 }
 
-// INVALID
-void path_tangent_rohart(const real* __restrict__ mep, real* __restrict__ grad) {
-  real* u=ralloc(3*SIZE);
-  for(int p=0; p<sizep; p++) {
-    //real l1=normsq(3*SIZE, grad+3*SIZE*p);
-    project_to_tangent(mep+3*SIZE*p,grad+3*SIZE*p);
-    //real l2=normsq(3*SIZE, grad+3*SIZE*p);
-    //real l3=0, l4=0;
-    if(p>0 && p<sizep-1) {
-      three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+3*SIZE*(p-1), mep+p*3*SIZE, mep+3*SIZE*(p+1), u);
-      normalize(u);
-      project_to_tangent(u,grad+3*SIZE*p);
-      //l3=normsq(3*SIZE, grad+3*SIZE*p);
-      //project_to_tangent(mep+3*SIZE*p,grad+3*SIZE*p);
-      //l4=normsq(3*SIZE, grad+3*SIZE*p);
-    };
-    //fprintf(stderr, "  %" RF "g  %" RF "g  %" RF "g  %" RF "g\n", l1, l2, l3, l4);
-  };
-  free(u); 
-}
-
 void path_tangent_neb(const real* __restrict__ mep, real* __restrict__ grad) {
   real* u=ralloc(3*SIZE);
   real *g1=NULL, *g2=NULL, *g3=NULL; 
-  if(remove_zero_modes) {
-    g1=ralloc(3*SIZE);
-    g2=ralloc(3*SIZE);
-    g3=ralloc(3*SIZE);
-  };
-  // Find index f of node with
-  realp max=-INFINITY; int f=-1;
-  for(int p=sizep-1; p>=0; p--) if(energy[p]>max) { max=energy[p]; f=p; };
-  if(f==0 || f==sizep-1) f=-1;
+  if(remove_zero_modes) { g1=ralloc(3*SIZE); g2=ralloc(3*SIZE); g3=ralloc(3*SIZE); };
+  int f=argmax_energy();
+  if(f==0 || f==sizep-1) f=-1; // ends are never climbing
   for(int p=0; p<sizep; p++) {
     project_to_tangent(mep+3*SIZE*p,grad+3*SIZE*p);
-    if(p>0 && p<sizep-1) {
-      //if(post_optimization && energy[p]<energy[p-1] && energy[p]<energy[p+1]) {
-      //} else 
-      if(post_optimization && (p==f || (energy[p]>=energy[p-1] && energy[p]>=energy[p+1] && !single_maximum))) {
-        three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+3*SIZE*(p-1), mep+p*3*SIZE, mep+3*SIZE*(p+1), u);
-        //three_point_tangent(mep+3*SIZE*(p-1), mep+p*3*SIZE, mep+3*SIZE*(p+1), u);
+    int need_projection=(p>0 && p<sizep-1) || (fixed_length && middle_index!=p);
+    if(need_projection) {
+      get_tangent(p, mep, u);
+      int is_maximum=(p==f) || (!single_maximum && (p>0 && energy[p]>=energy[p-1]) && (p<sizep-1 && energy[p]>=energy[p+1])); 
+      if(post_optimization && is_maximum) {
         real proj=dot(3*SIZE,u,grad+p*3*SIZE)/dot(3*SIZE,u,u);
         mult_add(3*SIZE, -2*proj, u, grad+p*3*SIZE);
       } else {
-        //three_point_tangent(mep+3*SIZE*(p-1), mep+p*3*SIZE, mep+3*SIZE*(p+1), u);
         if(remove_zero_modes) {
-          three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+3*SIZE*(p-1), mep+p*3*SIZE, mep+3*SIZE*(p+1), u);
           group_generator(mep+3*SIZE*p, 0, g1);
           group_generator(mep+3*SIZE*p, 1, g2);
           group_generator(mep+3*SIZE*p, 2, g3);
           real* basis[5]={g1,g2,g3,u,grad+p*3*SIZE};
           gram_schmidt(3*SIZE, 5, basis);
         } else {
-          three_point_tangent_stable(energy[p-1],energy[p],energy[p+1],mep+3*SIZE*(p-1), mep+p*3*SIZE, mep+3*SIZE*(p+1), u);
           real* basis[2]={u,grad+p*3*SIZE};
           gram_schmidt(3*SIZE, 2, basis);
-          //real normu=rsqrt(normsq(3*SIZE,u));
-          //real proj=dot(3*SIZE,u,grad+p*3*SIZE)/normu;
-          //mult_add(3*SIZE, -proj/normu, u, grad+p*3*SIZE);
         };
       };
     };
@@ -622,10 +601,11 @@ int path_steepest_descent(real* __restrict__ path, int mode,
   real mode_param, real epsilon, int max_iter) 
 {
   desired_left=desired_right=-1;
-  if(fixed_length && !post_optimization) {
+  /*if(fixed_length && !post_optimization) {
     fprintf(stderr, "Turning on climbing since length is fixed\n");
     post_optimization=1;
-  };
+  };*/
+  if(post_optimization) middle_index=-1;
   COPYMASK(all_active, active);
   number_of_used=number_of_active;
   real updated_param=mode_param;
@@ -640,7 +620,8 @@ int path_steepest_descent(real* __restrict__ path, int mode,
     NULL
   );
   if(post_optimization) return retcode;
-  post_optimization=1;
+  post_optimization=1; 
+  middle_index=-1; desired_left=desired_right=-1;
   retcode=steepest_descend(
     3*SIZE*sizep, (real*)path, 
     projected_path_gradient,
