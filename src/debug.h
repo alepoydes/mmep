@@ -14,6 +14,7 @@
 #define COLOR_BLUE "\033[34m"
 #define CLEAR_SCREEN "\033[2J"
 #define RESET_CURSOR "\033[1;1H"
+#define CLEAR_LINE "\033[2K"
 
 extern volatile int stop_signal;
 

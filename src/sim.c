@@ -15,9 +15,11 @@
 #include "integra.h"
 #include "bitmap.h"
 #include "cmd.h"
+#include "octave.h"
 
 real time_step=0;
 real sim_time=0.0;
+real max_time=-1;
 real damping=0;
 int powered=0;
 real power=-1;
@@ -114,9 +116,9 @@ void dspins(const real* X, real* G, realp* E) {
     for3(j) eff[j]+=G[i+j]; // gamma*(grad E+beta*(p times m))
     real vec[3]; cross3(X+i,eff,vec); // m times gamma*(grad E+beta*(p times m)) 
     for3(c) G[i+c]=vec[c]; // = d m/d t without damping
-    const int number_of_consistancy_iterations=3;
+    const int number_of_consistency_iterations=3;
     // solving dm/dt=vec+damping*m times dm/dt.
-    for(int r=0; r<number_of_consistancy_iterations; r++) { 
+    for(int r=0; r<number_of_consistency_iterations; r++) { 
       real vec2[3]; cross3(X+i,G+i,vec2); // m times d m/d t
       for3(c) G[i+c]=vec[c]+damping*vec2[c]; // 
     };
@@ -207,41 +209,7 @@ void motion_function(real p[3]) {
   };
 };
 
-const char options_desc[]="\
-\n";
-
-char handle_option(char opt, const char* arg) {
-  switch(opt) {
-    default: return FALSE;
-  };
-  return TRUE;
-};
-
-int main(int argc, char** argv) {
-  epsilon=1e-6;
-  integrator=1; // 0 - RK, 1 - simplectic RK
-
-  int i=init_program(argc,argv,
-    "Integrate LLG equation and visializate dynamics.", options_desc,
-    "", handle_option);
-  if(i<argc) {
-    fprintf(stderr, COLOR_RED "There are unused parameters:" COLOR_RESET "\n");
-    while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
-  };
-
-  // Initialize states
-  real* spins=(real*)malloc(sizeof(real)*SIZE*3); assert(spins);
-  if(initial_state) {
-    copy_vector(SIZE*3, initial_state, spins);
-    free(initial_state);
-  } else random_vector(SIZE*3, spins); 
-  // Initialize graphics
-  is_aborting=initDisplay(&argc, argv);
-
-  // initialize magnetic field
-  allocate_nonuniform_field();
-  external_field=ralloc(SIZE*3);
-  copy_vector(SIZE*3,nonuniform_field,external_field);
+void run_interactive(real* spins) {
   // Main loop
   fprintf(stderr, CLEAR_SCREEN);
   while(!is_aborting) { 
@@ -257,7 +225,88 @@ int main(int argc, char** argv) {
   };
   // Deinitialization
   deinitDisplay();
-  free(spins); free(nonuniform_field); free(display_buffer);
-  free(external_field);
+  free(display_buffer);
+}
+
+const char options_desc[]="\
+\n   -T      Save state after given time and terminate\
+\n   -s      Integration step\
+\n   -d      Damping factor\
+\n   -i      Integrator (0 - RK, 1 - simpl. RK, 2 - Radau)\
+\n";
+
+char handle_option(char opt, const char* arg) {
+  switch(opt) {
+    case 'i': integrator=atoi(optarg); break;
+    case 's': time_step=rabs(atof(optarg)); break;
+    case 'T': max_time=atof(optarg); break;
+    case 'd': damping=atof(optarg); break;
+    default: return FALSE;
+  };
+  return TRUE;
+};
+
+int main(int argc, char** argv) {
+  epsilon=1e-6;
+  integrator=1; // 0 - RK, 1 - simplectic RK
+
+  int i=init_program(argc,argv,
+    "Integrate LLG equation and visualize dynamics.", options_desc,
+    "s:T:d:i:", handle_option);
+  if(i<argc) {
+    fprintf(stderr, COLOR_RED "There are unused parameters:" COLOR_RESET "\n");
+    while(i<argc) fprintf(stderr, "  %s\n", argv[i++]);
+  };
+
+  // Initialize states
+  real* spins=(real*)malloc(sizeof(real)*SIZE*3); assert(spins);
+  if(initial_state) {
+    copy_vector(SIZE*3, initial_state, spins);
+    free(initial_state);
+  } else random_vector(SIZE*3, spins); 
+
+  // initialize magnetic field
+  allocate_nonuniform_field();
+  external_field=ralloc(SIZE*3);
+  copy_vector(SIZE*3,nonuniform_field,external_field);
+
+  // If interactive mode
+  if(max_time>=0) {
+    // set default parameters
+    if(time_step<=0) time_step=0.01;
+    // run simulation
+    while(sim_time<max_time) {
+      fprintf(stderr, CLEAR_LINE "%"RF"g" COLOR_YELLOW "(%d)" COLOR_RESET ": %"RF"g\r", RT(sim_time), iter, RT(E));
+      if(time_step+sim_time>max_time) time_step=max_time-sim_time;
+      doStep(spins);
+    };
+    fprintf(stderr, "\n");
+    // save result
+    fprintf(stderr, COLOR_YELLOW "Saving gnuplot\n" COLOR_RESET);
+    FILE* file=open_file(outdir,"/state.gnuplot",TRUE);
+    if(file) {
+      fprintf(file,"set terminal pngcairo\n");
+      fprintf(file,"set output '%s/state.png'\n", outdir);
+      plot_field3(file, spins);
+      fclose(file);
+    };    
+    file=open_file(outdir, "/state.oct", TRUE);
+    if(file) {
+      oct_save_init(file);
+      oct_save_lattice(file);
+      oct_save_path(file,"PATH",spins,1);
+      oct_save_vectorp(file,"ENERGY",&E,1);
+      oct_save_finish(file);
+      fclose(file);
+    };
+  } else {
+    // Initialize graphics
+    is_aborting=initDisplay(&argc, argv);
+    // run GUI
+    run_interactive(spins);
+  };
+
+  // Free memory
+  free(spins); free(nonuniform_field); free(external_field);
   return 0;
 };
