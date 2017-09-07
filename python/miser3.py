@@ -342,7 +342,7 @@ class Lattice(object):
         if highlight is not None:
             self.plot_angles(highlight, rscale=rscale, ax=ax, style='-k', lw=highlightlw)
         ax.set_ylim([-1,1])
-        return dist, states          
+        return dist, states, origin
 
     def plot_field(self,S,scale=1,axis=None,fig=None):
         if axis is None:

@@ -2,5 +2,7 @@ obj/
 old/
 fields/
 bin/
+tmp/
 octave
+.ipynb_checkpoints
 ~
